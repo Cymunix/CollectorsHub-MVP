@@ -365,7 +365,402 @@ $$;
 revoke all on function public.admin_create_retail_user(text, text, public.retail_user_role, text[], boolean) from public;
 grant execute on function public.admin_create_retail_user(text, text, public.retail_user_role, text[], boolean) to authenticated;
 
--- Allow authenticated users to verify their own retail_users row for role checks
+-- ============================================================
+-- CATALOG MANAGEMENT SYSTEM
+-- ============================================================
+
+-- Catalog Categories table
+create table if not exists public.catalog_categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  description text,
+  attributes jsonb not null default '[]'::jsonb,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.catalog_categories enable row level security;
+
+create policy "Allow read active catalog_categories" on public.catalog_categories
+  for select using (is_active = true);
+
+-- Catalog Items table
+create table if not exists public.catalog_items (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text not null,
+  brand_or_publisher text,
+  release_year integer,
+  series text,
+  description text,
+  primary_image_url text,
+  created_by uuid,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.catalog_items enable row level security;
+
+create policy "Allow read active catalog_items" on public.catalog_items
+  for select using (is_active = true);
+
+create index if not exists catalog_items_category_idx on public.catalog_items(category);
+create index if not exists catalog_items_name_idx on public.catalog_items(lower(name));
+create index if not exists catalog_items_created_by_idx on public.catalog_items(created_by);
+
+-- Variants table
+create table if not exists public.variants (
+  id uuid primary key default gen_random_uuid(),
+  catalog_item_id uuid not null references public.catalog_items(id) on delete cascade,
+  platform_or_format text,
+  edition text,
+  region text,
+  packaging text,
+  upc text,
+  release_date date,
+  attributes jsonb not null default '{}'::jsonb,
+  display_name text generated always as (
+    (select name from public.catalog_items where id = variants.catalog_item_id)
+    || coalesce(' — ' || platform_or_format, '')
+    || coalesce(' ' || edition, '')
+  ) stored,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.variants enable row level security;
+
+create policy "Allow read active variants" on public.variants
+  for select using (is_active = true);
+
+create index if not exists variants_catalog_item_idx on public.variants(catalog_item_id);
+create index if not exists variants_upc_idx on public.variants(upc);
+create index if not exists variants_display_name_idx on public.variants(display_name);
+
+-- Trigger for catalog_items updated_at
+drop trigger if exists catalog_items_set_updated_at on public.catalog_items;
+create trigger catalog_items_set_updated_at
+before update on public.catalog_items
+for each row
+execute function public.set_catalog_items_updated_at();
+
+-- Recreate trigger function with variations support
+create or replace function public.set_catalog_items_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+-- Trigger for variants updated_at
+drop trigger if exists variants_set_updated_at on public.variants;
+create trigger variants_set_updated_at
+before update on public.variants
+for each row
+execute function public.set_variants_updated_at();
+
+create or replace function public.set_variants_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+-- Seed default categories with their attributes
+insert into public.catalog_categories (name, description, attributes, is_active)
+values
+  ('Video Games', 'Video games across all platforms', '["Platform", "Edition", "Region", "Packaging", "UPC", "Release Date"]'::jsonb, true),
+  ('Movies', 'Film and TV releases', '["Format", "Edition", "Region", "Packaging", "Disc Count", "UPC"]'::jsonb, true),
+  ('Toys', 'Collectible toys and figures', '["Series", "Edition", "Packaging", "Release Year", "UPC"]'::jsonb, true),
+  ('Music', 'Music albums and recordings', '["Format", "Edition", "Release Year", "Label", "UPC"]'::jsonb, true),
+  ('Sports Cards', 'Sports trading and collectible cards', '["Set", "Year", "Card Number", "Parallel"]'::jsonb, true),
+  ('Trading Cards', 'TCG and collectible card games', '["Set", "Edition", "Rarity", "Condition"]'::jsonb, true),
+  ('Comics', 'Comic books and graphic novels', '["Issue Number", "Variant Cover", "Publisher", "Year", "Printing"]'::jsonb, true),
+  ('Building Blocks', 'Construction sets and building systems', '["Brand", "Set Number", "Edition", "Release Year", "Piece Count", "UPC"]'::jsonb, true)
+on conflict (name)
+do update set
+  description = excluded.description,
+  attributes = excluded.attributes,
+  is_active = excluded.is_active;
+
+-- RPC: Check for duplicate catalog items by name and category
+create or replace function public.check_catalog_duplicates(
+  p_name text,
+  p_category text
+)
+returns table (
+  id uuid,
+  item_name text,
+  variant_display_name text
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select distinct
+    ci.id,
+    ci.name as item_name,
+    max(v.display_name) as variant_display_name
+  from public.catalog_items ci
+  left join public.variants v on v.catalog_item_id = ci.id
+  where lower(ci.name) = lower(btrim(p_name))
+    and ci.category = btrim(p_category)
+    and ci.is_active = true
+  group by ci.id, ci.name
+  limit 10;
+$$;
+
+revoke all on function public.check_catalog_duplicates(text, text) from public;
+grant execute on function public.check_catalog_duplicates(text, text) to authenticated;
+
+-- RPC: Admin create catalog item
+create or replace function public.admin_create_catalog_item(
+  p_name text,
+  p_category text,
+  p_brand_or_publisher text default null,
+  p_release_year integer default null,
+  p_series text default null,
+  p_description text default null,
+  p_primary_image_url text default null
+)
+returns table (
+  id uuid,
+  name text,
+  category text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_is_admin boolean;
+  v_new_id uuid;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  -- Check if user is server_admin
+  v_is_admin := exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = v_uid
+      and su.is_active = true
+      and su.role = 'server_admin'
+  );
+
+  if not v_is_admin then
+    raise exception 'Only server admins can create catalog items';
+  end if;
+
+  -- Validate inputs
+  if btrim(p_name) = '' or p_category is null then
+    raise exception 'Name and category are required';
+  end if;
+
+  -- Create catalog item
+  insert into public.catalog_items (
+    name,
+    category,
+    brand_or_publisher,
+    release_year,
+    series,
+    description,
+    primary_image_url,
+    created_by,
+    is_active
+  )
+  values (
+    btrim(p_name),
+    btrim(p_category),
+    case when btrim(p_brand_or_publisher) = '' then null else btrim(p_brand_or_publisher) end,
+    p_release_year,
+    case when btrim(p_series) = '' then null else btrim(p_series) end,
+    case when btrim(p_description) = '' then null else btrim(p_description) end,
+    p_primary_image_url,
+    v_uid,
+    true
+  )
+  returning catalog_items.id, catalog_items.name, catalog_items.category
+  into v_new_id, p_name, p_category;
+
+  return query select v_new_id, p_name, p_category;
+end;
+$$;
+
+revoke all on function public.admin_create_catalog_item(text, text, text, integer, text, text, text) from public;
+grant execute on function public.admin_create_catalog_item(text, text, text, integer, text, text, text) to authenticated;
+
+-- RPC: Admin list catalog items
+create or replace function public.admin_list_catalog_items(
+  p_category text default null,
+  p_search text default null,
+  p_limit integer default 100
+)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'items', coalesce(jsonb_agg(
+      jsonb_build_object(
+        'id', ci.id,
+        'name', ci.name,
+        'category', ci.category,
+        'brand_or_publisher', ci.brand_or_publisher,
+        'release_year', ci.release_year,
+        'series', ci.series,
+        'description', ci.description,
+        'primary_image_url', ci.primary_image_url,
+        'variant_count', (select count(*) from public.variants v where v.catalog_item_id = ci.id and v.is_active = true),
+        'created_at', ci.created_at
+      )
+      order by ci.name
+    ), '[]'::jsonb),
+    'total', count(*)
+  )
+  from public.catalog_items ci
+  where ci.is_active = true
+    and (p_category is null or ci.category = p_category)
+    and (p_search is null or lower(ci.name) like lower('%' || btrim(p_search) || '%'))
+  limit p_limit;
+$$;
+
+revoke all on function public.admin_list_catalog_items(text, text, integer) from public;
+grant execute on function public.admin_list_catalog_items(text, text, integer) to authenticated;
+
+-- RPC: Admin create variant
+create or replace function public.admin_create_variant(
+  p_catalog_item_id uuid,
+  p_platform_or_format text default null,
+  p_edition text default null,
+  p_region text default null,
+  p_packaging text default null,
+  p_upc text default null,
+  p_release_date date default null,
+  p_attributes jsonb default '{}'::jsonb
+)
+returns table (
+  id uuid,
+  display_name text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_is_admin boolean;
+  v_new_id uuid;
+  v_display_name text;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  -- Check if user is server_admin
+  v_is_admin := exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = v_uid
+      and su.is_active = true
+      and su.role = 'server_admin'
+  );
+
+  if not v_is_admin then
+    raise exception 'Only server admins can create variants';
+  end if;
+
+  -- Verify catalog item exists
+  if not exists (select 1 from public.catalog_items where id = p_catalog_item_id and is_active = true) then
+    raise exception 'Catalog item not found';
+  end if;
+
+  -- Create variant
+  insert into public.variants (
+    catalog_item_id,
+    platform_or_format,
+    edition,
+    region,
+    packaging,
+    upc,
+    release_date,
+    attributes,
+    is_active
+  )
+  values (
+    p_catalog_item_id,
+    case when btrim(p_platform_or_format) = '' then null else btrim(p_platform_or_format) end,
+    case when btrim(p_edition) = '' then null else btrim(p_edition) end,
+    case when btrim(p_region) = '' then null else btrim(p_region) end,
+    case when btrim(p_packaging) = '' then null else btrim(p_packaging) end,
+    case when btrim(p_upc) = '' then null else btrim(p_upc) end,
+    p_release_date,
+    coalesce(p_attributes, '{}'::jsonb),
+    true
+  )
+  returning variants.id, variants.display_name, variants.created_at
+  into v_new_id, v_display_name;
+
+  return query select v_new_id, v_display_name;
+end;
+$$;
+
+revoke all on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb) from public;
+grant execute on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb) to authenticated;
+
+-- RPC: Admin list variants for a catalog item
+create or replace function public.admin_list_variants(p_catalog_item_id uuid)
+returns table (
+  id uuid,
+  catalog_item_id uuid,
+  platform_or_format text,
+  edition text,
+  region text,
+  packaging text,
+  upc text,
+  release_date date,
+  display_name text,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    v.id,
+    v.catalog_item_id,
+    v.platform_or_format,
+    v.edition,
+    v.region,
+    v.packaging,
+    v.upc,
+    v.release_date,
+    v.display_name,
+    v.created_at
+  from public.variants v
+  where v.catalog_item_id = p_catalog_item_id
+    and v.is_active = true
+  order by v.display_name;
+$$;
+
+revoke all on function public.admin_list_variants(uuid) from public;
+grant execute on function public.admin_list_variants(uuid) to authenticated;
+
+select 'Catalog management system initialized.' as status;
 drop policy if exists "Authenticated users can read their own retail_user row" on public.retail_users;
 create policy "Authenticated users can read their own retail_user row"
 on public.retail_users
