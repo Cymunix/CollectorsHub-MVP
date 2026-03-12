@@ -286,6 +286,13 @@
         }
 
         if (!session) {
+          var cachedRole = localStorage.getItem(USER_ROLE_KEY);
+          if (cachedRole) {
+            console.warn("[CollectorsHub Store] No active session yet; using cached role to continue.");
+            initializeStore();
+            return;
+          }
+
           console.warn("[CollectorsHub Store] No active session, redirecting to login");
           window.location.href = "index.html";
           return;

@@ -409,10 +409,12 @@
         if (userRecord.role) {
           localStorage.setItem(USER_ROLE_KEY, userRecord.role);
         }
-        var hasSession = await waitForActiveSession(5, 250);
+        var hasSession = !!(authResponse.data && authResponse.data.session);
         if (!hasSession) {
-          setStatus("Signed in, but session is still initializing. Please wait a moment and retry.", false);
-          return;
+          hasSession = await waitForActiveSession(8, 300);
+        }
+        if (!hasSession) {
+          console.warn("[CollectorsHub] Session not readable yet; continuing redirect with cached context.");
         }
 
         setStatus("Login successful. Redirecting...", true);
