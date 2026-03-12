@@ -769,6 +769,30 @@ for select
 to authenticated
 using (auth_user_id = auth.uid());
 
+drop policy if exists "Server admins can manage all retail users" on public.retail_users;
+create policy "Server admins can manage all retail users"
+on public.retail_users
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.role = 'server_admin'
+      and su.is_active = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.role = 'server_admin'
+      and su.is_active = true
+  )
+);
+
 drop policy if exists "Authenticated users can read their own server_user row" on public.server_users;
 create policy "Authenticated users can read their own server_user row"
 on public.server_users
@@ -776,9 +800,57 @@ for select
 to authenticated
 using (auth_user_id = auth.uid());
 
+drop policy if exists "Server admins can manage all server users" on public.server_users;
+create policy "Server admins can manage all server users"
+on public.server_users
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.role = 'server_admin'
+      and su.is_active = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.role = 'server_admin'
+      and su.is_active = true
+  )
+);
+
 drop policy if exists "Authenticated users can read their own client_user row" on public.client_users;
 create policy "Authenticated users can read their own client_user row"
 on public.client_users
 for select
 to authenticated
 using (auth_user_id = auth.uid());
+
+drop policy if exists "Server admins can manage all client users" on public.client_users;
+create policy "Server admins can manage all client users"
+on public.client_users
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.role = 'server_admin'
+      and su.is_active = true
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.role = 'server_admin'
+      and su.is_active = true
+  )
+);
