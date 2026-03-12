@@ -226,6 +226,7 @@
 
       <div class="secondary-links">
         <a href="#" aria-label="Forgot Password">Forgot Password</a>
+        <a href="?reset=1" id="reset-state-link" aria-label="Reset App State">Reset App State</a>
       </div>
     </form>
   </main>
@@ -250,6 +251,7 @@
     var passwordInput = document.getElementById("password");
     var formError = document.getElementById("form-error");
     var loginBtn = form.querySelector(".login-btn");
+    var resetStateLink = document.getElementById("reset-state-link");
 
     function hasServiceRoleKey(jwt) {
       try {
@@ -284,10 +286,47 @@
 
     var supabase = createClient(config.url, config.anonKey);
 
+    async function clearClientState() {
+      localStorage.removeItem("collectorshub_retail_store_code");
+      localStorage.removeItem("collectorshub_retail_user_role");
+      localStorage.removeItem("collectorshub_test_store");
+      sessionStorage.clear();
+
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.warn("[CollectorsHub] Sign-out during reset failed:", signOutError);
+      }
+    }
+
+    async function maybeRunResetFlow() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get("reset") !== "1") {
+        return;
+      }
+
+      setLoading(true);
+      setStatus("Resetting saved browser state...", false);
+      await clearClientState();
+      setStatus("Browser state reset complete. Please sign in again.", true);
+
+      var cleanUrl = window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+      setLoading(false);
+    }
+
     var savedStoreCode = localStorage.getItem(STORE_CODE_KEY);
     if (savedStoreCode) {
       storeCodeInput.value = savedStoreCode;
     }
+
+    resetStateLink.addEventListener("click", async function(event) {
+      event.preventDefault();
+      await clearClientState();
+      setStatus("Browser state reset complete. Please sign in again.", true);
+    });
+
+    maybeRunResetFlow();
 
     function setStatus(message, isSuccess) {
       formError.textContent = message;
