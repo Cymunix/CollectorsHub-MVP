@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings - CollectorsHub Retail</title>
+  <style>
+    :root {
+      --bg: #070d18;
+      --panel: #121c30;
+      --panel-2: #15233a;
+      --border: #233451;
+      --text: #e7eefb;
+      --text-soft: #9fb0cf;
+      --accent: #33c3ff;
+      --ok: #3ed090;
+      --danger: #ff6e81;
+      --shadow: 0 14px 30px rgba(2, 8, 20, 0.45);
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Sora", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(700px 400px at 90% -20%, rgba(51, 195, 255, 0.16), transparent 60%),
+        radial-gradient(600px 350px at -10% 100%, rgba(45, 224, 196, 0.12), transparent 60%),
+        linear-gradient(135deg, #060b14 0%, #0a1424 50%, #0c1a2f 100%);
+      min-height: 100vh;
+    }
+
+    body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(10, 18, 33, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .brand {
+      padding: 10px 10px 14px;
+      border-bottom: 1px solid rgba(159, 176, 207, 0.15);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .brand-sub {
+      margin: 6px 0 0;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      color: var(--text-soft);
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      font-size: 0.9rem;
+    }
+
+    .nav-item:hover {
+      background: rgba(51, 195, 255, 0.09);
+      border-color: rgba(51, 195, 255, 0.26);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: rgba(51, 195, 255, 0.14);
+      border-color: rgba(51, 195, 255, 0.36);
+      color: #dff6ff;
+      box-shadow: inset 0 0 0 1px rgba(51, 195, 255, 0.12);
+    }
+
+    .nav-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 76px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 16, 30, 0.78);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .platform-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .admin-badge {
+      background: rgba(45, 224, 196, 0.16);
+      color: #86ffe8;
+      border: 1px solid rgba(45, 224, 196, 0.44);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+
+    .btn {
+      background: none;
+      border: 1px solid rgba(51, 195, 255, 0.44);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 140ms ease, background 140ms ease;
+    }
+
+    .btn:hover {
+      border-color: rgba(51, 195, 255, 0.55);
+      background: var(--panel-2);
+    }
+
+    .btn.secondary {
+      border-color: rgba(159, 176, 207, 0.35);
+      color: var(--text-soft);
+    }
+
+    .btn.danger {
+      border-color: rgba(255, 110, 129, 0.44);
+      color: #ff6e81;
+    }
+
+    .btn.danger:hover {
+      border-color: rgba(255, 110, 129, 0.65);
+      background: rgba(255, 110, 129, 0.08);
+    }
+
+    .main {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .section {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(18, 28, 48, 0.55);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 650;
+    }
+
+    .section-sub {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: var(--text-soft);
+    }
+
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .meta-item {
+      border: 1px solid rgba(56, 89, 136, 0.6);
+      background: rgba(14, 26, 46, 0.6);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .meta-label {
+      color: var(--text-soft);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+
+    .meta-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .toggle-list {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid rgba(56, 89, 136, 0.55);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: rgba(14, 26, 46, 0.6);
+    }
+
+    .toggle-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .toggle-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .toggle-desc {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+
+    .switch {
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      border: 1px solid rgba(56, 89, 136, 0.8);
+      background: rgba(12, 22, 38, 0.85);
+      position: relative;
+      cursor: pointer;
+      transition: all 140ms ease;
+    }
+
+    .switch::after {
+      content: "";
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #9fb0cf;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: all 140ms ease;
+    }
+
+    .switch[aria-checked="true"] {
+      background: rgba(51, 195, 255, 0.2);
+      border-color: rgba(51, 195, 255, 0.75);
+    }
+
+    .switch[aria-checked="true"]::after {
+      left: 22px;
+      background: #33c3ff;
+    }
+
+    .actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      margin-top: 10px;
+      min-height: 18px;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    .status.success { color: var(--ok); }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+      .main { padding: 14px; }
+      .section { padding: 14px; }
+      .grid { grid-template-columns: 1fr; }
+      .topbar { padding: 10px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1 class="brand-title">CollectorsHub Retail</h1>
+        <p class="brand-sub">Platform Administration</p>
+      </div>
+
+      <nav class="nav" aria-label="Admin navigation">
+        <a class="nav-item" href="/admin-dashboard.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-item" href="/admin-stores.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>
+          Stores
+        </a>
+        <a class="nav-item" href="/admin-users.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2a3 3 0 110 6 3 3 0 010-6zm-5 11a5 5 0 1110 0v1H3z"/></svg>
+          Users
+        </a>
+        <a class="nav-item" href="/admin-catalog.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>
+          Catalog
+        </a>
+        <a class="nav-item active" href="/admin-settings.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.7 1l.4 1.6a5.7 5.7 0 011.5.9l1.5-.5.8 1.3-1.2 1a5.8 5.8 0 01.1.9 5.8 5.8 0 01-.1.9l1.2 1-.8 1.3-1.5-.5a5.8 5.8 0 01-1.5.9L9.7 15H8.3l-.4-1.6a5.8 5.8 0 01-1.5-.9l-1.5.5-.8-1.3 1.2-1a5.8 5.8 0 01-.1-.9c0-.3 0-.6.1-.9l-1.2-1 .8-1.3 1.5.5a5.8 5.8 0 011.5-.9L8.3 1zM8 6.2A1.8 1.8 0 108 9.8a1.8 1.8 0 000-3.6z"/></svg>
+          Settings
+        </a>
+      </nav>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <div>
+          <h2 class="platform-title">Admin Settings</h2>
+          <span class="admin-badge">Server Admin</span>
+        </div>
+        <button class="btn secondary" id="sign-out" type="button">Sign Out</button>
+      </header>
+
+      <main class="main">
+        <section class="section">
+          <div class="section-head">
+            <h2>Account</h2>
+            <p class="section-sub">Your current server admin session details.</p>
+          </div>
+          <div class="grid">
+            <div class="meta-item">
+              <div class="meta-label">Username</div>
+              <div class="meta-value" id="meta-username">Loading...</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Email</div>
+              <div class="meta-value" id="meta-email">Loading...</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Role</div>
+              <div class="meta-value" id="meta-role">Loading...</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Auth User ID</div>
+              <div class="meta-value" id="meta-auth-user-id">Loading...</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>Interface Preferences</h2>
+            <p class="section-sub">Saved locally in this browser.</p>
+          </div>
+
+          <div class="toggle-list">
+            <div class="toggle-row">
+              <div class="toggle-copy">
+                <div class="toggle-title">Reduce motion</div>
+                <div class="toggle-desc">Turns off most transition and animation effects.</div>
+              </div>
+              <button class="switch" id="reduce-motion-toggle" role="switch" aria-checked="false" aria-label="Reduce motion"></button>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn" id="save-preferences" type="button">Save Preferences</button>
+            <button class="btn secondary" id="reset-preferences" type="button">Reset to Default</button>
+          </div>
+          <p class="status" id="pref-status"></p>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>Session</h2>
+            <p class="section-sub">Manage this browser session.</p>
+          </div>
+          <div class="actions">
+            <button class="btn secondary" id="clear-local-data" type="button">Clear Local Admin Cache</button>
+            <button class="btn danger" id="sign-out-all" type="button">Sign Out</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+    var PREFS_KEY = "collectorshub_admin_settings";
+
+    var config = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var signOutBtn = document.getElementById("sign-out");
+    var signOutAllBtn = document.getElementById("sign-out-all");
+    var clearLocalDataBtn = document.getElementById("clear-local-data");
+    var savePrefsBtn = document.getElementById("save-preferences");
+    var resetPrefsBtn = document.getElementById("reset-preferences");
+    var reduceMotionToggle = document.getElementById("reduce-motion-toggle");
+    var prefStatus = document.getElementById("pref-status");
+
+    function setReduceMotion(enabled) {
+      reduceMotionToggle.setAttribute("aria-checked", enabled ? "true" : "false");
+      if (enabled) {
+        document.body.classList.add("reduce-motion");
+      } else {
+        document.body.classList.remove("reduce-motion");
+      }
+    }
+
+    function getSavedPrefs() {
+      try {
+        var raw = localStorage.getItem(PREFS_KEY);
+        return raw ? JSON.parse(raw) : { reduceMotion: false };
+      } catch (err) {
+        return { reduceMotion: false };
+      }
+    }
+
+    function savePrefs(prefs) {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    }
+
+    async function signOut() {
+      await supabase.auth.signOut();
+      localStorage.removeItem(USER_ROLE_KEY);
+      window.location.href = "/index.html";
+    }
+
+    async function verifyServerUser() {
+      var sessionResult = await supabase.auth.getSession();
+      var session = sessionResult && sessionResult.data && sessionResult.data.session;
+      if (!session) {
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      var role = null;
+      var userResult = await supabase
+        .from("server_users")
+        .select("username, email, role")
+        .eq("auth_user_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!userResult.error && userResult.data) {
+        role = userResult.data.role;
+        document.getElementById("meta-username").textContent = userResult.data.username || "-";
+        document.getElementById("meta-email").textContent = userResult.data.email || session.user.email || "-";
+      } else {
+        document.getElementById("meta-username").textContent = "-";
+        document.getElementById("meta-email").textContent = session.user.email || "-";
+      }
+
+      if (!role && localStorage.getItem(USER_ROLE_KEY) === "server_admin") {
+        role = "server_admin";
+      }
+
+      var SERVER_ROLES = ["server_admin", "server_ops", "support"];
+      if (!role || SERVER_ROLES.indexOf(role) < 0) {
+        await supabase.auth.signOut();
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      document.getElementById("meta-role").textContent = role;
+      document.getElementById("meta-auth-user-id").textContent = session.user.id || "-";
+
+      return { role: role };
+    }
+
+    reduceMotionToggle.addEventListener("click", function() {
+      var enabled = reduceMotionToggle.getAttribute("aria-checked") === "true";
+      setReduceMotion(!enabled);
+    });
+
+    savePrefsBtn.addEventListener("click", function() {
+      var prefs = {
+        reduceMotion: reduceMotionToggle.getAttribute("aria-checked") === "true"
+      };
+      savePrefs(prefs);
+      prefStatus.textContent = "Preferences saved.";
+      prefStatus.classList.add("success");
+    });
+
+    resetPrefsBtn.addEventListener("click", function() {
+      var prefs = { reduceMotion: false };
+      savePrefs(prefs);
+      setReduceMotion(false);
+      prefStatus.textContent = "Preferences reset to default.";
+      prefStatus.classList.add("success");
+    });
+
+    clearLocalDataBtn.addEventListener("click", function() {
+      localStorage.removeItem(USER_ROLE_KEY);
+      localStorage.removeItem(PREFS_KEY);
+      prefStatus.textContent = "Local admin cache cleared.";
+      prefStatus.classList.add("success");
+    });
+
+    signOutBtn.addEventListener("click", signOut);
+    signOutAllBtn.addEventListener("click", signOut);
+
+    async function init() {
+      var prefs = getSavedPrefs();
+      setReduceMotion(Boolean(prefs.reduceMotion));
+      await verifyServerUser();
+    }
+
+    init();
+  </script>
+</body>
+</html>
