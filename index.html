@@ -208,9 +208,9 @@
       <div class="field">
         <label for="username">Username</label>
         <div class="input-wrap">
-          <input id="username" name="username" type="text" autocomplete="username" placeholder="Example: HaydenM42" required />
+          <input id="username" name="username" type="text" autocomplete="username" placeholder="Enter username" required />
         </div>
-        <p class="username-hint">Store employees: FirstName + MiddleInitial + two digits (e.g. HaydenM42). Not case sensitive.</p>
+        <p class="username-hint">Store employees: letters and numbers only. Not case sensitive.</p>
       </div>
 
       <div class="field">
@@ -239,7 +239,7 @@
 
     var STORE_CODE_KEY = "collectorshub_retail_store_code";
     var USER_ROLE_KEY = "collectorshub_retail_user_role";
-    // Retail store employees: alphanumeric only (e.g. HaydenM42)
+    // Retail store employees: alphanumeric only
     var usernamePatternRetail = /^[a-z0-9]+$/i;
     // Server/admin users: letters, numbers, dots, underscores, hyphens allowed
     var usernamePatternServer = /^[a-z0-9._\-]+$/i;

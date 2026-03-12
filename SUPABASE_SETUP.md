@@ -18,7 +18,7 @@ For each store employee, create a Supabase Auth user with email + password.
 ## 4) Create retail stores
 Insert rows into `public.retail_stores`.
 
-Example:
+Run this SQL:
 ```sql
 insert into public.retail_stores (store_code, store_name, timezone, is_active)
 values
@@ -33,7 +33,7 @@ Or run the prepared store seed script:
 ## 5) Map Store Code + Username to Auth email + role
 Insert rows into `public.retail_users`.
 
-Example:
+Run this SQL:
 ```sql
 insert into public.retail_users (store_code, username, role, email, auth_user_id, is_active)
 val6es

@@ -387,7 +387,7 @@ for select
 to authenticated
 using (auth_user_id = auth.uid());
 
--- Sample seed rows. Edit these before running in production.
+-- Seed rows.
 insert into public.retail_users (store_code, username, role, email, auth_user_id, is_active)
 values
   ('NYC01', 'HaydenM42', 'manager', 'hayden@collectorshub.com', null, true),
