@@ -398,11 +398,11 @@
 
         setTimeout(function() {
           if (userRecord.role === "server_admin") {
-            window.location.href = "/server-admin.html";
+            window.location.href = "server-admin.html";
           } else if (config.postLoginRedirectPath) {
             window.location.href = config.postLoginRedirectPath;
           } else {
-            window.location.href = "/store.html";
+            window.location.href = "store.html";
           }
         }, 500);
       } catch (error) {

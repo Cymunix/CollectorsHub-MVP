@@ -263,20 +263,20 @@
         var { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("[CollectorsHub Store] Session check error:", error);
-          window.location.href = "/index.html";
+          window.location.href = "index.html";
           return;
         }
 
         if (!session) {
           console.warn("[CollectorsHub Store] No active session, redirecting to login");
-          window.location.href = "/index.html";
+          window.location.href = "index.html";
           return;
         }
 
         var storeCode = localStorage.getItem(STORE_CODE_KEY);
         if (!storeCode) {
           console.warn("[CollectorsHub Store] No store code in localStorage");
-          window.location.href = "/index.html";
+          window.location.href = "index.html";
           return;
         }
 
@@ -284,7 +284,7 @@
         initializeStore();
       } catch (err) {
         console.error("[CollectorsHub Store] Auth check exception:", err);
-        window.location.href = "/index.html";
+        window.location.href = "index.html";
       }
     })();
 
@@ -303,14 +303,14 @@
     welcomeText.textContent = "Welcome to " + storeCode + " store operations.";
 
     backBtn.addEventListener("click", () => {
-      window.location.href = "/admin-dashboard.html";
+      window.location.href = "admin-dashboard.html";
     });
 
     signOutBtn.addEventListener("click", async () => {
       localStorage.removeItem(STORE_CODE_KEY);
       localStorage.removeItem(USER_ROLE_KEY);
       await supabase.auth.signOut();
-      window.location.href = "/index.html";
+      window.location.href = "index.html";
     });
 
     viewInventoryBtn.addEventListener("click", () => {
