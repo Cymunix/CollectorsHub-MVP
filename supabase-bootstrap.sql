@@ -384,11 +384,30 @@ alter table public.catalog_categories enable row level security;
 create policy "Allow read active catalog_categories" on public.catalog_categories
   for select using (is_active = true);
 
+-- Catalog Subcategories table
+create table if not exists public.catalog_subcategories (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid not null references public.catalog_categories(id) on delete cascade,
+  name text not null,
+  description text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique(category_id, name)
+);
+
+alter table public.catalog_subcategories enable row level security;
+
+create policy "Allow read active catalog_subcategories" on public.catalog_subcategories
+  for select using (is_active = true);
+
+create index if not exists catalog_subcategories_category_id_idx on public.catalog_subcategories(category_id);
+
 -- Catalog Items table
 create table if not exists public.catalog_items (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  category text not null,
+  category_id uuid not null references public.catalog_categories(id),
+  subcategory_id uuid references public.catalog_subcategories(id),
   brand_or_publisher text,
   release_year integer,
   series text,
@@ -405,7 +424,8 @@ alter table public.catalog_items enable row level security;
 create policy "Allow read active catalog_items" on public.catalog_items
   for select using (is_active = true);
 
-create index if not exists catalog_items_category_idx on public.catalog_items(category);
+create index if not exists catalog_items_category_id_idx on public.catalog_items(category_id);
+create index if not exists catalog_items_subcategory_id_idx on public.catalog_items(subcategory_id);
 create index if not exists catalog_items_name_idx on public.catalog_items(lower(name));
 create index if not exists catalog_items_created_by_idx on public.catalog_items(created_by);
 
@@ -485,10 +505,85 @@ do update set
   attributes = excluded.attributes,
   is_active = excluded.is_active;
 
+-- Seed subcategories for Video Games
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'Console', 'Home and handheld consoles', true from catalog_categories where name = 'Video Games'
+union all
+select id, 'PC', 'Personal computer games', true from catalog_categories where name = 'Video Games'
+union all
+select id, 'Arcade', 'Arcade and coin-op games', true from catalog_categories where name = 'Video Games'
+on conflict do nothing;
+
+-- Seed subcategories for Movies
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'Blu-ray', 'Blu-ray disc releases', true from catalog_categories where name = 'Movies'
+union all
+select id, 'DVD', 'Standard DVD releases', true from catalog_categories where name = 'Movies'
+union all
+select id, '4K Ultra HD', '4K ultra high definition releases', true from catalog_categories where name = 'Movies'
+on conflict do nothing;
+
+-- Seed subcategories for Toys
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'Action Figures', 'Collectible action figures', true from catalog_categories where name = 'Toys'
+union all
+select id, 'Statues', 'Statues and sculptures', true from catalog_categories where name = 'Toys'
+union all
+select id, 'Plushies', 'Plush toys and stuffed animals', true from catalog_categories where name = 'Toys'
+on conflict do nothing;
+
+-- Seed subcategories for Music
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'Vinyl', 'Vinyl records and LPs', true from catalog_categories where name = 'Music'
+union all
+select id, 'CD', 'Compact discs', true from catalog_categories where name = 'Music'
+union all
+select id, 'Cassette', 'Audio cassettes', true from catalog_categories where name = 'Music'
+on conflict do nothing;
+
+-- Seed subcategories for Sports Cards
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'Baseball', 'Baseball trading cards', true from catalog_categories where name = 'Sports Cards'
+union all
+select id, 'Football', 'American football trading cards', true from catalog_categories where name = 'Sports Cards'
+union all
+select id, 'Basketball', 'Basketball trading cards', true from catalog_categories where name = 'Sports Cards'
+union all
+select id, 'Hockey', 'Ice hockey trading cards', true from catalog_categories where name = 'Sports Cards'
+on conflict do nothing;
+
+-- Seed subcategories for Trading Cards
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'Pokémon', 'Pokémon Trading Card Game', true from catalog_categories where name = 'Trading Cards'
+union all
+select id, 'Magic: The Gathering', 'Magic the Gathering cards', true from catalog_categories where name = 'Trading Cards'
+union all
+select id, 'Yu-Gi-Oh', 'Yu-Gi-Oh Trading Card Game', true from catalog_categories where name = 'Trading Cards'
+on conflict do nothing;
+
+-- Seed subcategories for Comics
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'Marvel', 'Marvel Comics', true from catalog_categories where name = 'Comics'
+union all
+select id, 'DC', 'DC Comics', true from catalog_categories where name = 'Comics'
+union all
+select id, 'Independent', 'Independent and indie comics', true from catalog_categories where name = 'Comics'
+on conflict do nothing;
+
+-- Seed subcategories for Building Blocks
+insert into public.catalog_subcategories (category_id, name, description, is_active)
+select id, 'LEGO', 'LEGO building sets', true from catalog_categories where name = 'Building Blocks'
+union all
+select id, 'Mega Bloks', 'Mega Bloks construction sets', true from catalog_categories where name = 'Building Blocks'
+union all
+select id, 'Other Brands', 'Other brick and building systems', true from catalog_categories where name = 'Building Blocks'
+on conflict do nothing;
+
 -- RPC: Check for duplicate catalog items by name and category
 create or replace function public.check_catalog_duplicates(
   p_name text,
-  p_category text
+  p_category_id uuid,
+  p_subcategory_id uuid default null
 )
 returns table (
   id uuid,
@@ -510,19 +605,22 @@ as $$
   from public.catalog_items ci
   left join public.variants v on v.catalog_item_id = ci.id
   where lower(ci.name) = lower(btrim(p_name))
-    and ci.category = btrim(p_category)
+    and ci.category_id = p_category_id
+    and (p_subcategory_id is null or ci.subcategory_id = p_subcategory_id)
     and ci.is_active = true
   group by ci.id, ci.name
   limit 10;
 $$;
 
-revoke all on function public.check_catalog_duplicates(text, text) from public;
-grant execute on function public.check_catalog_duplicates(text, text) to authenticated;
+revoke all on function public.check_catalog_duplicates(uuid, uuid) from public;
+revoke all on function public.check_catalog_duplicates(uuid, uuid, uuid) from public;
+grant execute on function public.check_catalog_duplicates(uuid, uuid, uuid) to authenticated;
 
 -- RPC: Admin create catalog item
 create or replace function public.admin_create_catalog_item(
   p_name text,
-  p_category text,
+  p_category_id uuid,
+  p_subcategory_id uuid default null,
   p_brand_or_publisher text default null,
   p_release_year integer default null,
   p_series text default null,
@@ -532,7 +630,7 @@ create or replace function public.admin_create_catalog_item(
 returns table (
   id uuid,
   name text,
-  category text
+  category_id uuid
 )
 language plpgsql
 security definer
@@ -562,14 +660,27 @@ begin
   end if;
 
   -- Validate inputs
-  if btrim(p_name) = '' or p_category is null then
+  if btrim(p_name) = '' or p_category_id is null then
     raise exception 'Name and category are required';
+  end if;
+
+  -- Verify category exists
+  if not exists (select 1 from public.catalog_categories where id = p_category_id and is_active = true) then
+    raise exception 'Category not found';
+  end if;
+
+  -- Verify subcategory exists if provided
+  if p_subcategory_id is not null then
+    if not exists (select 1 from public.catalog_subcategories where id = p_subcategory_id and category_id = p_category_id and is_active = true) then
+      raise exception 'Subcategory not found or does not belong to this category';
+    end if;
   end if;
 
   -- Create catalog item
   insert into public.catalog_items (
     name,
-    category,
+    category_id,
+    subcategory_id,
     brand_or_publisher,
     release_year,
     series,
@@ -580,7 +691,8 @@ begin
   )
   values (
     btrim(p_name),
-    btrim(p_category),
+    p_category_id,
+    p_subcategory_id,
     case when btrim(p_brand_or_publisher) = '' then null else btrim(p_brand_or_publisher) end,
     p_release_year,
     case when btrim(p_series) = '' then null else btrim(p_series) end,
@@ -589,19 +701,20 @@ begin
     v_uid,
     true
   )
-  returning catalog_items.id, catalog_items.name, catalog_items.category
-  into v_new_id, p_name, p_category;
+  returning catalog_items.id, catalog_items.name, catalog_items.category_id
+  into v_new_id, p_name, p_category_id;
 
-  return query select v_new_id, p_name, p_category;
+  return query select v_new_id, p_name, p_category_id;
 end;
 $$;
 
 revoke all on function public.admin_create_catalog_item(text, text, text, integer, text, text, text) from public;
-grant execute on function public.admin_create_catalog_item(text, text, text, integer, text, text, text) to authenticated;
+revoke all on function public.admin_create_catalog_item(text, uuid, uuid, text, integer, text, text, text) from public;
+grant execute on function public.admin_create_catalog_item(text, uuid, uuid, text, integer, text, text, text) to authenticated;
 
 -- RPC: Admin list catalog items
 create or replace function public.admin_list_catalog_items(
-  p_category text default null,
+  p_category_id uuid default null,
   p_search text default null,
   p_limit integer default 100
 )
@@ -615,7 +728,10 @@ as $$
       jsonb_build_object(
         'id', ci.id,
         'name', ci.name,
-        'category', ci.category,
+        'category_id', ci.category_id,
+        'category_name', cat.name,
+        'subcategory_id', ci.subcategory_id,
+        'subcategory_name', subcat.name,
         'brand_or_publisher', ci.brand_or_publisher,
         'release_year', ci.release_year,
         'series', ci.series,
@@ -629,14 +745,45 @@ as $$
     'total', count(*)
   )
   from public.catalog_items ci
+  join public.catalog_categories cat on cat.id = ci.category_id
+  left join public.catalog_subcategories subcat on subcat.id = ci.subcategory_id
   where ci.is_active = true
-    and (p_category is null or ci.category = p_category)
+    and (p_category_id is null or ci.category_id = p_category_id)
     and (p_search is null or lower(ci.name) like lower('%' || btrim(p_search) || '%'))
   limit p_limit;
 $$;
 
 revoke all on function public.admin_list_catalog_items(text, text, integer) from public;
-grant execute on function public.admin_list_catalog_items(text, text, integer) to authenticated;
+revoke all on function public.admin_list_catalog_items(uuid, text, integer) from public;
+grant execute on function public.admin_list_catalog_items(uuid, text, integer) to authenticated;
+
+-- RPC: Admin list subcategories for a category
+create or replace function public.admin_list_subcategories(p_category_id uuid)
+returns table (
+  id uuid,
+  name text,
+  description text,
+  category_id uuid,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    cs.id,
+    cs.name,
+    cs.description,
+    cs.category_id,
+    cs.created_at
+  from public.catalog_subcategories cs
+  where cs.category_id = p_category_id
+    and cs.is_active = true
+  order by cs.name;
+$$;
+
+revoke all on function public.admin_list_subcategories(uuid) from public;
+grant execute on function public.admin_list_subcategories(uuid) to authenticated;
 
 -- RPC: Admin create variant
 create or replace function public.admin_create_variant(
