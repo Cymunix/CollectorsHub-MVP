@@ -612,9 +612,8 @@ as $$
   limit 10;
 $$;
 
-revoke all on function public.check_catalog_duplicates(uuid, uuid) from public;
-revoke all on function public.check_catalog_duplicates(uuid, uuid, uuid) from public;
-grant execute on function public.check_catalog_duplicates(uuid, uuid, uuid) to authenticated;
+revoke all on function public.check_catalog_duplicates(text, uuid, uuid) from public;
+grant execute on function public.check_catalog_duplicates(text, uuid, uuid) to authenticated;
 
 -- RPC: Admin create catalog item
 create or replace function public.admin_create_catalog_item(
@@ -708,7 +707,6 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_create_catalog_item(text, text, text, integer, text, text, text) from public;
 revoke all on function public.admin_create_catalog_item(text, uuid, uuid, text, integer, text, text, text) from public;
 grant execute on function public.admin_create_catalog_item(text, uuid, uuid, text, integer, text, text, text) to authenticated;
 
@@ -753,7 +751,6 @@ as $$
   limit p_limit;
 $$;
 
-revoke all on function public.admin_list_catalog_items(text, text, integer) from public;
 revoke all on function public.admin_list_catalog_items(uuid, text, integer) from public;
 grant execute on function public.admin_list_catalog_items(uuid, text, integer) to authenticated;
 
