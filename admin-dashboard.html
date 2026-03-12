@@ -747,7 +747,7 @@
           <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2a3 3 0 110 6 3 3 0 010-6zm-5 11a5 5 0 1110 0v1H3z"/></svg>
           Users
         </a>
-        <a class="nav-item" href="#">
+        <a class="nav-item" href="/admin-catalog.html">
           <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>
           Catalog
         </a>
@@ -828,7 +828,7 @@
             <button class="action-btn admin-only" type="button">Create Store</button>
             <button class="action-btn admin-only" id="create-user-btn" type="button">Create User</button>
             <button class="action-btn" id="reset-password-btn" type="button">Reset User Password</button>
-            <button class="action-btn admin-only" type="button">Add Catalog Item</button>
+            <button class="action-btn admin-only" id="go-catalog-page-btn" type="button">Add Catalog Item</button>
             <button class="action-btn" type="button">View System Logs</button>
           </div>
           <div class="store-ops-note">
@@ -1968,10 +1968,7 @@
 
     // Open catalog modal
     function openCatalogModal() {
-      catalogStatus.textContent = "";
-      catalogModal.classList.add("open");
-      loadCatalogItems();
-      loadCatalogItemsForVariant();
+      window.location.href = "/admin-catalog.html";
     }
 
     // Close catalog modal
@@ -2096,18 +2093,14 @@
       }, 1000);
     });
 
-    // Add Catalog nav item click handler
-    var navItems = document.querySelectorAll(".nav-item");
-    navItems.forEach(function (item, idx) {
-      if (idx === 3) {
-        item.addEventListener("click", function (e) {
-          e.preventDefault();
-          navItems.forEach(function (ni) { ni.classList.remove("active"); });
-          item.classList.add("active");
-          openCatalogModal();
-        });
-      }
-    });
+    // Catalog nav uses direct link href to navigate to the dedicated page.
+
+    var goCatalogPageBtn = document.getElementById("go-catalog-page-btn");
+    if (goCatalogPageBtn) {
+      goCatalogPageBtn.addEventListener("click", function () {
+        window.location.href = "/admin-catalog.html";
+      });
+    }
 
     async function verifyServerUser() {
       var sessionResult = await supabase.auth.getSession();
