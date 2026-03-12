@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Management - CollectorsHub Retail</title>
+  <style>
+    :root {
+      --bg: #070d18;
+      --panel: #121c30;
+      --panel-2: #15233a;
+      --border: #233451;
+      --text: #e7eefb;
+      --text-soft: #9fb0cf;
+      --accent: #33c3ff;
+      --ok: #3ed090;
+      --danger: #ff6e81;
+      --warn: #f7b955;
+      --shadow: 0 14px 30px rgba(2, 8, 20, 0.45);
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Sora", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(700px 400px at 90% -20%, rgba(51, 195, 255, 0.16), transparent 60%),
+        radial-gradient(600px 350px at -10% 100%, rgba(45, 224, 196, 0.12), transparent 60%),
+        linear-gradient(135deg, #060b14 0%, #0a1424 50%, #0c1a2f 100%);
+      min-height: 100vh;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(10, 18, 33, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .brand {
+      padding: 10px 10px 14px;
+      border-bottom: 1px solid rgba(159, 176, 207, 0.15);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .brand-sub {
+      margin: 6px 0 0;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      color: var(--text-soft);
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      font-size: 0.9rem;
+    }
+
+    .nav-item:hover {
+      background: rgba(51, 195, 255, 0.09);
+      border-color: rgba(51, 195, 255, 0.26);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: rgba(51, 195, 255, 0.14);
+      border-color: rgba(51, 195, 255, 0.36);
+      color: #dff6ff;
+      box-shadow: inset 0 0 0 1px rgba(51, 195, 255, 0.12);
+    }
+
+    .nav-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 76px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 16, 30, 0.78);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .platform-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .admin-badge {
+      background: rgba(45, 224, 196, 0.16);
+      color: #86ffe8;
+      border: 1px solid rgba(45, 224, 196, 0.44);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: 1px solid rgba(51, 195, 255, 0.35);
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(51, 195, 255, 0.1);
+      border-color: rgba(51, 195, 255, 0.55);
+    }
+
+    .main {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .section {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(18, 28, 48, 0.55);
+      padding: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      gap: 14px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 650;
+    }
+
+    .section-sub {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: var(--text-soft);
+    }
+
+    .btn {
+      background: none;
+      border: 1px solid rgba(51, 195, 255, 0.44);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 140ms ease, background 140ms ease;
+    }
+
+    .btn:hover {
+      border-color: rgba(51, 195, 255, 0.55);
+      background: var(--panel-2);
+    }
+
+    .btn.danger {
+      border-color: rgba(255, 110, 129, 0.44);
+      color: #ff6e81;
+    }
+
+    .btn.danger:hover {
+      border-color: rgba(255, 110, 129, 0.65);
+      background: rgba(255, 110, 129, 0.08);
+    }
+
+    .user-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin-top: 12px;
+    }
+
+    .user-table thead {
+      background: rgba(51, 195, 255, 0.08);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .user-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-weight: 600;
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.01em;
+    }
+
+    .user-table tbody tr {
+      border-bottom: 1px solid rgba(35, 52, 81, 0.5);
+      transition: background 100ms ease;
+    }
+
+    .user-table tbody tr:hover {
+      background: rgba(51, 195, 255, 0.06);
+    }
+
+    .user-table td {
+      padding: 10px 12px;
+      color: var(--text);
+    }
+
+    .user-table .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(51, 195, 255, 0.12);
+      color: #86ffe8;
+      border: 1px solid rgba(51, 195, 255, 0.25);
+      width: fit-content;
+    }
+
+    .user-table .status-active {
+      color: #3ed090;
+      background: rgba(62, 208, 144, 0.15);
+      border-color: rgba(62, 208, 144, 0.4);
+    }
+
+    .user-table .status-inactive {
+      color: #ffc6c6;
+      background: rgba(255, 110, 129, 0.14);
+      border-color: rgba(255, 110, 129, 0.38);
+    }
+
+    .user-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .user-actions button {
+      background: none;
+      border: 1px solid rgba(51, 195, 255, 0.35);
+      color: var(--text-soft);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 120ms ease;
+      white-space: nowrap;
+    }
+
+    .user-actions button:hover {
+      background: rgba(51, 195, 255, 0.1);
+      border-color: rgba(51, 195, 255, 0.55);
+      color: var(--text);
+    }
+
+    .user-actions .delete-btn {
+      border-color: rgba(255, 110, 129, 0.35);
+      color: var(--text-soft);
+    }
+
+    .user-actions .delete-btn:hover {
+      background: rgba(255, 110, 129, 0.1);
+      border-color: rgba(255, 110, 129, 0.55);
+      color: #ff6e81;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    .field-half {
+      grid-column: span 2;
+    }
+
+    .field label {
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid rgba(56, 89, 136, 0.7);
+      background: #0e1a2e;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: rgba(51, 195, 255, 0.65);
+      box-shadow: 0 0 0 3px rgba(51, 195, 255, 0.14);
+    }
+
+    .field-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-soft);
+      font-size: 0.85rem;
+    }
+
+    .form-status {
+      min-height: 18px;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      margin-top: 10px;
+    }
+
+    .form-status.success {
+      color: #3ed090;
+    }
+
+    .form-status.error {
+      color: #ff6e81;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      color: var(--text-soft);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-bottom: 2px solid transparent;
+      transition: all 120ms ease;
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .empty {
+      color: var(--text-soft);
+      font-size: 0.9rem;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-soft);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+      .main { padding: 14px; }
+      .section { padding: 14px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field-half { grid-column: auto; }
+      .user-table { font-size: 0.75rem; }
+      .user-table th, .user-table td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1 class="brand-title">CollectorsHub Retail</h1>
+        <p class="brand-sub">Platform Administration</p>
+      </div>
+
+      <nav class="nav" aria-label="Admin navigation">
+        <a class="nav-item" href="/admin-dashboard.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-item" href="/admin-stores.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>
+          Stores
+        </a>
+        <a class="nav-item active" href="/admin-users.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2C1.45 2 1 2.45 1 3s.45 1 1 1 1-.45 1-1-.45-1-1-1zm3 1c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm3 7c-1.1 0-2 .9-2 2v1h4v-1c0-1.1-.9-2-2-2zm9-1h-1V7c0-.55-.45-1-1-1h-2v2h-2V6H8c-.55 0-1 .45-1 1v2H5v2h2v1c0 1.1.9 2 2 2h7c1.1 0 2-.9 2-2v-3c0-1.1-.9-2-2-2z"/></svg>
+          Users
+        </a>
+        <a class="nav-item" href="/admin-catalog.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>
+          Catalog
+        </a>
+      </nav>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <div>
+          <h2 class="platform-title">User Management</h2>
+          <span class="admin-badge">Server Admin</span>
+        </div>
+        <button class="icon-btn" id="sign-out" type="button">Sign Out</button>
+      </header>
+
+      <main class="main">
+        <div class="tabs">
+          <button class="tab active" data-tab="server-users">Server Users</button>
+          <button class="tab" data-tab="retail-users">Retail Users</button>
+        </div>
+
+        <!-- SERVER USERS TAB -->
+        <div id="server-users-tab" class="tab-content">
+          <section class="section">
+            <div class="section-head">
+              <div>
+                <h2>Server Users</h2>
+                <p class="section-sub">Platform administrators and support staff.</p>
+              </div>
+              <button class="btn" id="refresh-server-users-btn" type="button">Refresh</button>
+            </div>
+            <table class="user-table" id="server-users-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" class="empty">Loading...</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <div>
+                <h2>Create Server User</h2>
+                <p class="section-sub">Add a new admin or support staff member.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field field-full">
+                <label for="server-username">Username *</label>
+                <input id="server-username" type="text" placeholder="e.g., JohnDoe42" />
+              </div>
+              <div class="field field-full">
+                <label for="server-email">Email *</label>
+                <input id="server-email" type="email" placeholder="john@example.com" />
+              </div>
+              <div class="field">
+                <label for="server-role">Role *</label>
+                <select id="server-role">
+                  <option value="server_admin">Server Admin</option>
+                  <option value="server_ops">Server Ops</option>
+                  <option value="support">Support</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field-check">
+                  <input id="server-active" type="checkbox" checked />
+                  <span>Is Active</span>
+                </label>
+              </div>
+            </div>
+
+            <button class="btn" id="create-server-user-btn" type="button">Create Server User</button>
+            <p class="form-status" id="server-form-status"></p>
+          </section>
+        </div>
+
+        <!-- RETAIL USERS TAB -->
+        <div id="retail-users-tab" class="tab-content" style="display: none;">
+          <section class="section">
+            <div class="section-head">
+              <div>
+                <h2>Retail Users</h2>
+                <p class="section-sub">Store managers and staff members.</p>
+              </div>
+              <button class="btn" id="refresh-retail-users-btn" type="button">Refresh</button>
+            </div>
+            <table class="user-table" id="retail-users-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Store</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" class="empty">Loading...</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <div>
+                <h2>Create Retail User</h2>
+                <p class="section-sub">Add a new store manager or staff member.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field field-full">
+                <label for="retail-username">Username *</label>
+                <input id="retail-username" type="text" placeholder="e.g., JaneSmith99" />
+              </div>
+              <div class="field field-full">
+                <label for="retail-email">Email *</label>
+                <input id="retail-email" type="email" placeholder="jane@example.com" />
+              </div>
+              <div class="field">
+                <label for="retail-role">Role *</label>
+                <select id="retail-role">
+                  <option value="staff">Staff</option>
+                  <option value="manager">Manager</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </div>
+              <div class="field field-half">
+                <label for="retail-stores">Assign to Store(s) *</label>
+                <select id="retail-stores" multiple style="min-height: 80px;">
+                  <option>Loading stores...</option>
+                </select>
+                <p style="margin: 4px 0 0; font-size: 0.75rem; color: var(--text-soft);">Hold Ctrl/Cmd to select multiple</p>
+              </div>
+              <div class="field">
+                <label class="field-check">
+                  <input id="retail-active" type="checkbox" checked />
+                  <span>Is Active</span>
+                </label>
+              </div>
+            </div>
+
+            <button class="btn" id="create-retail-user-btn" type="button">Create Retail User</button>
+            <p class="form-status" id="retail-form-status"></p>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal" id="edit-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="edit-modal-title">Edit User</h3>
+        <button class="modal-close" id="edit-modal-close">✕</button>
+      </div>
+      <div id="edit-modal-body"></div>
+    </div>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+    var config = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var signOutBtn = document.getElementById("sign-out");
+    var editModal = document.getElementById("edit-modal");
+    var editModalClose = document.getElementById("edit-modal-close");
+    var tabs = document.querySelectorAll(".tab");
+
+    var currentUserRole = null;
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      var dt = new Date(value);
+      if (Number.isNaN(dt.getTime())) return "-";
+      return dt.toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    }
+
+    async function verifyServerUser() {
+      var sessionResult = await supabase.auth.getSession();
+      var session = sessionResult && sessionResult.data && sessionResult.data.session;
+      if (!session) {
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      var role = null;
+      var serverResult = await supabase
+        .from("server_users")
+        .select("role")
+        .eq("auth_user_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!serverResult.error && serverResult.data) {
+        role = serverResult.data.role;
+      }
+
+      if (!role && localStorage.getItem(USER_ROLE_KEY) === "server_admin") {
+        role = "server_admin";
+      }
+
+      var SERVER_ROLES = ["server_admin", "server_ops", "support"];
+      if (!role || SERVER_ROLES.indexOf(role) < 0) {
+        await supabase.auth.signOut();
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      return { role: role };
+    }
+
+    async function loadServerUsers() {
+      var tbody = document.querySelector("#server-users-table tbody");
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading...</td></tr>';
+
+      var result = await supabase
+        .from("server_users")
+        .select("id, username, email, role, is_active, created_at")
+        .order("created_at", { ascending: false });
+
+      if (result.error) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading users: ' + result.error.message + '</td></tr>';
+        return;
+      }
+
+      var users = result.data || [];
+
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No server users found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = users.map(function(user) {
+        var statusClass = user.is_active ? "status-active" : "status-inactive";
+        var statusText = user.is_active ? "Active" : "Inactive";
+        return '<tr>' +
+          '<td>' + escapeHtml(user.username) + '</td>' +
+          '<td>' + escapeHtml(user.email) + '</td>' +
+          '<td><span class="role-badge">' + escapeHtml(user.role) + '</span></td>' +
+          '<td><span class="role-badge ' + statusClass + '">' + statusText + '</span></td>' +
+          '<td>' + formatDate(user.created_at) + '</td>' +
+          '<td>' +
+            '<div class="user-actions">' +
+              '<button class="edit-user-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="server">Edit</button>' +
+              '<button class="delete-user-btn delete-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="server">Delete</button>' +
+            '</div>' +
+          '</td>' +
+          '</tr>';
+      }).join("");
+
+      attachServerUserActions();
+    }
+
+    async function loadRetailUsers() {
+      var tbody = document.querySelector("#retail-users-table tbody");
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading...</td></tr>';
+
+      var result = await supabase
+        .from("retail_users")
+        .select("id, username, store_code, email, role, is_active, created_at")
+        .order("created_at", { ascending: false });
+
+      if (result.error) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading users: ' + result.error.message + '</td></tr>';
+        return;
+      }
+
+      var users = result.data || [];
+
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No retail users found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = users.map(function(user) {
+        var statusClass = user.is_active ? "status-active" : "status-inactive";
+        var statusText = user.is_active ? "Active" : "Inactive";
+        return '<tr>' +
+          '<td>' + escapeHtml(user.username) + '</td>' +
+          '<td><span style="background: rgba(51,195,255,0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">' + escapeHtml(user.store_code) + '</span></td>' +
+          '<td>' + escapeHtml(user.email) + '</td>' +
+          '<td><span class="role-badge">' + escapeHtml(user.role) + '</span></td>' +
+          '<td><span class="role-badge ' + statusClass + '">' + statusText + '</span></td>' +
+          '<td>' +
+            '<div class="user-actions">' +
+              '<button class="edit-user-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="retail">Edit</button>' +
+              '<button class="delete-user-btn delete-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="retail">Delete</button>' +
+            '</div>' +
+          '</td>' +
+          '</tr>';
+      }).join("");
+
+      attachRetailUserActions();
+    }
+
+    async function loadStoresForRetailForm() {
+      var select = document.getElementById("retail-stores");
+      var result = await supabase
+        .from("retail_stores")
+        .select("store_code, store_name")
+        .eq("is_active", true)
+        .order("store_name", { ascending: true });
+
+      if (result.error || !result.data) {
+        select.innerHTML = '<option disabled>Error loading stores</option>';
+        return;
+      }
+
+      select.innerHTML = result.data.map(function(store) {
+        return '<option value="' + escapeHtml(store.store_code) + '">' + escapeHtml(store.store_name) + ' (' + escapeHtml(store.store_code) + ')</option>';
+      }).join("");
+    }
+
+    function openEditModal(userId, userType) {
+      if (userType === "server") {
+        openEditServerUserModal(userId);
+      } else {
+        openEditRetailUserModal(userId);
+      }
+    }
+
+    async function openEditServerUserModal(userId) {
+      var result = await supabase
+        .from("server_users")
+        .select("username, email, role, is_active")
+        .eq("id", userId)
+        .single();
+
+      if (result.error || !result.data) {
+        alert("Error loading user: " + (result.error ? result.error.message : "Unknown error"));
+        return;
+      }
+
+      var user = result.data;
+      var body = document.getElementById("edit-modal-body");
+      var modalTitle = document.getElementById("edit-modal-title");
+      modalTitle.textContent = "Edit Server User: " + user.username;
+
+      body.innerHTML = '<div class="form-grid">' +
+        '<div class="field field-full"><label>Username (read-only)</label><input type="text" value="' + escapeHtml(user.username) + '" disabled /></div>' +
+        '<div class="field field-full"><label for="esu-email">Email</label><input id="esu-email" type="email" value="' + escapeHtml(user.email) + '" /></div>' +
+        '<div class="field"><label for="esu-role">Role</label>' +
+          '<select id="esu-role">' +
+            '<option value="server_admin" ' + (user.role === "server_admin" ? "selected" : "") + '>Server Admin</option>' +
+            '<option value="server_ops" ' + (user.role === "server_ops" ? "selected" : "") + '>Server Ops</option>' +
+            '<option value="support" ' + (user.role === "support" ? "selected" : "") + '>Support</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="field"><label class="field-check"><input id="esu-active" type="checkbox" ' + (user.is_active ? "checked" : "") + ' /><span>Is Active</span></label></div>' +
+        '<div class="field field-full" style="margin-top: 10px;"><button class="btn" id="esu-save-btn" type="button">Save Changes</button></div>' +
+        '<p class="form-status" id="esu-status"></p>' +
+        '</div>';
+
+      var saveBtn = document.getElementById("esu-save-btn");
+      saveBtn.addEventListener("click", function() {
+        updateServerUser(userId, body);
+      });
+
+      editModal.classList.add("open");
+    }
+
+    async function updateServerUser(userId, body) {
+      var email = document.getElementById("esu-email").value;
+      var role = document.getElementById("esu-role").value;
+      var isActive = document.getElementById("esu-active").checked;
+      var statusEl = document.getElementById("esu-status");
+
+      if (!email) {
+        statusEl.textContent = "Email is required";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Updating...";
+      statusEl.classList.remove("error", "success");
+
+      var updateResult = await supabase
+        .from("server_users")
+        .update({ email: email, role: role, is_active: isActive })
+        .eq("id", userId);
+
+      if (updateResult.error) {
+        statusEl.textContent = "Error: " + updateResult.error.message;
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "User updated successfully!";
+      statusEl.classList.add("success");
+      setTimeout(function() {
+        editModal.classList.remove("open");
+        loadServerUsers();
+      }, 800);
+    }
+
+    async function openEditRetailUserModal(userId) {
+      var result = await supabase
+        .from("retail_users")
+        .select("username, email, role, is_active, store_code")
+        .eq("id", userId)
+        .single();
+
+      if (result.error || !result.data) {
+        alert("Error loading user: " + (result.error ? result.error.message : "Unknown error"));
+        return;
+      }
+
+      var user = result.data;
+      var body = document.getElementById("edit-modal-body");
+      var modalTitle = document.getElementById("edit-modal-title");
+      modalTitle.textContent = "Edit Retail User: " + user.username;
+
+      body.innerHTML = '<div class="form-grid">' +
+        '<div class="field field-full"><label>Username (read-only)</label><input type="text" value="' + escapeHtml(user.username) + '" disabled /></div>' +
+        '<div class="field field-full"><label for="eru-email">Email</label><input id="eru-email" type="email" value="' + escapeHtml(user.email) + '" /></div>' +
+        '<div class="field"><label for="eru-role">Role</label>' +
+          '<select id="eru-role">' +
+            '<option value="staff" ' + (user.role === "staff" ? "selected" : "") + '>Staff</option>' +
+            '<option value="manager" ' + (user.role === "manager" ? "selected" : "") + '>Manager</option>' +
+            '<option value="owner" ' + (user.role === "owner" ? "selected" : "") + '>Owner</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="field"><label>Store (read-only)</label><input type="text" value="' + escapeHtml(user.store_code) + '" disabled /></div>' +
+        '<div class="field field-full"><label class="field-check"><input id="eru-active" type="checkbox" ' + (user.is_active ? "checked" : "") + ' /><span>Is Active</span></label></div>' +
+        '<div class="field field-full" style="margin-top: 10px;"><button class="btn" id="eru-save-btn" type="button">Save Changes</button></div>' +
+        '<p class="form-status" id="eru-status"></p>' +
+        '</div>';
+
+      var saveBtn = document.getElementById("eru-save-btn");
+      saveBtn.addEventListener("click", function() {
+        updateRetailUser(userId, body);
+      });
+
+      editModal.classList.add("open");
+    }
+
+    async function updateRetailUser(userId, body) {
+      var email = document.getElementById("eru-email").value;
+      var role = document.getElementById("eru-role").value;
+      var isActive = document.getElementById("eru-active").checked;
+      var statusEl = document.getElementById("eru-status");
+
+      if (!email) {
+        statusEl.textContent = "Email is required";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Updating...";
+      statusEl.classList.remove("error", "success");
+
+      var updateResult = await supabase
+        .from("retail_users")
+        .update({ email: email, role: role, is_active: isActive })
+        .eq("id", userId);
+
+      if (updateResult.error) {
+        statusEl.textContent = "Error: " + updateResult.error.message;
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "User updated successfully!";
+      statusEl.classList.add("success");
+      setTimeout(function() {
+        editModal.classList.remove("open");
+        loadRetailUsers();
+      }, 800);
+    }
+
+    async function deleteUser(userId, userType) {
+      if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+        return;
+      }
+
+      var table = userType === "server" ? "server_users" : "retail_users";
+      var result = await supabase
+        .from(table)
+        .delete()
+        .eq("id", userId);
+
+      if (result.error) {
+        alert("Error deleting user: " + result.error.message);
+        return;
+      }
+
+      if (userType === "server") {
+        loadServerUsers();
+      } else {
+        loadRetailUsers();
+      }
+    }
+
+    function attachServerUserActions() {
+      document.querySelectorAll("#server-users-table .edit-user-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          openEditModal(this.dataset.userId, this.dataset.userType);
+        });
+      });
+      document.querySelectorAll("#server-users-table .delete-user-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          deleteUser(this.dataset.userId, this.dataset.userType);
+        });
+      });
+    }
+
+    function attachRetailUserActions() {
+      document.querySelectorAll("#retail-users-table .edit-user-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          openEditModal(this.dataset.userId, this.dataset.userType);
+        });
+      });
+      document.querySelectorAll("#retail-users-table .delete-user-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          deleteUser(this.dataset.userId, this.dataset.userType);
+        });
+      });
+    }
+
+    // Tab switching
+    tabs.forEach(function(tab) {
+      tab.addEventListener("click", function() {
+        var tabName = this.dataset.tab;
+        document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+        document.querySelectorAll(".tab-content").forEach(function(c) { c.style.display = "none"; });
+        this.classList.add("active");
+        document.getElementById(tabName + "-tab").style.display = "block";
+        if (tabName === "server-users") {
+          loadServerUsers();
+        } else {
+          loadRetailUsers();
+        }
+      });
+    });
+
+    // Sign out
+    signOutBtn.addEventListener("click", async function() {
+      localStorage.removeItem(USER_ROLE_KEY);
+      await supabase.auth.signOut();
+      window.location.href = "/index.html";
+    });
+
+    // Modal close
+    editModalClose.addEventListener("click", function() {
+      editModal.classList.remove("open");
+    });
+
+    editModal.addEventListener("click", function(e) {
+      if (e.target === editModal) {
+        editModal.classList.remove("open");
+      }
+    });
+
+    // Create server user
+    document.getElementById("create-server-user-btn").addEventListener("click", async function() {
+      var username = document.getElementById("server-username").value;
+      var email = document.getElementById("server-email").value;
+      var role = document.getElementById("server-role").value;
+      var isActive = document.getElementById("server-active").checked;
+      var statusEl = document.getElementById("server-form-status");
+
+      if (!username || !email) {
+        statusEl.textContent = "Username and email are required";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Creating user...";
+      statusEl.classList.remove("error", "success");
+
+      var result = await supabase.rpc("admin_create_server_user", {
+        p_username: username,
+        p_email: email,
+        p_role: role,
+        p_is_active: isActive
+      });
+
+      if (result.error) {
+        statusEl.textContent = "Error: " + result.error.message;
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Server user created successfully!";
+      statusEl.classList.add("success");
+      document.getElementById("server-username").value = "";
+      document.getElementById("server-email").value = "";
+      document.getElementById("server-role").value = "server_admin";
+      document.getElementById("server-active").checked = true;
+      setTimeout(loadServerUsers, 800);
+    });
+
+    // Create retail user
+    document.getElementById("create-retail-user-btn").addEventListener("click", async function() {
+      var username = document.getElementById("retail-username").value;
+      var email = document.getElementById("retail-email").value;
+      var role = document.getElementById("retail-role").value;
+      var storeSelect = document.getElementById("retail-stores");
+      var isActive = document.getElementById("retail-active").checked;
+      var statusEl = document.getElementById("retail-form-status");
+
+      if (!username || !email) {
+        statusEl.textContent = "Username and email are required";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      var storeCodes = Array.from(storeSelect.selectedOptions).map(function(o) { return o.value; });
+      if (storeCodes.length === 0) {
+        statusEl.textContent = "Please select at least one store";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Creating user...";
+      statusEl.classList.remove("error", "success");
+
+      var result = await supabase.rpc("admin_create_retail_user", {
+        p_username: username,
+        p_email: email,
+        p_role: role,
+        p_store_codes: storeCodes,
+        p_is_active: isActive
+      });
+
+      if (result.error) {
+        statusEl.textContent = "Error: " + result.error.message;
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Retail user created successfully!";
+      statusEl.classList.add("success");
+      document.getElementById("retail-username").value = "";
+      document.getElementById("retail-email").value = "";
+      document.getElementById("retail-role").value = "staff";
+      storeSelect.value = "";
+      document.getElementById("retail-active").checked = true;
+      setTimeout(loadRetailUsers, 800);
+    });
+
+    // Refresh buttons
+    document.getElementById("refresh-server-users-btn").addEventListener("click", loadServerUsers);
+    document.getElementById("refresh-retail-users-btn").addEventListener("click", loadRetailUsers);
+
+    // Init
+    async function init() {
+      var userInfo = await verifyServerUser();
+      if (!userInfo) return;
+
+      currentUserRole = userInfo.role;
+      await loadServerUsers();
+      await loadStoresForRetailForm();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -491,6 +491,124 @@ $$;
 revoke all on function public.admin_create_retail_user(text, text, public.retail_user_role, text[], boolean) from public;
 grant execute on function public.admin_create_retail_user(text, text, public.retail_user_role, text[], boolean) to authenticated;
 
+-- Create or update server user.
+create or replace function public.admin_create_server_user(
+  p_username text,
+  p_email text,
+  p_role text default 'server_ops',
+  p_is_active boolean default true
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_caller_id uuid := auth.uid();
+  v_caller_role text;
+  v_auth_user_id uuid;
+  v_instance_id uuid;
+  v_auth_created boolean := false;
+  v_temp_password text;
+  v_existing_id uuid;
+  v_result jsonb;
+begin
+  if v_caller_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select role
+  into v_caller_role
+  from public.server_users su
+  where su.auth_user_id = v_caller_id
+    and su.is_active = true
+  limit 1;
+
+  if v_caller_role is distinct from 'server_admin' then
+    raise exception 'Permission denied: server_admin role required';
+  end if;
+
+  if p_role not in ('server_admin', 'server_ops', 'support') then
+    raise exception 'Invalid role: must be server_admin, server_ops, or support';
+  end if;
+
+  if btrim(p_username) = '' or btrim(p_email) = '' then
+    raise exception 'Username and email are required';
+  end if;
+
+  select au.id
+  into v_auth_user_id
+  from auth.users au
+  where lower(au.email) = lower(btrim(p_email))
+  limit 1;
+
+  if v_auth_user_id is null then
+    select au.instance_id
+    into v_instance_id
+    from auth.users au
+    limit 1;
+
+    if v_instance_id is null then
+      v_instance_id := '00000000-0000-0000-0000-000000000000'::uuid;
+    end if;
+
+    v_temp_password := 'Tmp!' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 10);
+
+    insert into auth.users (
+      instance_id, id, aud, role, email, encrypted_password,
+      email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+      created_at, updated_at
+    )
+    values (
+      v_instance_id, gen_random_uuid(), 'authenticated', 'authenticated',
+      lower(btrim(p_email)), crypt(v_temp_password, gen_salt('bf')),
+      now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+      now(), now()
+    )
+    returning id into v_auth_user_id;
+    v_auth_created := true;
+  end if;
+
+  select su.id
+  into v_existing_id
+  from public.server_users su
+  where su.username_lower = lower(btrim(p_username))
+  limit 1;
+
+  if v_existing_id is not null then
+    update public.server_users su
+    set
+      email = lower(btrim(p_email)),
+      role = p_role::public.server_user_role,
+      is_active = p_is_active,
+      auth_user_id = coalesce(v_auth_user_id, su.auth_user_id),
+      updated_at = now()
+    where su.id = v_existing_id;
+  else
+    insert into public.server_users (username, email, role, is_active, auth_user_id)
+    values (
+      btrim(p_username),
+      lower(btrim(p_email)),
+      p_role::public.server_user_role,
+      p_is_active,
+      v_auth_user_id
+    );
+  end if;
+
+  v_result := jsonb_build_object(
+    'ok', true,
+    'auth_user_linked', v_auth_user_id is not null,
+    'auth_user_created', v_auth_created,
+    'temporary_password', case when v_auth_created then v_temp_password else null end
+  );
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.admin_create_server_user(text, text, text, boolean) from public;
+grant execute on function public.admin_create_server_user(text, text, text, boolean) to authenticated;
+
 -- Allow authenticated users to verify their own retail_users row for role checks
 drop policy if exists "Authenticated users can read their own retail_user row" on public.retail_users;
 create policy "Authenticated users can read their own retail_user row"
