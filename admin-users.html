@@ -540,6 +540,7 @@
         <div class="tabs">
           <button class="tab active" data-tab="server-users">Server Users</button>
           <button class="tab" data-tab="retail-users">Retail Users</button>
+          <button class="tab" data-tab="client-users">Client Users</button>
         </div>
 
         <!-- SERVER USERS TAB -->
@@ -550,7 +551,10 @@
                 <h2>Server Users</h2>
                 <p class="section-sub">Platform administrators and support staff.</p>
               </div>
-              <button class="btn" id="refresh-server-users-btn" type="button">Refresh</button>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input id="server-search" type="text" placeholder="Search users..." style="border: 1px solid rgba(56, 89, 136, 0.7); background: #0e1a2e; color: var(--text); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; width: 200px;" />
+                <button class="btn" id="refresh-server-users-btn" type="button">Refresh</button>
+              </div>
             </div>
             <table class="user-table" id="server-users-table">
               <thead>
@@ -615,7 +619,10 @@
                 <h2>Retail Users</h2>
                 <p class="section-sub">Store managers and staff members.</p>
               </div>
-              <button class="btn" id="refresh-retail-users-btn" type="button">Refresh</button>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input id="retail-search" type="text" placeholder="Search users..." style="border: 1px solid rgba(56, 89, 136, 0.7); background: #0e1a2e; color: var(--text); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; width: 200px;" />
+                <button class="btn" id="refresh-retail-users-btn" type="button">Refresh</button>
+              </div>
             </div>
             <table class="user-table" id="retail-users-table">
               <thead>
@@ -676,6 +683,78 @@
 
             <button class="btn" id="create-retail-user-btn" type="button">Create Retail User</button>
             <p class="form-status" id="retail-form-status"></p>
+          </section>
+        </div>
+
+        <!-- CLIENT USERS TAB -->
+        <div id="client-users-tab" class="tab-content" style="display: none;">
+          <section class="section">
+            <div class="section-head">
+              <div>
+                <h2>Client Users</h2>
+                <p class="section-sub">External client account holders.</p>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input id="client-search" type="text" placeholder="Search users..." style="border: 1px solid rgba(56, 89, 136, 0.7); background: #0e1a2e; color: var(--text); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; width: 200px;" />
+                <button class="btn" id="refresh-client-users-btn" type="button">Refresh</button>
+              </div>
+            </div>
+            <table class="user-table" id="client-users-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Client</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" class="empty">Loading...</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="section">
+            <div class="section-head">
+              <div>
+                <h2>Create Client User</h2>
+                <p class="section-sub">Add a new client account holder.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field field-full">
+                <label for="client-username">Username *</label>
+                <input id="client-username" type="text" placeholder="e.g., ClientUser88" />
+              </div>
+              <div class="field field-full">
+                <label for="client-email">Email *</label>
+                <input id="client-email" type="email" placeholder="client@example.com" />
+              </div>
+              <div class="field">
+                <label for="client-role">Role *</label>
+                <select id="client-role">
+                  <option value="client_staff">Client Staff</option>
+                  <option value="client_manager">Client Manager</option>
+                  <option value="client_admin">Client Admin</option>
+                </select>
+              </div>
+              <div class="field field-half">
+                <label for="client-code">Client Code *</label>
+                <input id="client-code" type="text" placeholder="e.g., CLIENT01" />
+              </div>
+              <div class="field">
+                <label class="field-check">
+                  <input id="client-active" type="checkbox" checked />
+                  <span>Is Active</span>
+                </label>
+              </div>
+            </div>
+
+            <button class="btn" id="create-client-user-btn" type="button">Create Client User</button>
+            <p class="form-status" id="client-form-status"></p>
           </section>
         </div>
       </main>
@@ -772,14 +851,14 @@
         return;
       }
 
-      var users = result.data || [];
+      allServerUsers = result.data || [];
 
-      if (users.length === 0) {
+      if (allServerUsers.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">No server users found.</td></tr>';
         return;
       }
 
-      tbody.innerHTML = users.map(function(user) {
+      tbody.innerHTML = allServerUsers.map(function(user) {
         var statusClass = user.is_active ? "status-active" : "status-inactive";
         var statusText = user.is_active ? "Active" : "Inactive";
         return '<tr>' +
@@ -814,14 +893,14 @@
         return;
       }
 
-      var users = result.data || [];
+      allRetailUsers = result.data || [];
 
-      if (users.length === 0) {
+      if (allRetailUsers.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">No retail users found.</td></tr>';
         return;
       }
 
-      tbody.innerHTML = users.map(function(user) {
+      tbody.innerHTML = allRetailUsers.map(function(user) {
         var statusClass = user.is_active ? "status-active" : "status-inactive";
         var statusText = user.is_active ? "Active" : "Inactive";
         return '<tr>' +
@@ -860,11 +939,55 @@
       }).join("");
     }
 
+    async function loadClientUsers() {
+      var tbody = document.querySelector("#client-users-table tbody");
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading...</td></tr>';
+
+      var result = await supabase
+        .from("client_users")
+        .select("id, username, client_code, email, role, is_active, created_at")
+        .order("created_at", { ascending: false });
+
+      if (result.error) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading users: ' + result.error.message + '</td></tr>';
+        return;
+      }
+
+      allClientUsers = result.data || [];
+
+      if (allClientUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No client users found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = allClientUsers.map(function(user) {
+        var statusClass = user.is_active ? "status-active" : "status-inactive";
+        var statusText = user.is_active ? "Active" : "Inactive";
+        return '<tr>' +
+          '<td>' + escapeHtml(user.username) + '</td>' +
+          '<td><span style="background: rgba(45,224,196,0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">' + escapeHtml(user.client_code) + '</span></td>' +
+          '<td>' + escapeHtml(user.email) + '</td>' +
+          '<td><span class="role-badge">' + escapeHtml(user.role) + '</span></td>' +
+          '<td><span class="role-badge ' + statusClass + '">' + statusText + '</span></td>' +
+          '<td>' +
+            '<div class="user-actions">' +
+              '<button class="edit-user-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="client">Edit</button>' +
+              '<button class="delete-user-btn delete-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="client">Delete</button>' +
+            '</div>' +
+          '</td>' +
+          '</tr>';
+      }).join("");
+
+      attachClientUserActions();
+    }
+
     function openEditModal(userId, userType) {
       if (userType === "server") {
         openEditServerUserModal(userId);
-      } else {
+      } else if (userType === "retail") {
         openEditRetailUserModal(userId);
+      } else if (userType === "client") {
+        openEditClientUserModal(userId);
       }
     }
 
@@ -1017,6 +1140,81 @@
       }, 800);
     }
 
+    async function openEditClientUserModal(userId) {
+      var result = await supabase
+        .from("client_users")
+        .select("username, email, role, is_active, client_code")
+        .eq("id", userId)
+        .single();
+
+      if (result.error || !result.data) {
+        alert("Error loading user: " + (result.error ? result.error.message : "Unknown error"));
+        return;
+      }
+
+      var user = result.data;
+      var body = document.getElementById("edit-modal-body");
+      var modalTitle = document.getElementById("edit-modal-title");
+      modalTitle.textContent = "Edit Client User: " + user.username;
+
+      body.innerHTML = '<div class="form-grid">' +
+        '<div class="field field-full"><label>Username (read-only)</label><input type="text" value="' + escapeHtml(user.username) + '" disabled /></div>' +
+        '<div class="field field-full"><label for="ecu-email">Email</label><input id="ecu-email" type="email" value="' + escapeHtml(user.email) + '" /></div>' +
+        '<div class="field"><label for="ecu-role">Role</label>' +
+          '<select id="ecu-role">' +
+            '<option value="client_staff" ' + (user.role === "client_staff" ? "selected" : "") + '>Client Staff</option>' +
+            '<option value="client_manager" ' + (user.role === "client_manager" ? "selected" : "") + '>Client Manager</option>' +
+            '<option value="client_admin" ' + (user.role === "client_admin" ? "selected" : "") + '>Client Admin</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="field"><label>Client Code (read-only)</label><input type="text" value="' + escapeHtml(user.client_code) + '" disabled /></div>' +
+        '<div class="field field-full"><label class="field-check"><input id="ecu-active" type="checkbox" ' + (user.is_active ? "checked" : "") + ' /><span>Is Active</span></label></div>' +
+        '<div class="field field-full" style="margin-top: 10px;"><button class="btn" id="ecu-save-btn" type="button">Save Changes</button></div>' +
+        '<p class="form-status" id="ecu-status"></p>' +
+        '</div>';
+
+      var saveBtn = document.getElementById("ecu-save-btn");
+      saveBtn.addEventListener("click", function() {
+        updateClientUser(userId, body);
+      });
+
+      editModal.classList.add("open");
+    }
+
+    async function updateClientUser(userId, body) {
+      var email = document.getElementById("ecu-email").value;
+      var role = document.getElementById("ecu-role").value;
+      var isActive = document.getElementById("ecu-active").checked;
+      var statusEl = document.getElementById("ecu-status");
+
+      if (!email) {
+        statusEl.textContent = "Email is required";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Updating...";
+      statusEl.classList.remove("error", "success");
+
+      var updateResult = await supabase
+        .from("client_users")
+        .update({ email: email, role: role, is_active: isActive })
+        .eq("id", userId);
+
+      if (updateResult.error) {
+        statusEl.textContent = "Error: " + updateResult.error.message;
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "User updated successfully!";
+      statusEl.classList.add("success");
+      setTimeout(function() {
+        editModal.classList.remove("open");
+        loadClientUsers();
+      }, 800);
+    }
+
     async function deleteUser(userId, userType) {
       if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
         return;
@@ -1035,8 +1233,10 @@
 
       if (userType === "server") {
         loadServerUsers();
-      } else {
+      } else if (userType === "retail") {
         loadRetailUsers();
+      } else if (userType === "client") {
+        loadClientUsers();
       }
     }
 
@@ -1066,6 +1266,104 @@
       });
     }
 
+    function attachClientUserActions() {
+      document.querySelectorAll("#client-users-table .edit-user-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          openEditModal(this.dataset.userId, this.dataset.userType);
+        });
+      });
+      document.querySelectorAll("#client-users-table .delete-user-btn").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          deleteUser(this.dataset.userId, this.dataset.userType);
+        });
+      });
+    }
+
+    // Search filtering
+    var allServerUsers = [];
+    var allRetailUsers = [];
+    var allClientUsers = [];
+
+    function filterTable(tableId, searchTerm, allUsers) {
+      var tbody = document.querySelector("#" + tableId + " tbody");
+      if (allUsers.length === 0) {
+        return;
+      }
+
+      searchTerm = searchTerm.toLowerCase();
+      var filtered = allUsers.filter(function(user) {
+        var username = (user.username || "").toLowerCase();
+        var email = (user.email || "").toLowerCase();
+        var store = (user.store_code || "").toLowerCase();
+        var clientCode = (user.client_code || "").toLowerCase();
+        return username.includes(searchTerm) || email.includes(searchTerm) || store.includes(searchTerm) || clientCode.includes(searchTerm);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No users match your search.</td></tr>';
+        return;
+      }
+
+      if (tableId === "server-users-table") {
+        tbody.innerHTML = filtered.map(function(user) {
+          var statusClass = user.is_active ? "status-active" : "status-inactive";
+          var statusText = user.is_active ? "Active" : "Inactive";
+          return '<tr>' +
+            '<td>' + escapeHtml(user.username) + '</td>' +
+            '<td>' + escapeHtml(user.email) + '</td>' +
+            '<td><span class="role-badge">' + escapeHtml(user.role) + '</span></td>' +
+            '<td><span class="role-badge ' + statusClass + '">' + statusText + '</span></td>' +
+            '<td>' + formatDate(user.created_at) + '</td>' +
+            '<td>' +
+              '<div class="user-actions">' +
+                '<button class="edit-user-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="server">Edit</button>' +
+                '<button class="delete-user-btn delete-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="server">Delete</button>' +
+              '</div>' +
+            '</td>' +
+            '</tr>';
+        }).join("");
+        attachServerUserActions();
+      } else if (tableId === "retail-users-table") {
+        tbody.innerHTML = filtered.map(function(user) {
+          var statusClass = user.is_active ? "status-active" : "status-inactive";
+          var statusText = user.is_active ? "Active" : "Inactive";
+          return '<tr>' +
+            '<td>' + escapeHtml(user.username) + '</td>' +
+            '<td><span style="background: rgba(51,195,255,0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">' + escapeHtml(user.store_code) + '</span></td>' +
+            '<td>' + escapeHtml(user.email) + '</td>' +
+            '<td><span class="role-badge">' + escapeHtml(user.role) + '</span></td>' +
+            '<td><span class="role-badge ' + statusClass + '">' + statusText + '</span></td>' +
+            '<td>' +
+              '<div class="user-actions">' +
+                '<button class="edit-user-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="retail">Edit</button>' +
+                '<button class="delete-user-btn delete-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="retail">Delete</button>' +
+              '</div>' +
+            '</td>' +
+            '</tr>';
+        }).join("");
+        attachRetailUserActions();
+      } else if (tableId === "client-users-table") {
+        tbody.innerHTML = filtered.map(function(user) {
+          var statusClass = user.is_active ? "status-active" : "status-inactive";
+          var statusText = user.is_active ? "Active" : "Inactive";
+          return '<tr>' +
+            '<td>' + escapeHtml(user.username) + '</td>' +
+            '<td><span style="background: rgba(45,224,196,0.1); padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">' + escapeHtml(user.client_code) + '</span></td>' +
+            '<td>' + escapeHtml(user.email) + '</td>' +
+            '<td><span class="role-badge">' + escapeHtml(user.role) + '</span></td>' +
+            '<td><span class="role-badge ' + statusClass + '">' + statusText + '</span></td>' +
+            '<td>' +
+              '<div class="user-actions">' +
+                '<button class="edit-user-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="client">Edit</button>' +
+                '<button class="delete-user-btn delete-btn" data-user-id="' + escapeHtml(user.id) + '" data-user-type="client">Delete</button>' +
+              '</div>' +
+            '</td>' +
+            '</tr>';
+        }).join("");
+        attachClientUserActions();
+      }
+    }
+
     // Tab switching
     tabs.forEach(function(tab) {
       tab.addEventListener("click", function() {
@@ -1076,10 +1374,25 @@
         document.getElementById(tabName + "-tab").style.display = "block";
         if (tabName === "server-users") {
           loadServerUsers();
-        } else {
+        } else if (tabName === "retail-users") {
           loadRetailUsers();
+        } else if (tabName === "client-users") {
+          loadClientUsers();
         }
       });
+    });
+
+    // Search functionality
+    document.getElementById("server-search").addEventListener("input", function() {
+      filterTable("server-users-table", this.value, allServerUsers);
+    });
+
+    document.getElementById("retail-search").addEventListener("input", function() {
+      filterTable("retail-users-table", this.value, allRetailUsers);
+    });
+
+    document.getElementById("client-search").addEventListener("input", function() {
+      filterTable("client-users-table", this.value, allClientUsers);
     });
 
     // Sign out
@@ -1191,6 +1504,51 @@
     // Refresh buttons
     document.getElementById("refresh-server-users-btn").addEventListener("click", loadServerUsers);
     document.getElementById("refresh-retail-users-btn").addEventListener("click", loadRetailUsers);
+    document.getElementById("refresh-client-users-btn").addEventListener("click", loadClientUsers);
+
+    // Create client user
+    document.getElementById("create-client-user-btn").addEventListener("click", async function() {
+      var username = document.getElementById("client-username").value;
+      var email = document.getElementById("client-email").value;
+      var role = document.getElementById("client-role").value;
+      var clientCode = document.getElementById("client-code").value;
+      var isActive = document.getElementById("client-active").checked;
+      var statusEl = document.getElementById("client-form-status");
+
+      if (!username || !email || !clientCode) {
+        statusEl.textContent = "Username, email, and client code are required";
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Creating user...";
+      statusEl.classList.remove("error", "success");
+
+      var result = await supabase
+        .from("client_users")
+        .insert([{
+          username: username,
+          email: email,
+          role: role,
+          client_code: clientCode,
+          is_active: isActive
+        }]);
+
+      if (result.error) {
+        statusEl.textContent = "Error: " + result.error.message;
+        statusEl.classList.add("error");
+        return;
+      }
+
+      statusEl.textContent = "Client user created successfully!";
+      statusEl.classList.add("success");
+      document.getElementById("client-username").value = "";
+      document.getElementById("client-email").value = "";
+      document.getElementById("client-code").value = "";
+      document.getElementById("client-role").value = "client_staff";
+      document.getElementById("client-active").checked = true;
+      setTimeout(loadClientUsers, 800);
+    });
 
     // Init
     async function init() {
