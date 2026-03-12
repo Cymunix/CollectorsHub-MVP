@@ -327,6 +327,21 @@
       return null;
     }
 
+    async function waitForActiveSession(maxAttempts, delayMs) {
+      var attempts = maxAttempts || 4;
+      var delay = delayMs || 250;
+
+      for (var i = 0; i < attempts; i++) {
+        var sessionResult = await supabase.auth.getSession();
+        if (sessionResult && sessionResult.data && sessionResult.data.session) {
+          return true;
+        }
+        await new Promise(function(resolve) { setTimeout(resolve, delay); });
+      }
+
+      return false;
+    }
+
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
       setStatus("", false);
@@ -394,17 +409,21 @@
         if (userRecord.role) {
           localStorage.setItem(USER_ROLE_KEY, userRecord.role);
         }
+        var hasSession = await waitForActiveSession(5, 250);
+        if (!hasSession) {
+          setStatus("Signed in, but session is still initializing. Please wait a moment and retry.", false);
+          return;
+        }
+
         setStatus("Login successful. Redirecting...", true);
 
-        setTimeout(function() {
-          if (userRecord.role === "server_admin") {
-            window.location.href = "server-admin.html";
-          } else if (config.postLoginRedirectPath) {
-            window.location.href = config.postLoginRedirectPath;
-          } else {
-            window.location.href = "store.html";
-          }
-        }, 500);
+        if (userRecord.role === "server_admin") {
+          window.location.href = "server-admin.html";
+        } else if (config.postLoginRedirectPath) {
+          window.location.href = config.postLoginRedirectPath;
+        } else {
+          window.location.href = "store.html";
+        }
       } catch (error) {
         var catchMsg = error && (error.message || error.hint || JSON.stringify(error));
         console.error("[CollectorsHub] Login catch:", error);
