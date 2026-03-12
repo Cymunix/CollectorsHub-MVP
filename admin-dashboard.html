@@ -983,6 +983,233 @@
     </div>
   </div>
 
+  <!-- Catalog Management Modals -->
+  <div class="modal-overlay" id="catalog-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-modal-title">
+    <div class="modal" style="max-width: 900px; max-height: 85vh; overflow-y: auto;">
+      <h3 id="catalog-modal-title">Catalog Management</h3>
+
+      <div style="margin: 16px 0; display: flex; gap: 8px; border-bottom: 1px solid var(--border);">
+        <button class="catalog-tab active" data-tab="items" type="button">Catalog Items</button>
+        <button class="catalog-tab" data-tab="variants" type="button">Variants</button>
+        <button class="catalog-tab" data-tab="categories" type="button">Categories</button>
+      </div>
+
+      <!-- Catalog Items Tab -->
+      <div id="catalog-items-tab" class="catalog-tab-content" style="display: block;">
+        <button id="create-item-btn" class="btn" type="button" style="margin-bottom: 12px;">Create Catalog Item</button>
+        <div id="catalog-items-list" style="max-height: 400px; overflow-y: auto;">
+          <p style="color: var(--text-soft);">Loading catalog items...</p>
+        </div>
+      </div>
+
+      <!-- Variants Tab -->
+      <div id="catalog-variants-tab" class="catalog-tab-content" style="display: none;">
+        <button id="create-variant-btn" class="btn" type="button" style="margin-bottom: 12px;">Create Variant</button>
+        <div style="margin-bottom: 12px;">
+          <label for="variant-item-select">Select Catalog Item:</label>
+          <select id="variant-item-select" style="width: 100%;">
+            <option value="">Loading items...</option>
+          </select>
+        </div>
+        <div id="catalog-variants-list" style="max-height: 400px; overflow-y: auto;">
+          <p style="color: var(--text-soft);">Select a catalog item to view variants.</p>
+        </div>
+      </div>
+
+      <!-- Categories Tab -->
+      <div id="catalog-categories-tab" class="catalog-tab-content" style="display: none;">
+        <div id="catalog-categories-list" style="max-height: 400px; overflow-y: auto;">
+          <p style="color: var(--text-soft);">Loading categories...</p>
+        </div>
+      </div>
+
+      <p class="form-status" id="catalog-status"></p>
+      <div class="modal-foot">
+        <button class="btn" id="close-catalog-modal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Catalog Item Modal -->
+  <div class="modal-overlay" id="create-item-modal" role="dialog" aria-modal="true" aria-labelledby="create-item-title">
+    <div class="modal">
+      <h3 id="create-item-title">Create Catalog Item</h3>
+
+      <div class="field">
+        <label for="item-name">Item Name *</label>
+        <input id="item-name" type="text" placeholder="e.g., Dead Space" />
+      </div>
+
+      <div class="field">
+        <label for="item-category">Category *</label>
+        <select id="item-category">
+          <option value="">Select a category...</option>
+        </select>
+      </div>
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="item-publisher">Brand/Publisher</label>
+          <input id="item-publisher" type="text" placeholder="e.g., Electronic Arts" />
+        </div>
+        <div class="field">
+          <label for="item-year">Release Year</label>
+          <input id="item-year" type="number" min="1900" max="2100" placeholder="e.g., 2008" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="item-description">Description</label>
+        <textarea id="item-description" rows="3" placeholder="Optional description..."></textarea>
+      </div>
+
+      <div id="duplicate-warning" style="display: none; padding: 12px; background: rgba(247, 185, 85, 0.1); border: 1px solid rgba(247, 185, 85, 0.3); border-radius: 8px; margin: 12px 0; color: #f8d8a2; font-size: 0.9rem;">
+        <strong>⚠️ Possible Duplicates Found:</strong>
+        <ul id="duplicate-list" style="margin: 8px 0; padding-left: 20px;"></ul>
+        <label style="display: flex; gap: 8px; margin-top: 8px;">
+          <input id="confirm-duplicate" type="checkbox" />
+          <span>I've reviewed duplicates and want to create this item anyway</span>
+        </label>
+      </div>
+
+      <p class="form-status" id="create-item-status"></p>
+
+      <div class="modal-foot">
+        <button class="btn" id="create-item-cancel" type="button">Cancel</button>
+        <button class="btn" id="create-item-submit" type="button">Create Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Variant Modal -->
+  <div class="modal-overlay" id="create-variant-modal" role="dialog" aria-modal="true" aria-labelledby="create-variant-title">
+    <div class="modal">
+      <h3 id="create-variant-title">Create Variant</h3>
+
+      <div class="field">
+        <label for="variant-catalog-item">Catalog Item *</label>
+        <select id="variant-catalog-item">
+          <option value="">Loading items...</option>
+        </select>
+      </div>
+
+      <div id="variant-attributes-container"></div>
+
+      <div class="field">
+        <label for="variant-upc">UPC</label>
+        <input id="variant-upc" type="text" placeholder="e.g., 810105673357" />
+      </div>
+
+      <div class="field">
+        <label for="variant-release-date">Release Date</label>
+        <input id="variant-release-date" type="date" />
+      </div>
+
+      <p class="form-status" id="create-variant-status"></p>
+
+      <div class="modal-foot">
+        <button class="btn" id="create-variant-cancel" type="button">Cancel</button>
+        <button class="btn" id="create-variant-submit" type="button">Create Variant</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .catalog-tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-soft);
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .catalog-tab:hover {
+      color: var(--text);
+    }
+
+    .catalog-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .catalog-item-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .catalog-item-info {
+      flex: 1;
+    }
+
+    .catalog-item-name {
+      font-weight: 600;
+      margin: 0;
+      color: var(--text);
+    }
+
+    .catalog-item-meta {
+      margin: 4px 0 0;
+      font-size: 0.85rem;
+      color: var(--text-soft);
+    }
+
+    .catalog-item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .catalog-item-actions button {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      background: rgba(51, 195, 255, 0.1);
+      border: 1px solid rgba(51, 195, 255, 0.3);
+      color: var(--accent);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .catalog-item-actions button:hover {
+      background: rgba(51, 195, 255, 0.2);
+    }
+
+    .category-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .category-card h4 {
+      margin: 0 0 8px;
+      color: var(--text);
+    }
+
+    .category-attributes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .attribute-badge {
+      background: rgba(45, 224, 196, 0.1);
+      color: #86ffe8;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+  </style>
+
   <script src="./supabase-config.js"></script>
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -1221,6 +1448,18 @@
       if (event.target === resetPasswordModal) {
         resetPasswordModal.classList.remove("open");
       }
+      var catalogModal = document.getElementById("catalog-modal");
+      if (event.target === catalogModal) {
+        catalogModal.classList.remove("open");
+      }
+      var createItemModal = document.getElementById("create-item-modal");
+      if (event.target === createItemModal) {
+        createItemModal.classList.remove("open");
+      }
+      var createVariantModal = document.getElementById("create-variant-modal");
+      if (event.target === createVariantModal) {
+        createVariantModal.classList.remove("open");
+      }
     });
 
     function renderSelectedStoreChips() {
@@ -1392,6 +1631,483 @@
 
       await loadDashboardData();
     }
+
+    // ---- CATALOG MANAGEMENT ----
+    var catalogModal = document.getElementById("catalog-modal");
+    var closeCatalogModalBtn = document.getElementById("close-catalog-modal");
+    var catalogStatus = document.getElementById("catalog-status");
+    var catalogTabs = document.querySelectorAll(".catalog-tab");
+    var createItemBtn = document.getElementById("create-item-btn");
+    var createItemModal = document.getElementById("create-item-modal");
+    var createItemName = document.getElementById("item-name");
+    var createItemCategory = document.getElementById("item-category");
+    var createItemPublisher = document.getElementById("item-publisher");
+    var createItemYear = document.getElementById("item-year");
+    var createItemDescription = document.getElementById("item-description");
+    var createItemStatus = document.getElementById("create-item-status");
+    var createItemCancel = document.getElementById("create-item-cancel");
+    var createItemSubmit = document.getElementById("create-item-submit");
+    var duplicateWarning = document.getElementById("duplicate-warning");
+    var duplicateList = document.getElementById("duplicate-list");
+    var confirmDuplicate = document.getElementById("confirm-duplicate");
+
+    var createVariantBtn = document.getElementById("create-variant-btn");
+    var createVariantModal = document.getElementById("create-variant-modal");
+    var variantCatalogItem = document.getElementById("variant-catalog-item");
+    var variantItemSelect = document.getElementById("variant-item-select");
+    var variantUpc = document.getElementById("variant-upc");
+    var variantReleaseDate = document.getElementById("variant-release-date");
+    var variantStatus = document.getElementById("create-variant-status");
+    var variantCancel = document.getElementById("create-variant-cancel");
+    var variantSubmit = document.getElementById("create-variant-submit");
+
+    var catalogItemsList = document.getElementById("catalog-items-list");
+    var catalogVariantsList = document.getElementById("catalog-variants-list");
+    var catalogCategoriesList = document.getElementById("catalog-categories-list");
+
+    var allCategories = {};
+    var allCatalogItems = [];
+    var selectedVariantItemId = null;
+
+    // Load categories on page init
+    async function loadCatalogCategories() {
+      var response = await supabase
+        .from("catalog_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (response.error || !response.data) {
+        return [];
+      }
+
+      var categories = {};
+      response.data.forEach(function (cat) {
+        categories[cat.name] = {
+          name: cat.name,
+          description: cat.description,
+          attributes: cat.attributes || []
+        };
+      });
+
+      allCategories = categories;
+      return response.data;
+    }
+
+    // Populate category select
+    async function populateCategorySelects() {
+      var categories = Object.keys(allCategories);
+      createItemCategory.innerHTML = '<option value="">Select a category...</option>';
+      variantCatalogItem.innerHTML = '<option value="">Select a catalog item...</option>';
+
+      categories.forEach(function (cat) {
+        var opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        createItemCategory.appendChild(opt);
+      });
+    }
+
+    // Check for duplicates before creating item
+    async function checkDuplicates() {
+      var name = createItemName.value.trim();
+      var category = createItemCategory.value;
+
+      if (!name || !category) {
+        duplicateWarning.style.display = "none";
+        return;
+      }
+
+      duplicateWarning.style.display = "none";
+      var response = await supabase.rpc("check_catalog_duplicates", {
+        p_name: name,
+        p_category: category
+      });
+
+      if (response.error || !response.data || response.data.length === 0) {
+        return;
+      }
+
+      duplicateWarning.style.display = "block";
+      duplicateList.innerHTML = "";
+      response.data.slice(0, 5).forEach(function (dup) {
+        var li = document.createElement("li");
+        li.style.marginBottom = "4px";
+        li.textContent = dup.item_name + (dup.variant_display_name ? " — " + dup.variant_display_name : "");
+        duplicateList.appendChild(li);
+      });
+    }
+
+    createItemName.addEventListener("blur", checkDuplicates);
+    createItemCategory.addEventListener("change", checkDuplicates);
+
+    createItemBtn.addEventListener("click", function () {
+      createItemName.value = "";
+      createItemCategory.value = "";
+      createItemPublisher.value = "";
+      createItemYear.value = "";
+      createItemDescription.value = "";
+      confirmDuplicate.checked = false;
+      duplicateWarning.style.display = "none";
+      createItemStatus.textContent = "";
+      createItemModal.classList.add("open");
+    });
+
+    createItemCancel.addEventListener("click", function () {
+      createItemModal.classList.remove("open");
+    });
+
+    createItemSubmit.addEventListener("click", async function () {
+      var name = createItemName.value.trim();
+      var category = createItemCategory.value;
+      var publisher = createItemPublisher.value.trim();
+      var year = createItemYear.value ? parseInt(createItemYear.value) : null;
+      var desc = createItemDescription.value.trim();
+
+      if (!name || !category) {
+        createItemStatus.textContent = "Name and category are required.";
+        return;
+      }
+
+      if (duplicateWarning.style.display !== "none" && !confirmDuplicate.checked) {
+        createItemStatus.textContent = "Please confirm that you've reviewed the duplicates.";
+        return;
+      }
+
+      createItemSubmit.disabled = true;
+      createItemStatus.textContent = "Creating catalog item...";
+
+      var response = await supabase.rpc("admin_create_catalog_item", {
+        p_name: name,
+        p_category: category,
+        p_brand_or_publisher: publisher || null,
+        p_release_year: year,
+        p_description: desc || null
+      });
+
+      createItemSubmit.disabled = false;
+
+      if (response.error) {
+        createItemStatus.textContent = "Error: " + (response.error.message || "Could not create catalog item.");
+        return;
+      }
+
+      createItemStatus.textContent = "Catalog item created successfully!";
+      createItemName.value = "";
+      createItemCategory.value = "";
+      createItemPublisher.value = "";
+      createItemYear.value = "";
+      createItemDescription.value = "";
+      confirmDuplicate.checked = false;
+
+      setTimeout(function () {
+        createItemModal.classList.remove("open");
+        loadCatalogItems();
+        loadCatalogItemsForVariant();
+      }, 1000);
+    });
+
+    // Load and display catalog items
+    async function loadCatalogItems() {
+      var response = await supabase.rpc("admin_list_catalog_items", {
+        p_category: null,
+        p_search: null,
+        p_limit: 100
+      });
+
+      if (response.error || !response.data) {
+        catalogItemsList.innerHTML = '<p style="color: var(--text-soft);">Error loading catalog items.</p>';
+        return;
+      }
+
+      var items = response.data.items || [];
+      allCatalogItems = items;
+
+      if (items.length === 0) {
+        catalogItemsList.innerHTML = '<p style="color: var(--text-soft);">No catalog items yet. Create one to get started.</p>';
+        return;
+      }
+
+      catalogItemsList.innerHTML = "";
+      items.forEach(function (item) {
+        var card = document.createElement("div");
+        card.className = "catalog-item-card";
+        card.innerHTML =
+          '<div class="catalog-item-info">' +
+          '<p class="catalog-item-name">' + escapeHtml(item.name) + '</p>' +
+          '<p class="catalog-item-meta">' + escapeHtml(item.category) + ' • ' + (item.variant_count || 0) + ' variants' +
+          (item.brand_or_publisher ? ' • ' + escapeHtml(item.brand_or_publisher) : '') + '</p>' +
+          '</div>' +
+          '<div class="catalog-item-actions">' +
+          '<button type="button" data-item-id="' + escapeHtml(item.id) + '" class="edit-item-btn">Edit</button>' +
+          '</div>';
+        catalogItemsList.appendChild(card);
+      });
+    }
+
+    // Load catalog items for variant creation
+    async function loadCatalogItemsForVariant() {
+      var response = await supabase.rpc("admin_list_catalog_items", {
+        p_category: null,
+        p_search: null,
+        p_limit: 100
+      });
+
+      if (response.error || !response.data) {
+        return;
+      }
+
+      var items = response.data.items || [];
+      variantCatalogItem.innerHTML = '<option value="">Select a catalog item...</option>';
+      variantItemSelect.innerHTML = '<option value="">Select a catalog item...</option>';
+
+      items.forEach(function (item) {
+        var opt1 = document.createElement("option");
+        opt1.value = item.id;
+        opt1.textContent = item.name + " (" + item.category + ")";
+        variantCatalogItem.appendChild(opt1);
+
+        var opt2 = document.createElement("option");
+        opt2.value = item.id;
+        opt2.textContent = item.name + " (" + item.category + ")";
+        variantItemSelect.appendChild(opt2);
+      });
+    }
+
+    // Load variants for selected item
+    variantItemSelect.addEventListener("change", async function () {
+      var itemId = this.value;
+      selectedVariantItemId = itemId;
+      if (!itemId) {
+        catalogVariantsList.innerHTML = '<p style="color: var(--text-soft);">Select a catalog item to view variants.</p>';
+        return;
+      }
+
+      var response = await supabase.rpc("admin_list_variants", {
+        p_catalog_item_id: itemId
+      });
+
+      if (response.error || !response.data) {
+        catalogVariantsList.innerHTML = '<p style="color: var(--text-soft);">Error loading variants.</p>';
+        return;
+      }
+
+      var variants = response.data || [];
+      if (variants.length === 0) {
+        catalogVariantsList.innerHTML = '<p style="color: var(--text-soft);">No variants yet. Create one from the Variants tab.</p>';
+        return;
+      }
+
+      catalogVariantsList.innerHTML = "";
+      variants.forEach(function (variant) {
+        var card = document.createElement("div");
+        card.className = "catalog-item-card";
+        card.innerHTML =
+          '<div class="catalog-item-info">' +
+          '<p class="catalog-item-name">' + escapeHtml(variant.display_name) + '</p>' +
+          '<p class="catalog-item-meta">' + (variant.upc ? 'UPC: ' + escapeHtml(variant.upc) : 'No UPC') + '</p>' +
+          '</div>' +
+          '<div class="catalog-item-actions">' +
+          '<button type="button" data-variant-id="' + escapeHtml(variant.id) + '" class="edit-variant-btn">Edit</button>' +
+          '</div>';
+        catalogVariantsList.appendChild(card);
+      });
+    });
+
+    // Load and display categories
+    async function loadCatalogCategoriesDisplay() {
+      var response = await supabase
+        .from("catalog_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (response.error || !response.data) {
+        catalogCategoriesList.innerHTML = '<p style="color: var(--text-soft);">Error loading categories.</p>';
+        return;
+      }
+
+      if (response.data.length === 0) {
+        catalogCategoriesList.innerHTML = '<p style="color: var(--text-soft);">No categories found.</p>';
+        return;
+      }
+
+      catalogCategoriesList.innerHTML = "";
+      response.data.forEach(function (cat) {
+        var card = document.createElement("div");
+        card.className = "category-card";
+        var attrs = cat.attributes || [];
+        var attrsHtml = attrs.map(function (a) {
+          return '<span class="attribute-badge">' + escapeHtml(a) + '</span>';
+        }).join("");
+
+        card.innerHTML =
+          '<h4>' + escapeHtml(cat.name) + '</h4>' +
+          '<div class="category-attributes">' + attrsHtml + '</div>';
+        catalogCategoriesList.appendChild(card);
+      });
+    }
+
+    // Tab switching
+    catalogTabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var tabName = this.getAttribute("data-tab");
+        catalogTabs.forEach(function (t) { t.classList.remove("active"); });
+        document.querySelectorAll(".catalog-tab-content").forEach(function (c) { c.style.display = "none"; });
+        this.classList.add("active");
+        var contentEl = document.getElementById("catalog-" + tabName + "-tab");
+        if (contentEl) contentEl.style.display = "block";
+
+        if (tabName === "items") {
+          loadCatalogItems();
+        } else if (tabName === "categories") {
+          loadCatalogCategoriesDisplay();
+        }
+      });
+    });
+
+    // Open catalog modal
+    function openCatalogModal() {
+      catalogStatus.textContent = "";
+      catalogModal.classList.add("open");
+      loadCatalogItems();
+      loadCatalogItemsForVariant();
+    }
+
+    // Close catalog modal
+    closeCatalogModalBtn.addEventListener("click", function () {
+      catalogModal.classList.remove("open");
+    });
+
+    // Variant creation setup
+    variantCatalogItem.addEventListener("change", function () {
+      var itemId = this.value;
+      var category = null;
+
+      allCatalogItems.forEach(function (item) {
+        if (item.id === itemId) {
+          category = item.category;
+        }
+      });
+
+      if (!category) {
+        return;
+      }
+
+      var attrs = allCategories[category] ? allCategories[category].attributes : [];
+      var container = document.getElementById("variant-attributes-container");
+      container.innerHTML = "";
+
+      if (attrs.length === 0) {
+        return;
+      }
+
+      attrs.forEach(function (attr) {
+        var fieldDiv = document.createElement("div");
+        fieldDiv.className = "field";
+        fieldDiv.innerHTML =
+          '<label for="variant-attr-' + escapeHtml(attr) + '">' + escapeHtml(attr) + '</label>' +
+          '<input id="variant-attr-' + escapeHtml(attr) + '" type="text" data-attribute="' + escapeHtml(attr) + '" placeholder="' + escapeHtml(attr) + '" />';
+        container.appendChild(fieldDiv);
+      });
+    });
+
+    createVariantBtn.addEventListener("click", function () {
+      variantCatalogItem.value = "";
+      variantUpc.value = "";
+      variantReleaseDate.value = "";
+      variantStatus.textContent = "";
+      document.getElementById("variant-attributes-container").innerHTML = "";
+      createVariantModal.classList.add("open");
+    });
+
+    variantCancel.addEventListener("click", function () {
+      createVariantModal.classList.remove("open");
+    });
+
+    variantSubmit.addEventListener("click", async function () {
+      var itemId = variantCatalogItem.value;
+      var upc = variantUpc.value.trim();
+      var releaseDate = variantReleaseDate.value;
+
+      if (!itemId) {
+        variantStatus.textContent = "Please select a catalog item.";
+        return;
+      }
+
+      // Collect attribute values
+      var attrs = {};
+      var category = null;
+      allCatalogItems.forEach(function (item) {
+        if (item.id === itemId) {
+          category = item.category;
+        }
+      });
+
+      if (category && allCategories[category]) {
+        allCategories[category].attributes.forEach(function (attr) {
+          var input = document.getElementById("variant-attr-" + escapeHtml(attr));
+          if (input) {
+            var val = input.value.trim();
+            if (val) {
+              attrs[attr] = val;
+            }
+          }
+        });
+      }
+
+      variantSubmit.disabled = true;
+      variantStatus.textContent = "Creating variant...";
+
+      // Build variant data based on category
+      var variantData = {
+        p_catalog_item_id: itemId,
+        p_platform_or_format: attrs["Platform"] || attrs["Format"] || attrs["Brand"] || null,
+        p_edition: attrs["Edition"] || null,
+        p_region: attrs["Region"] || null,
+        p_packaging: attrs["Packaging"] || null,
+        p_upc: upc || null,
+        p_release_date: releaseDate ? releaseDate : null,
+        p_attributes: Object.keys(attrs).length > 0 ? JSON.stringify(attrs) : "{}"
+      };
+
+      var response = await supabase.rpc("admin_create_variant", variantData);
+
+      variantSubmit.disabled = false;
+
+      if (response.error) {
+        variantStatus.textContent = "Error: " + (response.error.message || "Could not create variant.");
+        return;
+      }
+
+      variantStatus.textContent = "Variant created: " + (response.data.display_name || "Success");
+      variantCatalogItem.value = "";
+      variantUpc.value = "";
+      variantReleaseDate.value = "";
+      document.getElementById("variant-attributes-container").innerHTML = "";
+
+      setTimeout(function () {
+        createVariantModal.classList.remove("open");
+        loadCatalogItemsForVariant();
+        if (selectedVariantItemId) {
+          variantItemSelect.value = selectedVariantItemId;
+          variantItemSelect.dispatchEvent(new Event("change"));
+        }
+      }, 1000);
+    });
+
+    // Add Catalog nav item click handler
+    var navItems = document.querySelectorAll(".nav-item");
+    navItems.forEach(function (item, idx) {
+      if (idx === 3) {
+        item.addEventListener("click", function (e) {
+          e.preventDefault();
+          navItems.forEach(function (ni) { ni.classList.remove("active"); });
+          item.classList.add("active");
+          openCatalogModal();
+        });
+      }
+    });
 
     async function verifyServerUser() {
       var sessionResult = await supabase.auth.getSession();
@@ -1724,6 +2440,10 @@
       // Reset password — ops and admin only
       var rpBtn = document.getElementById("reset-password-btn");
       if (rpBtn) rpBtn.style.display = canResetPasswords ? "" : "none";
+
+      // Initialize catalog categories
+      await loadCatalogCategories();
+      await populateCategorySelects();
 
       await loadDashboardData();
     })();

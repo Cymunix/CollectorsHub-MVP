@@ -1765,39 +1765,32 @@
     });
 
     // ========== CATALOG SEARCH ==========
-    var mockCatalog = [
-      { id: 1,  name: "Charizard Base Set Holo",         category: "trading-card",   franchise: "pokemon",    brand: "Wizards of the Coast", year: "1999", platform: "TCG", edition: "Base Set",             barcode: "820650102301", image: "🔥", marketVal: 150,   avg30: 145,   lastSale: 152   },
-      { id: 2,  name: "Black Lotus Limited Edition",     category: "trading-card",   franchise: "magic",      brand: "Wizards of the Coast", year: "1993", platform: "TCG", edition: "Limited Edition",      barcode: "820650100000", image: "♠️", marketVal: 8500,  avg30: 8200,  lastSale: 8400  },
-      { id: 3,  name: "Blue Eyes White Dragon 1st Ed",   category: "trading-card",   franchise: "yugioh",     brand: "Konami",                year: "2002", platform: "TCG", edition: "1st Edition",          barcode: "083717850201", image: "👁️", marketVal: 85,    avg30: 82,    lastSale: 88    },
-      { id: 4,  name: "Amazing Spider-Man #1",           category: "comic",          franchise: "marvel",     brand: "Marvel Comics",         year: "1963", platform: "Comic", edition: "Silver Age",         barcode: "761941200316", image: "📗", marketVal: 950,   avg30: 920,   lastSale: 960   },
-      { id: 5,  name: "Sealed Pokemon Base Booster Box", category: "trading-card",   franchise: "pokemon",    brand: "Wizards of the Coast", year: "1999", platform: "TCG", edition: "Base Set Sealed",      barcode: "820650102509", image: "📦", marketVal: 12000, avg30: 11500, lastSale: 12200 },
-      { id: 6,  name: "Super Mario Bros. (NES CIB)",     category: "video-game",     franchise: "nintendo",   brand: "Nintendo",              year: "1985", platform: "NES", edition: "CIB",                  barcode: "045496630553", image: "🎮", marketVal: 120,   avg30: 115,   lastSale: 125   },
-      { id: 7,  name: "The Legend of Zelda (NES CIB)",   category: "video-game",     franchise: "nintendo",   brand: "Nintendo",              year: "1986", platform: "NES", edition: "CIB",                  barcode: "045496630591", image: "🗡️", marketVal: 200,   avg30: 195,   lastSale: 205   },
-      { id: 8,  name: "Star Wars Episode IV VHS",        category: "movie",          franchise: "star-wars",  brand: "20th Century Fox",      year: "1982", platform: "VHS", edition: "Home Release",         barcode: "086162123456", image: "🎬", marketVal: 45,    avg30: 42,    lastSale: 48    },
-      { id: 9,  name: "Hot Wheels Redline Classic",      category: "toy",            franchise: "hot-wheels", brand: "Mattel",                year: "1969", platform: "Die-cast", edition: "Redline",           barcode: "074299098765", image: "🚗", marketVal: 85,    avg30: 80,    lastSale: 88    },
-      { id: 10, name: "Michael Jordan 1986 Fleer RC",    category: "sports-card",    franchise: "nba",        brand: "Fleer",                 year: "1986", platform: "Sports Card", edition: "Rookie Card",      barcode: "041199111111", image: "🏀", marketVal: 8000,  avg30: 7800,  lastSale: 8100  },
-      { id: 11, name: "Tom Brady 2000 Bowman Chrome RC", category: "sports-card",    franchise: "nfl",        brand: "Topps",                 year: "2000", platform: "Sports Card", edition: "Rookie Card",      barcode: "041199222222", image: "🏈", marketVal: 3500,  avg30: 3400,  lastSale: 3600  },
-      { id: 12, name: "Beatles White Album (UK Press)",  category: "music",          franchise: "rock",       brand: "Apple Records",         year: "1968", platform: "Vinyl", edition: "UK First Press",       barcode: "602547777777", image: "🎵", marketVal: 400,   avg30: 385,   lastSale: 420   },
-      { id: 13, name: "LEGO Star Wars Millennium Falcon", category: "building-blocks", franchise: "star-wars", brand: "LEGO",                  year: "2017", platform: "Building Set", edition: "75192",             barcode: "673419264723", image: "🧱", marketVal: 850,   avg30: 820,   lastSale: 860   },
-      { id: 14, name: "Batman #1 (1940 Reprint)",        category: "comic",          franchise: "dc",         brand: "DC Comics",             year: "1990", platform: "Comic", edition: "Reprint",             barcode: "761941343997", image: "🦇", marketVal: 75,    avg30: 72,    lastSale: 78    }
-    ];
+    // Now uses real catalog from Supabase instead of mock data
 
-    var mockSalesHistory = {
-      1: [{ condition: "near-mint", grade: "", price: 148, soldAt: "2026-03-01" }, { condition: "near-mint", grade: "", price: 151, soldAt: "2026-02-20" }, { condition: "graded", grade: "PSA 8", price: 255, soldAt: "2026-02-11" }],
-      2: [{ condition: "graded", grade: "BGS 9", price: 9100, soldAt: "2026-02-28" }, { condition: "graded", grade: "PSA 8", price: 8420, soldAt: "2026-02-15" }],
-      6: [{ condition: "complete", grade: "", price: 118, soldAt: "2026-02-25" }, { condition: "loose", grade: "", price: 76, soldAt: "2026-02-13" }],
-      10: [{ condition: "graded", grade: "PSA 8", price: 7900, soldAt: "2026-02-21" }, { condition: "graded", grade: "PSA 9", price: 12300, soldAt: "2026-02-08" }]
-    };
+    async function searchCatalogItems(searchTerm, category) {
+      var response = await supabase.rpc("search_catalog", {
+        p_category: category || null,
+        p_search_term: searchTerm || null,
+        p_limit: 50,
+        p_offset: 0
+      });
+
+      if (response.error || !response.data) {
+        return { items: [], total: 0 };
+      }
+
+      return response.data;
+    }
 
     var franchisesByCategory = {
-      "video-game":      [ ["nintendo","Nintendo"], ["playstation","PlayStation"], ["xbox","Xbox"], ["sega","Sega"], ["atari","Atari"], ["pc","PC Games"] ],
-      "movie":           [ ["disney","Disney"], ["marvel","Marvel Studios"], ["dc","DC Films"], ["star-wars","Star Wars"], ["universal","Universal"], ["criterion","Criterion"] ],
-      "toy":             [ ["hot-wheels","Hot Wheels"], ["funko","Funko Pop"], ["barbie","Barbie"], ["transformers","Transformers"], ["gi-joe","G.I. Joe"], ["star-wars","Star Wars"] ],
-      "music":           [ ["rock","Rock"], ["pop","Pop"], ["hip-hop","Hip-Hop"], ["metal","Metal"], ["jazz","Jazz"], ["classical","Classical"] ],
-      "sports-card":     [ ["nba","NBA Basketball"], ["nfl","NFL Football"], ["mlb","MLB Baseball"], ["nhl","NHL Hockey"], ["soccer","Soccer / FIFA"] ],
-      "trading-card":    [ ["pokemon","Pokémon"], ["magic","Magic: The Gathering"], ["yugioh","Yu-Gi-Oh!"], ["dragonball","Dragon Ball Z"], ["onepiece","One Piece"], ["digimon","Digimon"] ],
-      "comic":           [ ["marvel","Marvel"], ["dc","DC Comics"], ["image","Image Comics"], ["dark-horse","Dark Horse"], ["idw","IDW Publishing"] ],
-      "building-blocks": [ ["lego","LEGO"], ["mega","Mega Construx"], ["knex","K'NEX"], ["star-wars","Star Wars LEGO"] ]
+      "Video Games":      [ ["Nintendo", "Nintendo"], ["PlayStation", "PlayStation"], ["Xbox", "Xbox"], ["Sega", "Sega"], ["Atari", "Atari"], ["PC", "PC Games"] ],
+      "Movies":           [ ["Disney", "Disney"], ["Marvel Studios", "Marvel Studios"], ["DC Films", "DC Films"], ["Star Wars", "Star Wars"], ["Universal", "Universal"], ["Criterion", "Criterion"] ],
+      "Toys":             [ ["Hot Wheels", "Hot Wheels"], ["Funko", "Funko Pop"], ["Barbie", "Barbie"], ["Transformers", "Transformers"], ["G.I. Joe", "G.I. Joe"], ["Star Wars", "Star Wars"] ],
+      "Music":            [ ["Rock", "Rock"], ["Pop", "Pop"], ["Hip-Hop", "Hip-Hop"], ["Metal", "Metal"], ["Jazz", "Jazz"], ["Classical", "Classical"] ],
+      "Sports Cards":     [ ["NBA Basketball", "NBA Basketball"], ["NFL Football", "NFL Football"], ["MLB Baseball", "MLB Baseball"], ["NHL Hockey", "NHL Hockey"], ["Soccer", "Soccer / FIFA"] ],
+      "Trading Cards":    [ ["Pokémon", "Pokémon"], ["Magic: The Gathering", "Magic: The Gathering"], ["Yu-Gi-Oh!", "Yu-Gi-Oh!"], ["Dragon Ball Z", "Dragon Ball Z"], ["One Piece", "One Piece"], ["Digimon", "Digimon"] ],
+      "Comics":           [ ["Marvel", "Marvel"], ["DC Comics", "DC Comics"], ["Image Comics", "Image Comics"], ["Dark Horse", "Dark Horse"], ["IDW Publishing", "IDW Publishing"] ],
+      "Building Blocks":  [ ["LEGO", "LEGO"], ["Mega Construx", "Mega Construx"], ["K'NEX", "K'NEX"], ["Star Wars LEGO", "Star Wars LEGO"] ]
     };
 
     function updateFranchiseDropdown(category) {
@@ -1862,22 +1855,14 @@
       selectedCatalogItem = null;
     }
 
-    function searchCatalog() {
-      var query = catalogSearchInput.value.toLowerCase().trim();
+    async function searchCatalog() {
+      var query = catalogSearchInput.value.trim();
       var category = filterCategoryEl.value;
-      var franchise = filterFranchiseEl.value;
-      var year = filterYearEl.value;
-      var results = mockCatalog.filter(item => {
-        if (query && !item.name.toLowerCase().includes(query)) return false;
-        if (category && item.category !== category) return false;
-        if (franchise && item.franchise !== franchise) return false;
-        if (year) {
-          if (year === "2020-down" && parseInt(item.year) >= 2020) return false;
-          if (year !== "2020-down" && item.year !== year) return false;
-        }
-        return true;
-      });
-      renderCatalogResults(results);
+      
+      catalogResults.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);">Searching catalog...</div>';
+      
+      var results = await searchCatalogItems(query, category);
+      renderCatalogResults(results.items || []);
     }
 
     function renderCatalogResults(results) {
@@ -1887,10 +1872,25 @@
       }
       catalogResults.innerHTML = '<div class="catalog-grid"></div>';
       var grid = catalogResults.querySelector(".catalog-grid");
-      results.forEach(item => {
+      results.forEach(function(item) {
         var card = document.createElement("div");
         card.className = "catalog-card";
-        card.innerHTML = '<div class="catalog-card-image">' + item.image + '</div><div class="catalog-card-content"><div class="catalog-card-name">' + escapeHtml(item.name) + '</div><div class="catalog-card-meta">' + escapeHtml(item.brand) + ' • ' + item.year + '</div><div class="catalog-card-pricing">Market: $' + item.marketVal.toFixed(2) + '</div><div class="catalog-card-actions"><button class="catalog-card-btn" data-action="add" data-id="' + item.id + '">Add to TX</button><button class="catalog-card-btn" data-action="details" data-id="' + item.id + '">Details</button></div></div>';
+        
+        // Flatten variants into readable format
+        var variants = item.variants || [];
+        var variantSample = variants.length > 0 ? variants[0].display_name : "No variants";
+        
+        card.innerHTML = 
+          '<div class="catalog-card-image">📦</div>' +
+          '<div class="catalog-card-content">' +
+          '<div class="catalog-card-name">' + escapeHtml(item.name) + '</div>' +
+          '<div class="catalog-card-meta">' + escapeHtml(item.category) + (item.brand_or_publisher ? ' • ' + escapeHtml(item.brand_or_publisher) : '') + '</div>' +
+          '<div class="catalog-card-meta" style="color: var(--accent); font-size: 11px;">' + escapeHtml(variantSample) + '</div>' +
+          '<div class="catalog-card-pricing">' + variants.length + ' variant' + (variants.length !== 1 ? 's' : '') + '</div>' +
+          '<div class="catalog-card-actions">' +
+          '<button class="catalog-card-btn" data-action="add" data-id="' + escapeHtml(item.id) + '" data-item-name="' + escapeHtml(item.name) + '">Add Item</button>' +
+          '</div>' +
+          '</div>';
         grid.appendChild(card);
       });
     }
@@ -2011,30 +2011,44 @@
       }
     });
 
-    catalogResults.addEventListener("click", (e) => {
+    catalogResults.addEventListener("click", function(e) {
       var btn = e.target.closest(".catalog-card-btn");
       if (!btn) return;
       var action = btn.getAttribute("data-action");
-      var itemId = parseInt(btn.getAttribute("data-id"));
-      var item = mockCatalog.find(i => i.id === itemId);
+      var itemId = btn.getAttribute("data-id");
+      var itemName = btn.getAttribute("data-item-name");
+      
       if (action === "add") {
-        openConditionPanel(item);
-      } else if (action === "details") {
-        openItemDetail({
-          category: item.category,
-          name: item.name,
-          brand: item.brand,
-          year: item.year,
-          platform: item.platform,
-          edition: item.edition,
-          barcode: item.barcode,
-          catalogueId: "CAT-" + String(item.id).padStart(5, "0"),
-          condition: "loose",
-          grade: "",
-          grader: "",
-          catalogItemId: item.id,
+        // Simple item add - store the catalog item reference
+        selectedCatalogItem = {
+          id: itemId,
+          name: itemName,
+          category: "Catalog Item",
+          brand: "",
+          year: new Date().getFullYear().toString(),
+          platform: "Standard",
+          edition: "Standard",
+          barcode: "",
+          catalogItemId: itemId,
           source: "catalog"
-        }, item);
+        };
+        
+        // Show condition panel with pre-filled data
+        conditionItemName.textContent = escapeHtml(itemName);
+        conditionType.value = "loose";
+        conditionIsGraded.checked = false;
+        conditionPrice.value = "0.00";
+        pricingMarket.textContent = "$0.00";
+        pricingAvg.textContent = "$0.00";
+        pricingLast.textContent = "$0.00";
+        pricingSuggest.textContent = "$0.00";
+        gradeGroup.style.display = "none";
+        gradedFields.style.display = "none";
+        conditionPlatform.textContent = "-";
+        conditionEdition.textContent = "-";
+        conditionBarcode.textContent = "-";
+        conditionCatalogueId.textContent = escapeHtml(itemId);
+        conditionPanel.classList.add("open");
       }
     });
 
