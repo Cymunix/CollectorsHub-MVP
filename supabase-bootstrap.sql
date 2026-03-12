@@ -1309,6 +1309,24 @@ $$;
 revoke all on function public.admin_list_client_users() from public;
 grant execute on function public.admin_list_client_users() to authenticated;
 
+create or replace function public.is_current_user_server_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.role = 'server_admin'
+      and su.is_active = true
+  );
+$$;
+
+revoke all on function public.is_current_user_server_admin() from public;
+grant execute on function public.is_current_user_server_admin() to authenticated;
+
 select 'Catalog management system initialized.' as status;
 drop policy if exists "Authenticated users can read their own retail_user row" on public.retail_users;
 create policy "Authenticated users can read their own retail_user row"
@@ -1322,24 +1340,8 @@ create policy "Server admins can manage all retail users"
 on public.retail_users
 for all
 to authenticated
-using (
-  exists (
-    select 1
-    from public.server_users su
-    where su.auth_user_id = auth.uid()
-      and su.role = 'server_admin'
-      and su.is_active = true
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.server_users su
-    where su.auth_user_id = auth.uid()
-      and su.role = 'server_admin'
-      and su.is_active = true
-  )
-);
+using (public.is_current_user_server_admin())
+with check (public.is_current_user_server_admin());
 
 drop policy if exists "Authenticated users can read their own server_user row" on public.server_users;
 create policy "Authenticated users can read their own server_user row"
@@ -1353,24 +1355,8 @@ create policy "Server admins can manage all server users"
 on public.server_users
 for all
 to authenticated
-using (
-  exists (
-    select 1
-    from public.server_users su
-    where su.auth_user_id = auth.uid()
-      and su.role = 'server_admin'
-      and su.is_active = true
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.server_users su
-    where su.auth_user_id = auth.uid()
-      and su.role = 'server_admin'
-      and su.is_active = true
-  )
-);
+using (public.is_current_user_server_admin())
+with check (public.is_current_user_server_admin());
 
 drop policy if exists "Authenticated users can read their own client_user row" on public.client_users;
 create policy "Authenticated users can read their own client_user row"
@@ -1384,24 +1370,8 @@ create policy "Server admins can manage all client users"
 on public.client_users
 for all
 to authenticated
-using (
-  exists (
-    select 1
-    from public.server_users su
-    where su.auth_user_id = auth.uid()
-      and su.role = 'server_admin'
-      and su.is_active = true
-  )
-)
-with check (
-  exists (
-    select 1
-    from public.server_users su
-    where su.auth_user_id = auth.uid()
-      and su.role = 'server_admin'
-      and su.is_active = true
-  )
-);
+using (public.is_current_user_server_admin())
+with check (public.is_current_user_server_admin());
 
 -- Seed rows.
 insert into public.retail_users (store_code, username, role, email, auth_user_id, is_active)
