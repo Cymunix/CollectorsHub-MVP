@@ -275,6 +275,130 @@ $$;
 revoke all on function public.retail_list_stores() from public;
 grant execute on function public.retail_list_stores() to authenticated;
 
+-- List all stores for admin management (includes inactive stores).
+create or replace function public.admin_list_stores()
+returns table (
+  id uuid,
+  store_code text,
+  store_name text,
+  timezone text,
+  is_active boolean,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.is_active = true
+      and su.role in ('server_admin', 'server_ops', 'support')
+    union all
+    select 1
+    from public.retail_users ru
+    where ru.auth_user_id = auth.uid()
+      and ru.is_active = true
+      and ru.role = 'server_admin'
+  ) then
+    raise exception 'Only server staff can list stores';
+  end if;
+
+  return query
+  select
+    rs.id,
+    rs.store_code,
+    rs.store_name,
+    rs.timezone,
+    rs.is_active,
+    rs.created_at,
+    rs.updated_at
+  from public.retail_stores rs
+  order by rs.store_name;
+end;
+$$;
+
+revoke all on function public.admin_list_stores() from public;
+grant execute on function public.admin_list_stores() to authenticated;
+
+-- Create or update store (server_admin only).
+create or replace function public.admin_create_store(
+  p_store_code text,
+  p_store_name text,
+  p_timezone text default 'UTC',
+  p_is_active boolean default true
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_store_code text;
+begin
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = v_uid
+      and su.is_active = true
+      and su.role = 'server_admin'
+    union all
+    select 1
+    from public.retail_users ru
+    where ru.auth_user_id = v_uid
+      and ru.is_active = true
+      and ru.role = 'server_admin'
+  ) then
+    raise exception 'Only server_admin can create stores';
+  end if;
+
+  v_store_code := upper(btrim(coalesce(p_store_code, '')));
+
+  if v_store_code = '' then
+    raise exception 'Store code is required';
+  end if;
+
+  if btrim(coalesce(p_store_name, '')) = '' then
+    raise exception 'Store name is required';
+  end if;
+
+  insert into public.retail_stores (store_code, store_name, timezone, is_active)
+  values (
+    v_store_code,
+    btrim(p_store_name),
+    coalesce(nullif(btrim(p_timezone), ''), 'UTC'),
+    coalesce(p_is_active, true)
+  )
+  on conflict (store_code)
+  do update set
+    store_name = excluded.store_name,
+    timezone = excluded.timezone,
+    is_active = excluded.is_active,
+    updated_at = now();
+
+  return jsonb_build_object(
+    'ok', true,
+    'store_code', v_store_code,
+    'store_name', btrim(p_store_name)
+  );
+end;
+$$;
+
+revoke all on function public.admin_create_store(text, text, text, boolean) from public;
+grant execute on function public.admin_create_store(text, text, text, boolean) to authenticated;
+
 -- Create or update a retail user across one or more stores.
 create or replace function public.admin_create_retail_user(
   p_username text,

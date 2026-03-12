@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Store Management - CollectorsHub Retail</title>
+  <style>
+    :root {
+      --bg: #070d18;
+      --panel: #121c30;
+      --panel-2: #15233a;
+      --border: #233451;
+      --text: #e7eefb;
+      --text-soft: #9fb0cf;
+      --accent: #33c3ff;
+      --ok: #3ed090;
+      --danger: #ff6e81;
+      --warn: #f7b955;
+      --shadow: 0 14px 30px rgba(2, 8, 20, 0.45);
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Sora", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(700px 400px at 90% -20%, rgba(51, 195, 255, 0.16), transparent 60%),
+        radial-gradient(600px 350px at -10% 100%, rgba(45, 224, 196, 0.12), transparent 60%),
+        linear-gradient(135deg, #060b14 0%, #0a1424 50%, #0c1a2f 100%);
+      min-height: 100vh;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(10, 18, 33, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .brand {
+      padding: 10px 10px 14px;
+      border-bottom: 1px solid rgba(159, 176, 207, 0.15);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .brand-sub {
+      margin: 6px 0 0;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      color: var(--text-soft);
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+      font-size: 0.9rem;
+    }
+
+    .nav-item:hover {
+      background: rgba(51, 195, 255, 0.09);
+      border-color: rgba(51, 195, 255, 0.26);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: rgba(51, 195, 255, 0.14);
+      border-color: rgba(51, 195, 255, 0.36);
+      color: #dff6ff;
+      box-shadow: inset 0 0 0 1px rgba(51, 195, 255, 0.12);
+    }
+
+    .nav-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 76px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 16, 30, 0.78);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .platform-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .admin-badge {
+      background: rgba(45, 224, 196, 0.16);
+      color: #86ffe8;
+      border: 1px solid rgba(45, 224, 196, 0.44);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+
+    .icon-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+
+    .main {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section {
+      background: rgba(13, 22, 40, 0.76);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .section-sub {
+      color: var(--text-soft);
+      margin: 6px 0 0;
+      font-size: 0.84rem;
+    }
+
+    .btn {
+      border: 1px solid rgba(56, 89, 136, 0.55);
+      background: rgba(18, 31, 53, 0.95);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 140ms ease, background 140ms ease;
+    }
+
+    .btn:hover {
+      border-color: rgba(51, 195, 255, 0.55);
+      background: var(--panel-2);
+    }
+
+    .store-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .store-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 12px;
+    }
+
+    .store-card h3 {
+      margin: 0;
+      font-size: 0.96rem;
+      color: var(--text);
+    }
+
+    .store-meta {
+      margin-top: 8px;
+      color: var(--text-soft);
+      font-size: 0.83rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .pill.active {
+      color: #86ffe8;
+      background: rgba(62, 208, 144, 0.15);
+      border: 1px solid rgba(62, 208, 144, 0.4);
+    }
+
+    .pill.inactive {
+      color: #ffc6c6;
+      background: rgba(255, 110, 129, 0.14);
+      border: 1px solid rgba(255, 110, 129, 0.38);
+    }
+
+    .empty {
+      color: var(--text-soft);
+      font-size: 0.9rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    .field label {
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid rgba(56, 89, 136, 0.7);
+      background: #0e1a2e;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: rgba(51, 195, 255, 0.65);
+      box-shadow: 0 0 0 3px rgba(51, 195, 255, 0.14);
+    }
+
+    .field-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-soft);
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+
+    .form-status {
+      margin: 10px 0 0;
+      min-height: 18px;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+      .main { padding: 14px; }
+      .section { padding: 14px; }
+      .store-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1 class="brand-title">CollectorsHub Retail</h1>
+        <p class="brand-sub">Platform Administration</p>
+      </div>
+
+      <nav class="nav" aria-label="Admin navigation">
+        <a class="nav-item" href="/admin-dashboard.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-item active" href="/admin-stores.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>
+          Stores
+        </a>
+        <a class="nav-item" href="/admin-catalog.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>
+          Catalog
+        </a>
+      </nav>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <div>
+          <h2 class="platform-title">Store Management</h2>
+          <span class="admin-badge">Server Admin</span>
+        </div>
+        <button class="icon-btn" id="sign-out" type="button">Sign Out</button>
+      </header>
+
+      <main class="main">
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h2>All Stores</h2>
+              <p class="section-sub">Shows every store in the system, including inactive stores.</p>
+            </div>
+            <button class="btn" id="refresh-stores-btn" type="button">Refresh</button>
+          </div>
+          <div id="stores-list" class="store-grid">
+            <p class="empty">Loading stores...</p>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h2>Create Store</h2>
+              <p class="section-sub">Create a new store environment for retail operations.</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="store-code">Store Code *</label>
+              <input id="store-code" type="text" placeholder="e.g., ATL03" maxlength="12" />
+            </div>
+            <div class="field">
+              <label for="store-name">Store Name *</label>
+              <input id="store-name" type="text" placeholder="e.g., CollectorsHub Atlanta" />
+            </div>
+            <div class="field">
+              <label for="store-timezone">Timezone</label>
+              <select id="store-timezone">
+                <option value="America/New_York">America/New_York</option>
+                <option value="America/Chicago">America/Chicago</option>
+                <option value="America/Denver">America/Denver</option>
+                <option value="America/Los_Angeles">America/Los_Angeles</option>
+                <option value="UTC">UTC</option>
+              </select>
+            </div>
+            <div class="field field-full">
+              <label class="field-check">
+                <input id="store-active" type="checkbox" checked />
+                <span>Store is active</span>
+              </label>
+            </div>
+          </div>
+
+          <button class="btn" id="create-store-btn" type="button">Create Store</button>
+          <p class="form-status" id="store-form-status"></p>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+    var config = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var signOutBtn = document.getElementById("sign-out");
+    var refreshStoresBtn = document.getElementById("refresh-stores-btn");
+    var storesList = document.getElementById("stores-list");
+    var createStoreBtn = document.getElementById("create-store-btn");
+    var storeCodeInput = document.getElementById("store-code");
+    var storeNameInput = document.getElementById("store-name");
+    var storeTimezoneInput = document.getElementById("store-timezone");
+    var storeActiveInput = document.getElementById("store-active");
+    var storeFormStatus = document.getElementById("store-form-status");
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "-";
+      }
+      var dt = new Date(value);
+      if (Number.isNaN(dt.getTime())) {
+        return "-";
+      }
+      return dt.toLocaleString();
+    }
+
+    async function verifyServerUser() {
+      var sessionResult = await supabase.auth.getSession();
+      var session = sessionResult && sessionResult.data && sessionResult.data.session;
+      if (!session) {
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      var role = null;
+      var serverResult = await supabase
+        .from("server_users")
+        .select("role")
+        .eq("auth_user_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!serverResult.error && serverResult.data) {
+        role = serverResult.data.role;
+      }
+
+      if (!role && localStorage.getItem(USER_ROLE_KEY) === "server_admin") {
+        role = "server_admin";
+      }
+
+      var SERVER_ROLES = ["server_admin", "server_ops", "support"];
+      if (!role || SERVER_ROLES.indexOf(role) < 0) {
+        await supabase.auth.signOut();
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      return { role: role };
+    }
+
+    function renderStores(stores) {
+      storesList.innerHTML = "";
+
+      if (!stores || stores.length === 0) {
+        storesList.innerHTML = '<p class="empty">No stores found.</p>';
+        return;
+      }
+
+      stores.forEach(function (store) {
+        var card = document.createElement("article");
+        card.className = "store-card";
+        card.innerHTML =
+          '<h3>' + escapeHtml(store.store_name || "Unnamed Store") + '</h3>' +
+          '<div class="store-meta">' +
+          '<span><strong>Code:</strong> ' + escapeHtml(store.store_code || "-") + '</span>' +
+          '<span><strong>Timezone:</strong> ' + escapeHtml(store.timezone || "UTC") + '</span>' +
+          '<span class="pill ' + (store.is_active ? "active" : "inactive") + '">' + (store.is_active ? "Active" : "Inactive") + '</span>' +
+          '</div>' +
+          '<div class="store-meta">' +
+          '<span><strong>Created:</strong> ' + escapeHtml(formatDate(store.created_at)) + '</span>' +
+          '<span><strong>Updated:</strong> ' + escapeHtml(formatDate(store.updated_at)) + '</span>' +
+          '</div>';
+        storesList.appendChild(card);
+      });
+    }
+
+    async function loadStores() {
+      storesList.innerHTML = '<p class="empty">Loading stores...</p>';
+
+      var rpcResult = await supabase.rpc("admin_list_stores");
+      if (!rpcResult.error && rpcResult.data) {
+        renderStores(rpcResult.data);
+        return;
+      }
+
+      // Fallback for environments that have not deployed the new admin_list_stores RPC yet.
+      var fallbackResult = await supabase.rpc("retail_list_stores");
+      if (fallbackResult.error || !fallbackResult.data) {
+        storesList.innerHTML = '<p class="empty">Could not load stores. Deploy latest SQL functions and retry.</p>';
+        return;
+      }
+
+      var mapped = fallbackResult.data.map(function (s) {
+        return {
+          store_code: s.store_code,
+          store_name: s.store_name,
+          timezone: s.timezone,
+          is_active: true,
+          created_at: null,
+          updated_at: null
+        };
+      });
+
+      renderStores(mapped);
+    }
+
+    async function createStore() {
+      var code = String(storeCodeInput.value || "").trim().toUpperCase();
+      var name = String(storeNameInput.value || "").trim();
+      var timezone = String(storeTimezoneInput.value || "").trim() || "UTC";
+      var isActive = !!storeActiveInput.checked;
+
+      if (!code || !name) {
+        storeFormStatus.textContent = "Store code and store name are required.";
+        return;
+      }
+
+      if (!/^[A-Z0-9_-]{3,12}$/.test(code)) {
+        storeFormStatus.textContent = "Store code must be 3-12 chars using letters, numbers, underscore, or hyphen.";
+        return;
+      }
+
+      createStoreBtn.disabled = true;
+      storeFormStatus.textContent = "Creating store...";
+
+      var response = await supabase.rpc("admin_create_store", {
+        p_store_code: code,
+        p_store_name: name,
+        p_timezone: timezone,
+        p_is_active: isActive
+      });
+
+      createStoreBtn.disabled = false;
+
+      if (response.error) {
+        storeFormStatus.textContent = "Error: " + (response.error.message || "Could not create store.");
+        return;
+      }
+
+      storeFormStatus.textContent = "Store created successfully.";
+      storeCodeInput.value = "";
+      storeNameInput.value = "";
+      storeTimezoneInput.value = "America/New_York";
+      storeActiveInput.checked = true;
+      await loadStores();
+    }
+
+    refreshStoresBtn.addEventListener("click", loadStores);
+    createStoreBtn.addEventListener("click", createStore);
+    signOutBtn.addEventListener("click", async function () {
+      await supabase.auth.signOut();
+      window.location.href = "/index.html";
+    });
+
+    (async function init() {
+      var user = await verifyServerUser();
+      if (!user) {
+        return;
+      }
+
+      // Only server_admin can create stores.
+      if (user.role !== "server_admin") {
+        createStoreBtn.style.display = "none";
+        storeFormStatus.textContent = "Only server_admin can create stores.";
+        storeCodeInput.disabled = true;
+        storeNameInput.disabled = true;
+        storeTimezoneInput.disabled = true;
+        storeActiveInput.disabled = true;
+      }
+
+      await loadStores();
+    })();
+  </script>
+</body>
+</html>

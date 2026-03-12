@@ -739,7 +739,7 @@
           <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>
           Dashboard
         </a>
-        <a class="nav-item" href="#">
+        <a class="nav-item" href="/admin-stores.html">
           <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>
           Stores
         </a>
@@ -825,7 +825,7 @@
           <h2>Quick Actions</h2>
           <p class="section-sub">Platform administration tools only. Store operations run in Store Mode.</p>
           <div class="actions">
-            <button class="action-btn admin-only" type="button">Create Store</button>
+            <button class="action-btn admin-only" id="go-stores-page-btn" type="button">Create Store</button>
             <button class="action-btn admin-only" id="create-user-btn" type="button">Create User</button>
             <button class="action-btn" id="reset-password-btn" type="button">Reset User Password</button>
             <button class="action-btn admin-only" id="go-catalog-page-btn" type="button">Add Catalog Item</button>
@@ -2099,6 +2099,13 @@
     if (goCatalogPageBtn) {
       goCatalogPageBtn.addEventListener("click", function () {
         window.location.href = "/admin-catalog.html";
+      });
+    }
+
+    var goStoresPageBtn = document.getElementById("go-stores-page-btn");
+    if (goStoresPageBtn) {
+      goStoresPageBtn.addEventListener("click", function () {
+        window.location.href = "/admin-stores.html";
       });
     }
 
