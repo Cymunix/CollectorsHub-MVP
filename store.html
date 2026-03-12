@@ -257,10 +257,28 @@
     var STORE_CODE_KEY = "collectorshub_retail_store_code";
     var USER_ROLE_KEY = "collectorshub_retail_user_role";
 
+    async function getSessionWithRetry() {
+      for (var attempt = 0; attempt < 4; attempt++) {
+        var result = await supabase.auth.getSession();
+        if (result && result.data && result.data.session) {
+          return { session: result.data.session, error: null };
+        }
+        await new Promise(function(resolve) { setTimeout(resolve, 250); });
+      }
+
+      var finalResult = await supabase.auth.getSession();
+      return {
+        session: finalResult && finalResult.data ? finalResult.data.session : null,
+        error: finalResult ? finalResult.error : null
+      };
+    }
+
     // Check if user has a valid session
     (async function() {
       try {
-        var { data: { session }, error } = await supabase.auth.getSession();
+        var authState = await getSessionWithRetry();
+        var session = authState.session;
+        var error = authState.error;
         if (error) {
           console.error("[CollectorsHub Store] Session check error:", error);
           window.location.href = "index.html";
@@ -275,9 +293,9 @@
 
         var storeCode = localStorage.getItem(STORE_CODE_KEY);
         if (!storeCode) {
-          console.warn("[CollectorsHub Store] No store code in localStorage");
-          window.location.href = "index.html";
-          return;
+          storeCode = "UNKNOWN";
+          localStorage.setItem(STORE_CODE_KEY, storeCode);
+          console.warn("[CollectorsHub Store] Missing store code, using fallback:", storeCode);
         }
 
         console.log("[CollectorsHub Store] Session valid, user:", session.user.email, "store:", storeCode);
