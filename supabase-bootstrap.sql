@@ -420,11 +420,6 @@ create table if not exists public.variants (
   upc text,
   release_date date,
   attributes jsonb not null default '{}'::jsonb,
-  display_name text generated always as (
-    (select name from public.catalog_items where id = variants.catalog_item_id)
-    || coalesce(' — ' || platform_or_format, '')
-    || coalesce(' ' || edition, '')
-  ) stored,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -437,7 +432,6 @@ create policy "Allow read active variants" on public.variants
 
 create index if not exists variants_catalog_item_idx on public.variants(catalog_item_id);
 create index if not exists variants_upc_idx on public.variants(upc);
-create index if not exists variants_display_name_idx on public.variants(display_name);
 
 -- Trigger for catalog_items updated_at
 drop trigger if exists catalog_items_set_updated_at on public.catalog_items;
@@ -508,7 +502,11 @@ as $$
   select distinct
     ci.id,
     ci.name as item_name,
-    max(v.display_name) as variant_display_name
+    max(
+      ci.name 
+      || coalesce(' — ' || v.platform_or_format, '')
+      || coalesce(' ' || v.edition, '')
+    ) as variant_display_name
   from public.catalog_items ci
   left join public.variants v on v.catalog_item_id = ci.id
   where lower(ci.name) = lower(btrim(p_name))
@@ -665,6 +663,7 @@ declare
   v_is_admin boolean;
   v_new_id uuid;
   v_display_name text;
+  v_item_name text;
 begin
   v_uid := auth.uid();
   if v_uid is null then
@@ -684,10 +683,19 @@ begin
     raise exception 'Only server admins can create variants';
   end if;
 
-  -- Verify catalog item exists
-  if not exists (select 1 from public.catalog_items where id = p_catalog_item_id and is_active = true) then
+  -- Verify catalog item exists and get its name
+  select ci.name into v_item_name
+  from public.catalog_items ci
+  where ci.id = p_catalog_item_id and ci.is_active = true;
+
+  if v_item_name is null then
     raise exception 'Catalog item not found';
   end if;
+
+  -- Construct display name
+  v_display_name := v_item_name 
+    || coalesce(' — ' || p_platform_or_format, '')
+    || coalesce(' ' || p_edition, '');
 
   -- Create variant
   insert into public.variants (
@@ -712,8 +720,8 @@ begin
     coalesce(p_attributes, '{}'::jsonb),
     true
   )
-  returning variants.id, variants.display_name, variants.created_at
-  into v_new_id, v_display_name;
+  returning variants.id, variants.created_at
+  into v_new_id;
 
   return query select v_new_id, v_display_name;
 end;
@@ -749,12 +757,15 @@ as $$
     v.packaging,
     v.upc,
     v.release_date,
-    v.display_name,
+    ci.name 
+      || coalesce(' — ' || v.platform_or_format, '')
+      || coalesce(' ' || v.edition, '') as display_name,
     v.created_at
   from public.variants v
+  join public.catalog_items ci on ci.id = v.catalog_item_id
   where v.catalog_item_id = p_catalog_item_id
     and v.is_active = true
-  order by v.display_name;
+  order by display_name;
 $$;
 
 revoke all on function public.admin_list_variants(uuid) from public;
