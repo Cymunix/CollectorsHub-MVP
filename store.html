@@ -257,6 +257,38 @@
     var STORE_CODE_KEY = "collectorshub_retail_store_code";
     var USER_ROLE_KEY = "collectorshub_retail_user_role";
 
+    // Check if user has a valid session
+    (async function() {
+      try {
+        var { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("[CollectorsHub Store] Session check error:", error);
+          window.location.href = "/index.html";
+          return;
+        }
+
+        if (!session) {
+          console.warn("[CollectorsHub Store] No active session, redirecting to login");
+          window.location.href = "/index.html";
+          return;
+        }
+
+        var storeCode = localStorage.getItem(STORE_CODE_KEY);
+        if (!storeCode) {
+          console.warn("[CollectorsHub Store] No store code in localStorage");
+          window.location.href = "/index.html";
+          return;
+        }
+
+        console.log("[CollectorsHub Store] Session valid, user:", session.user.email, "store:", storeCode);
+        initializeStore();
+      } catch (err) {
+        console.error("[CollectorsHub Store] Auth check exception:", err);
+        window.location.href = "/index.html";
+      }
+    })();
+
+    function initializeStore() {
     var storeBadge = document.getElementById("store-code-badge");
     var welcomeText = document.getElementById("welcome-text");
     var backBtn = document.getElementById("back-to-admin");
@@ -292,6 +324,7 @@
     storeSettingsBtn.addEventListener("click", () => {
       alert("Store settings not yet implemented.");
     });
+    }
   </script>
 </body>
 </html>

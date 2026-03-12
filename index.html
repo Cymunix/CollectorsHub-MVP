@@ -359,12 +359,17 @@
 
       try {
         setLoading(true);
+        setStatus("Looking up user...", false);
 
         var userRecord = await findUserByStoreAndUsername(storeCode, normalizedUsername);
         if (!userRecord || !userRecord.email) {
-          setStatus("No active user was found for this Store Code and Username.", false);
+          console.error("[CollectorsHub] User not found in DB for store=" + storeCode + " user=" + normalizedUsername);
+          setStatus("No active user was found for this Store Code and Username. Please check your credentials.", false);
           return;
         }
+
+        console.log("[CollectorsHub] User found:", userRecord.email, "role:", userRecord.role);
+        setStatus("Authenticating...", false);
 
         var authResponse = await supabase.auth.signInWithPassword({
           email: userRecord.email,
@@ -374,21 +379,32 @@
         if (authResponse.error) {
           var errMsg = authResponse.error.message || "Invalid username or password.";
           console.error("[CollectorsHub] signInWithPassword error:", authResponse.error);
-          setStatus("Sign-in failed: " + errMsg, false);
+          setStatus("Authentication failed: " + errMsg, false);
           return;
         }
 
+        if (!authResponse.data || !authResponse.data.user) {
+          console.error("[CollectorsHub] No user returned from auth");
+          setStatus("Authentication succeeded but no session created. Please try again.", false);
+          return;
+        }
+
+        console.log("[CollectorsHub] Auth successful, session created");
         localStorage.setItem(STORE_CODE_KEY, storeCode);
         if (userRecord.role) {
           localStorage.setItem(USER_ROLE_KEY, userRecord.role);
         }
         setStatus("Login successful. Redirecting...", true);
 
-        if (userRecord.role === "server_admin") {
-          window.location.href = "/server-admin.html";
-        } else if (config.postLoginRedirectPath) {
-          window.location.href = config.postLoginRedirectPath;
-        }
+        setTimeout(function() {
+          if (userRecord.role === "server_admin") {
+            window.location.href = "/server-admin.html";
+          } else if (config.postLoginRedirectPath) {
+            window.location.href = config.postLoginRedirectPath;
+          } else {
+            window.location.href = "/store.html";
+          }
+        }, 500);
       } catch (error) {
         var catchMsg = error && (error.message || error.hint || JSON.stringify(error));
         console.error("[CollectorsHub] Login catch:", error);
