@@ -1,0 +1,2141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Transaction - CollectorsHub Retail</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a1221;
+      --bg-secondary: #141f33;
+      --bg-tertiary: #1a2847;
+      --text-primary: #e2e8f0;
+      --text-secondary: #a0aec0;
+      --border-color: rgba(45, 72, 112, 0.6);
+      --accent: #33c3ff;
+      --accent-hover: #51d3ff;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .topbar h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .topbar button {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .topbar button:hover {
+      background: rgba(51, 195, 255, 0.1);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    /* Customer Info Section */
+    .customer-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .field input {
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(51, 195, 255, 0.14);
+    }
+
+    /* Transaction Panels */
+    .transaction-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .panel-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .panel-actions {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0a1221;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .panel-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .item-row:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(51, 195, 255, 0.2);
+    }
+
+    .item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .item-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .item-price {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .item-remove {
+      padding: 4px 8px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 4px;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+
+    .item-remove:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* Totals Section */
+    .totals-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      align-items: end;
+    }
+
+    .total-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .total-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .total-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .total-balance {
+      font-size: 24px;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      background: var(--bg-tertiary);
+      border: 2px solid var(--border-color);
+    }
+
+    .balance-positive {
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .balance-negative {
+      color: var(--warning);
+      border-color: rgba(245, 158, 11, 0.3);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .balance-neutral {
+      color: var(--text-secondary);
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn-action {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+
+    .btn-complete {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-complete:hover {
+      background: #059669;
+    }
+
+    .btn-draft {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-draft:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .btn-cancel {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-cancel:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .transaction-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .totals-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main {
+        padding: 12px;
+      }
+
+      .customer-section {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        padding: 10px 16px;
+      }
+
+      .panel-header {
+        padding: 12px;
+      }
+
+      .btn-action {
+        flex: 1;
+        padding: 10px 12px;
+      }
+
+      .action-buttons {
+        justify-content: stretch;
+      }
+    }
+
+    /* Modal for adding items */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .modal p {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .modal-foot {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+
+    .form-status {
+      font-size: 12px;
+      margin-top: 8px;
+      color: var(--text-secondary);
+    }
+
+    .form-status.error {
+      color: var(--danger);
+    }
+
+    .form-status.success {
+      color: var(--success);
+    }
+
+    /* Catalog Search Modal */
+    .catalog-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .catalog-modal-overlay.open {
+      display: flex;
+    }
+
+    .catalog-modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 1000px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .catalog-modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .catalog-modal-title {
+      flex: 1;
+    }
+
+    .catalog-modal-title h3 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .catalog-modal-title p {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .catalog-close-btn {
+      padding: 4px 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 18px;
+      transition: background 0.15s;
+    }
+
+    .catalog-close-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .catalog-search-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+    }
+
+    .catalog-search-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .catalog-search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(51, 195, 255, 0.14);
+    }
+
+    .catalog-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .catalog-filter {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .catalog-filter label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .catalog-filter select {
+      padding: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    .catalog-results {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .catalog-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .catalog-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(51, 195, 255, 0.15);
+    }
+
+    .catalog-card-image {
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(135deg, rgba(51, 195, 255, 0.1), rgba(51, 195, 255, 0.05));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .catalog-card-content {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .catalog-card-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .catalog-card-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .catalog-card-pricing {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      padding: 6px 8px;
+      background: rgba(51, 195, 255, 0.1);
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .catalog-card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .catalog-card-btn {
+      flex: 1;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 600;
+    }
+
+    .catalog-card-btn:hover {
+      background: rgba(51, 195, 255, 0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .catalog-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .catalog-empty p {
+      margin-bottom: 8px;
+    }
+
+    .catalog-empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* Condition Panel */
+    .condition-panel {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+      z-index: 1101;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .condition-panel.open {
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .condition-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .condition-header h4 {
+      font-size: 16px;
+    }
+
+    .condition-close-btn {
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .condition-close-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .condition-content {
+      padding: 20px;
+      flex: 1;
+    }
+
+    .condition-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .condition-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .condition-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .condition-select {
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+    }
+
+    .condition-input {
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+
+    .condition-input:focus {
+      border-color: var(--accent);
+    }
+
+    .condition-readonly {
+      padding: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      min-height: 39px;
+      display: flex;
+      align-items: center;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    .condition-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .condition-checkbox input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .pricing-panel {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .pricing-panel h5 {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .pricing-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pricing-item-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pricing-item-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .condition-actions {
+      display: flex;
+      gap: 8px;
+      padding: 20px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    .condition-actions button {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .condition-actions .btn-add {
+      background: var(--success);
+      color: white;
+    }
+
+    .condition-actions .btn-add:hover {
+      background: #059669;
+    }
+
+    .condition-actions .btn-cancel {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .condition-actions .btn-cancel:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .detail-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .detail-modal-overlay.open {
+      display: flex;
+    }
+
+    .detail-modal {
+      width: 100%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+
+    .detail-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .detail-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+    }
+
+    .detail-tab {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.03);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .detail-tab.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(51, 195, 255, 0.12);
+    }
+
+    .detail-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .detail-panel {
+      display: none;
+    }
+
+    .detail-panel.active {
+      display: block;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .detail-block {
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+    }
+
+    .detail-block-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .detail-history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .detail-history-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .detail-history-date {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .catalog-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+
+      .catalog-modal {
+        max-width: 95vw;
+        max-height: 95vh;
+      }
+
+      .condition-panel {
+        max-height: 70vh;
+      }
+
+      .detail-history-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h2>New Transaction</h2>
+      <div class="topbar-actions">
+        <button id="back-btn">← Back</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- Customer Information -->
+      <section class="customer-section">
+        <div class="field">
+          <label for="customer-name">Customer Name</label>
+          <input id="customer-name" type="text" placeholder="Optional">
+        </div>
+        <div class="field">
+          <label for="customer-phone">Phone Number</label>
+          <input id="customer-phone" type="tel" placeholder="Optional">
+        </div>
+        <div class="field">
+          <label for="customer-notes">Notes</label>
+          <input id="customer-notes" type="text" placeholder="Optional">
+        </div>
+      </section>
+
+      <!-- Transaction Panels -->
+      <div class="transaction-grid">
+        <!-- Left Panel: Customer Selling to Store -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Customer Selling to Store</div>
+            <div class="panel-desc">Items the store is purchasing from the customer</div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn-primary" id="search-selling-btn">Search Catalog</button>
+            <button class="btn-primary" id="add-selling-btn">Quick Add</button>
+          </div>
+          <div class="panel-list" id="selling-items">
+            <div class="empty-state">No items added yet</div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Customer Buying from Store -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">Customer Buying from Store</div>
+            <div class="panel-desc">Items the customer is purchasing from store inventory</div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn-primary" id="search-buying-btn">Search Inventory</button>
+            <button class="btn-primary" id="add-buying-btn">Quick Add</button>
+          </div>
+          <div class="panel-list" id="buying-items">
+            <div class="empty-state">No items added yet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Totals Section -->
+      <section class="totals-section">
+        <div class="total-item">
+          <div class="total-label">Store Buying Total</div>
+          <div class="total-value" id="total-selling">$0.00</div>
+        </div>
+        <div class="total-item">
+          <div class="total-label">Store Selling Total</div>
+          <div class="total-value" id="total-buying">$0.00</div>
+        </div>
+        <div class="total-item">
+          <div class="total-label">Final Balance</div>
+          <div class="total-balance balance-neutral" id="final-balance">$0.00</div>
+        </div>
+        <div class="action-buttons">
+          <button class="btn-action btn-cancel" id="cancel-btn">Cancel</button>
+          <button class="btn-action btn-draft" id="draft-btn">Save Draft</button>
+          <button class="btn-action btn-complete" id="complete-btn">Complete Transaction</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Add Item Modal -->
+  <div class="modal-overlay" id="add-item-modal">
+    <div class="modal">
+      <h3 id="modal-title">Quick Add Item</h3>
+      <p id="modal-desc">Use this only when an item is not yet in your catalog.</p>
+
+      <div class="field-grid">
+        <div class="field field-full">
+          <label for="item-name">Item Name *</label>
+          <input id="item-name" type="text" placeholder="e.g. Unlisted Local Promo Card">
+        </div>
+        <div class="field">
+          <label for="item-condition">Condition</label>
+          <select id="item-condition" style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+            <option value="mint">Mint</option>
+            <option value="near-mint">Near Mint</option>
+            <option value="excellent">Excellent</option>
+            <option value="good">Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="item-price">Price ($) *</label>
+          <input id="item-price" type="number" placeholder="0.00" step="0.01" min="0">
+        </div>
+      </div>
+
+      <p class="form-status" id="item-status"></p>
+
+      <div class="modal-foot">
+        <button class="btn secondary" id="item-cancel">Cancel</button>
+        <button class="btn primary" id="item-add">Add Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Catalog Search Modal -->
+  <div class="catalog-modal-overlay" id="catalog-modal-overlay">
+    <div class="catalog-modal" id="catalog-modal">
+      <div class="catalog-modal-header">
+        <div class="catalog-modal-title">
+          <h3>Search Catalog</h3>
+          <p>Find an item the customer is selling to the store</p>
+        </div>
+        <button class="catalog-close-btn" id="catalog-close-btn">✕</button>
+      </div>
+
+      <div class="catalog-search-section">
+        <input
+          class="catalog-search-input"
+          id="catalog-search-input"
+          type="text"
+          placeholder="Search collectibles or scan barcode..."
+          autofocus
+        />
+        <div class="catalog-filters">
+          <div class="catalog-filter">
+            <label>Category</label>
+            <select id="filter-category">
+              <option value="">All Categories</option>
+              <option value="video-game">Video Games</option>
+              <option value="movie">Movies</option>
+              <option value="toy">Toys</option>
+              <option value="music">Music</option>
+              <option value="sports-card">Sports Cards</option>
+              <option value="trading-card">Trading Cards</option>
+              <option value="comic">Comics</option>
+              <option value="building-blocks">Building Blocks</option>
+            </select>
+          </div>
+          <div class="catalog-filter">
+            <label>Franchise</label>
+            <select id="filter-franchise">
+              <option value="">All Franchises</option>
+            </select>
+          </div>
+          <div class="catalog-filter">
+            <label>Year</label>
+            <select id="filter-year">
+              <option value="">All Years</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2020-down">Before 2020</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="catalog-results" id="catalog-results">
+        <div class="catalog-empty">
+          <div class="catalog-empty-icon">🔍</div>
+          <p>Start typing to search catalog</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Condition Selection Panel -->
+  <div class="condition-panel" id="condition-panel">
+    <div class="condition-header">
+      <h4 id="condition-item-name">Item Condition</h4>
+      <button class="condition-close-btn" id="condition-close-btn">✕</button>
+    </div>
+
+    <div class="condition-content">
+      <div class="pricing-panel" id="pricing-panel">
+        <h5>Pricing Guidance</h5>
+        <div class="pricing-grid">
+          <div class="pricing-item">
+            <div class="pricing-item-label">Market Value</div>
+            <div class="pricing-item-value" id="pricing-market">$0.00</div>
+          </div>
+          <div class="pricing-item">
+            <div class="pricing-item-label">30 Day Avg</div>
+            <div class="pricing-item-value" id="pricing-avg">$0.00</div>
+          </div>
+          <div class="pricing-item">
+            <div class="pricing-item-label">Last Sale</div>
+            <div class="pricing-item-value" id="pricing-last">$0.00</div>
+          </div>
+          <div class="pricing-item">
+            <div class="pricing-item-label">Store Buy Price</div>
+            <div class="pricing-item-value" id="pricing-suggest">$0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="condition-grid">
+        <div class="condition-group">
+          <label class="condition-label">Condition</label>
+          <select id="condition-type" class="condition-select">
+            <option value="loose">Loose</option>
+            <option value="complete">Complete</option>
+            <option value="new">New</option>
+            <option value="damaged">Damaged</option>
+          </select>
+        </div>
+
+        <div class="condition-group" id="grade-group" style="display:none;">
+          <label class="condition-label">Raw Grade (1-10)</label>
+          <select id="condition-raw-grade" class="condition-select">
+            <option value="">Select Grade</option>
+            <option value="1">1 - Poor</option>
+            <option value="2">2 - Fair</option>
+            <option value="3">3 - Good</option>
+            <option value="4">4 - Very Good</option>
+            <option value="5">5 - Excellent</option>
+            <option value="6">6 - Excellent+</option>
+            <option value="7">7 - Near Mint</option>
+            <option value="8">8 - Near Mint+</option>
+            <option value="9">9 - Mint</option>
+            <option value="10">10 - Gem Mint</option>
+          </select>
+        </div>
+
+        <div class="condition-group">
+          <label class="condition-checkbox">
+            <input type="checkbox" id="condition-is-graded" />
+            <span>This item is graded</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="condition-grid" id="graded-fields" style="display:none;">
+        <div class="condition-group">
+          <label class="condition-label">Grading Company</label>
+          <select id="condition-grader" class="condition-select">
+            <option value="">Select Grader</option>
+            <option value="psa">PSA</option>
+            <option value="bgs">BGS</option>
+            <option value="cgc">CGC</option>
+          </select>
+        </div>
+
+        <div class="condition-group">
+          <label class="condition-label">Grade (1-10)</label>
+          <select id="condition-graded-grade" class="condition-select">
+            <option value="">Select Grade</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="condition-grid" style="margin-top: 16px;">
+        <div class="condition-group">
+          <label class="condition-label">Platform / Format</label>
+          <div id="condition-platform" class="condition-readonly">-</div>
+        </div>
+        <div class="condition-group">
+          <label class="condition-label">Edition / Version</label>
+          <div id="condition-edition" class="condition-readonly">-</div>
+        </div>
+        <div class="condition-group">
+          <label class="condition-label">Barcode / UPC</label>
+          <div id="condition-barcode" class="condition-readonly">-</div>
+        </div>
+        <div class="condition-group">
+          <label class="condition-label">Catalogue ID</label>
+          <div id="condition-catalogue-id" class="condition-readonly">-</div>
+        </div>
+      </div>
+
+      <div class="condition-group" style="margin-top: 16px;">
+        <label class="condition-label">Offered Price ($)</label>
+        <input type="number" id="condition-price" class="field input" placeholder="0.00" step="0.01" min="0" style="padding:10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; color:var(--text-primary);" />
+      </div>
+    </div>
+
+    <div class="condition-actions">
+      <button class="condition-actions btn-cancel" id="condition-cancel-btn">Cancel</button>
+      <button class="condition-actions btn-add" id="condition-add-btn">Add Item to Transaction</button>
+    </div>
+  </div>
+
+  <!-- Item Detail + Sales History Modal -->
+  <div class="detail-modal-overlay" id="detail-modal-overlay">
+    <div class="detail-modal">
+      <div class="detail-header">
+        <h4 id="detail-item-title">Item Details</h4>
+        <button class="condition-close-btn" id="detail-close-btn">✕</button>
+      </div>
+      <div class="detail-tabs">
+        <button class="detail-tab active" data-tab="attributes" id="detail-tab-attributes">Attributes</button>
+        <button class="detail-tab" data-tab="history" id="detail-tab-history">Sales History</button>
+      </div>
+      <div class="detail-body">
+        <div class="detail-panel active" id="detail-panel-attributes">
+          <div class="detail-grid" id="detail-attributes-grid"></div>
+          <div class="pricing-panel" id="detail-pricing-panel" style="margin-top: 20px;">
+            <h5>Pricing Guidance</h5>
+            <div class="pricing-grid">
+              <div class="pricing-item">
+                <div class="pricing-item-label">Market Value</div>
+                <div class="pricing-item-value" id="detail-pricing-market">$0.00</div>
+              </div>
+              <div class="pricing-item">
+                <div class="pricing-item-label">30 Day Avg</div>
+                <div class="pricing-item-value" id="detail-pricing-avg">$0.00</div>
+              </div>
+              <div class="pricing-item">
+                <div class="pricing-item-label">Last Sale</div>
+                <div class="pricing-item-value" id="detail-pricing-last">$0.00</div>
+              </div>
+            </div>
+          </div>
+          <div class="condition-grid" style="margin-top: 20px;">
+            <div class="condition-group">
+              <label class="condition-label">Condition</label>
+              <select id="detail-condition-type" class="condition-select">
+                <option value="loose">Loose</option>
+                <option value="complete">Complete</option>
+                <option value="new">New</option>
+                <option value="damaged">Damaged</option>
+              </select>
+            </div>
+            <div class="condition-group">
+              <label class="condition-checkbox">
+                <input type="checkbox" id="detail-condition-is-graded" />
+                <span>This item is graded</span>
+              </label>
+            </div>
+          </div>
+          <div class="condition-grid" id="detail-graded-fields" style="display:none; margin-top: 12px;">
+            <div class="condition-group">
+              <label class="condition-label">Grading Company</label>
+              <select id="detail-condition-grader" class="condition-select"><option value="">Select Grader</option><option value="psa">PSA</option><option value="bgs">BGS</option><option value="cgc">CGC</option></select>
+            </div>
+            <div class="condition-group">
+              <label class="condition-label">Grade (1-10)</label>
+              <select id="detail-condition-graded-grade" class="condition-select"><option value="">Select Grade</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+            </div>
+          </div>
+          <div class="condition-group" style="margin-top: 20px;">
+            <label class="condition-label">Offer Price ($)</label>
+            <input type="number" id="detail-offer-price" class="condition-input" placeholder="Suggested price" step="0.01" min="0" />
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn primary" id="detail-add-to-transaction" style="flex: 1;">Add to Transaction</button>
+            <button class="btn secondary" id="detail-detail-cancel" style="flex: 1;">Cancel</button>
+          </div>
+        </div>
+        <div class="detail-panel" id="detail-panel-history">
+          <div class="detail-history-list" id="detail-history-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var config = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var STORE_CODE_KEY = "collectorshub_retail_store_code";
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+
+    var backBtn = document.getElementById("back-btn");
+    var cancelBtn = document.getElementById("cancel-btn");
+    var draftBtn = document.getElementById("draft-btn");
+    var completeBtn = document.getElementById("complete-btn");
+
+    var addSellingBtn = document.getElementById("add-selling-btn");
+    var addBuyingBtn = document.getElementById("add-buying-btn");
+    var searchSellingBtn = document.getElementById("search-selling-btn");
+    var searchBuyingBtn = document.getElementById("search-buying-btn");
+
+    var sellingItemsEl = document.getElementById("selling-items");
+    var buyingItemsEl = document.getElementById("buying-items");
+
+    var totalSellingEl = document.getElementById("total-selling");
+    var totalBuyingEl = document.getElementById("total-buying");
+    var finalBalanceEl = document.getElementById("final-balance");
+
+    var addItemModal = document.getElementById("add-item-modal");
+    var itemNameInput = document.getElementById("item-name");
+    var itemConditionInput = document.getElementById("item-condition");
+    var itemPriceInput = document.getElementById("item-price");
+    var itemStatusEl = document.getElementById("item-status");
+    var itemAddBtn = document.getElementById("item-add");
+    var itemCancelBtn = document.getElementById("item-cancel");
+    var modalTitleEl = document.getElementById("modal-title");
+    var modalDescEl = document.getElementById("modal-desc");
+
+    var detailModalOverlay = document.getElementById("detail-modal-overlay");
+    var detailCloseBtn = document.getElementById("detail-close-btn");
+    var detailItemTitle = document.getElementById("detail-item-title");
+    var detailAttributesGrid = document.getElementById("detail-attributes-grid");
+    var detailHistoryList = document.getElementById("detail-history-list");
+    var detailTabAttributes = document.getElementById("detail-tab-attributes");
+    var detailTabHistory = document.getElementById("detail-tab-history");
+    var detailPanelAttributes = document.getElementById("detail-panel-attributes");
+    var detailPanelHistory = document.getElementById("detail-panel-history");
+    var detailPricingMarket = document.getElementById("detail-pricing-market");
+    var detailPricingAvg = document.getElementById("detail-pricing-avg");
+    var detailPricingLast = document.getElementById("detail-pricing-last");
+    var detailConditionType = document.getElementById("detail-condition-type");
+    var detailConditionIsGraded = document.getElementById("detail-condition-is-graded");
+    var detailGradedFields = document.getElementById("detail-graded-fields");
+    var detailOfferPrice = document.getElementById("detail-offer-price");
+    var detailAddBtn = document.getElementById("detail-add-to-transaction");
+    var detailCancelBtn = document.getElementById("detail-detail-cancel");
+    var detailConditionGrader = document.getElementById("detail-condition-grader");
+    var detailConditionGrade = document.getElementById("detail-condition-graded-grade");
+
+    var sellingItems = [];
+    var buyingItems = [];
+    var currentMode = null; // "selling" or "buying"
+    var selectedDetailItem = null;
+
+    function renderItems() {
+      renderSellingItems();
+      renderBuyingItems();
+      updateTotals();
+    }
+
+    function renderSellingItems() {
+      if (sellingItems.length === 0) {
+        sellingItemsEl.innerHTML = '<div class="empty-state">No items added yet</div>';
+        return;
+      }
+
+      sellingItemsEl.innerHTML = "";
+      sellingItems.forEach((item, idx) => {
+        var itemEl = document.createElement("div");
+        itemEl.className = "item-row";
+        itemEl.setAttribute("data-type", "selling");
+        itemEl.setAttribute("data-idx", String(idx));
+        var meta1 = [item.category, item.brand, item.year, item.platform].filter(Boolean).map(escapeHtml).join(" · ");
+        var meta2parts = [item.condition];
+        if (item.edition) meta2parts.push(escapeHtml(item.edition));
+        if (item.barcode) meta2parts.push("UPC: " + escapeHtml(item.barcode));
+        itemEl.innerHTML = `
+          <div class="item-info">
+            <div class="item-name">${escapeHtml(item.name)}</div>
+            ${meta1 ? `<div class="item-meta">${meta1}</div>` : ""}
+            <div class="item-meta">${meta2parts.join(" · ")}</div>
+          </div>
+          <div class="item-price">$${item.price.toFixed(2)}</div>
+          <button class="item-remove" data-type="selling" data-idx="${idx}">Remove</button>
+        `;
+        sellingItemsEl.appendChild(itemEl);
+      });
+    }
+
+    function renderBuyingItems() {
+      if (buyingItems.length === 0) {
+        buyingItemsEl.innerHTML = '<div class="empty-state">No items added yet</div>';
+        return;
+      }
+
+      buyingItemsEl.innerHTML = "";
+      buyingItems.forEach((item, idx) => {
+        var itemEl = document.createElement("div");
+        itemEl.className = "item-row";
+        itemEl.setAttribute("data-type", "buying");
+        itemEl.setAttribute("data-idx", String(idx));
+        var meta1 = [item.category, item.brand, item.year, item.platform].filter(Boolean).map(escapeHtml).join(" · ");
+        var meta2parts = [item.condition];
+        if (item.edition) meta2parts.push(escapeHtml(item.edition));
+        if (item.barcode) meta2parts.push("UPC: " + escapeHtml(item.barcode));
+        itemEl.innerHTML = `
+          <div class="item-info">
+            <div class="item-name">${escapeHtml(item.name)}</div>
+            ${meta1 ? `<div class="item-meta">${meta1}</div>` : ""}
+            <div class="item-meta">${meta2parts.join(" · ")}</div>
+          </div>
+          <div class="item-price">$${item.price.toFixed(2)}</div>
+          <button class="item-remove" data-type="buying" data-idx="${idx}">Remove</button>
+        `;
+        buyingItemsEl.appendChild(itemEl);
+      });
+    }
+
+    function updateTotals() {
+      var sellTotal = sellingItems.reduce((sum, item) => sum + item.price, 0);
+      var buyTotal = buyingItems.reduce((sum, item) => sum + item.price, 0);
+      var balance = sellTotal - buyTotal;
+
+      totalSellingEl.textContent = "$" + sellTotal.toFixed(2);
+      totalBuyingEl.textContent = "$" + buyTotal.toFixed(2);
+
+      var balanceEl = finalBalanceEl;
+      balanceEl.className = "total-balance";
+      if (balance > 0.01) {
+        balanceEl.classList.add("balance-positive");
+        balanceEl.textContent = "Customer Pays: $" + balance.toFixed(2);
+      } else if (balance < -0.01) {
+        balanceEl.classList.add("balance-negative");
+        balanceEl.textContent = "Store Pays Customer: $" + Math.abs(balance).toFixed(2);
+      } else {
+        balanceEl.classList.add("balance-neutral");
+        balanceEl.textContent = "Even: $0.00";
+      }
+    }
+
+    function openAddItemModal(mode) {
+      currentMode = mode;
+      itemStatusEl.textContent = "";
+      itemStatusEl.className = "form-status";
+      itemNameInput.value = "";
+      itemConditionInput.value = "near-mint";
+      itemPriceInput.value = "";
+      if (mode === "selling") {
+        modalTitleEl.textContent = "Add Item - Customer Selling to Store";
+        modalDescEl.textContent = "Item the store is purchasing from customer";
+      } else {
+        modalTitleEl.textContent = "Add Item - Customer Buying from Store";
+        modalDescEl.textContent = "Item the customer is purchasing";
+      }
+      addItemModal.classList.add("open");
+      itemNameInput.focus();
+    }
+
+    function closeAddItemModal() {
+      addItemModal.classList.remove("open");
+      currentMode = null;
+    }
+
+    function addItem() {
+      var name = itemNameInput.value.trim();
+      var condition = itemConditionInput.value;
+      var priceStr = itemPriceInput.value.trim();
+
+      if (!name) {
+        itemStatusEl.textContent = "Item name is required.";
+        itemStatusEl.className = "form-status error";
+        return;
+      }
+
+      var price = parseFloat(priceStr);
+      if (isNaN(price) || price < 0) {
+        itemStatusEl.textContent = "Price must be a valid number.";
+        itemStatusEl.className = "form-status error";
+        return;
+      }
+
+      var item = {
+        category: "uncataloged",
+        name: name,
+        brand: "",
+        year: "",
+        platform: "",
+        edition: "",
+        barcode: "",
+        catalogueId: "",
+        condition: condition,
+        grade: "",
+        grader: "",
+        price: price,
+        catalogItemId: null,
+        source: "quick-add"
+      };
+
+      if (currentMode === "selling") {
+        sellingItems.push(item);
+      } else {
+        buyingItems.push(item);
+      }
+
+      renderItems();
+      closeAddItemModal();
+    }
+
+    function removeItem(type, idx) {
+      if (type === "selling") {
+        sellingItems.splice(idx, 1);
+      } else {
+        buyingItems.splice(idx, 1);
+      }
+      renderItems();
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    addSellingBtn.addEventListener("click", () => openAddItemModal("selling"));
+    addBuyingBtn.addEventListener("click", () => openAddItemModal("buying"));
+
+    itemAddBtn.addEventListener("click", addItem);
+    itemCancelBtn.addEventListener("click", closeAddItemModal);
+
+    itemNameInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addItem();
+    });
+
+    itemPriceInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addItem();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (e.target.classList.contains("item-remove")) {
+        var type = e.target.getAttribute("data-type");
+        var idx = parseInt(e.target.getAttribute("data-idx"));
+        removeItem(type, idx);
+      }
+      if (e.target === addItemModal) {
+        closeAddItemModal();
+      }
+    });
+
+    backBtn.addEventListener("click", () => {
+      window.location.href = "/store.html";
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      if (confirm("Are you sure? Any unsaved data will be lost.")) {
+        window.location.href = "/store.html";
+      }
+    });
+
+    draftBtn.addEventListener("click", () => {
+      alert("Draft save not yet implemented.");
+    });
+
+    completeBtn.addEventListener("click", () => {
+      if (sellingItems.length === 0 && buyingItems.length === 0) {
+        alert("Add at least one item to complete transaction.");
+        return;
+      }
+      alert("Transaction completion not yet implemented.");
+    });
+
+    searchSellingBtn.addEventListener("click", () => {
+      openCatalogSearch("selling");
+    });
+
+    searchBuyingBtn.addEventListener("click", () => {
+      openCatalogSearch("buying");
+    });
+
+    // ========== CATALOG SEARCH ==========
+    var mockCatalog = [
+      { id: 1,  name: "Charizard Base Set Holo",         category: "trading-card",   franchise: "pokemon",    brand: "Wizards of the Coast", year: "1999", platform: "TCG", edition: "Base Set",             barcode: "820650102301", image: "🔥", marketVal: 150,   avg30: 145,   lastSale: 152   },
+      { id: 2,  name: "Black Lotus Limited Edition",     category: "trading-card",   franchise: "magic",      brand: "Wizards of the Coast", year: "1993", platform: "TCG", edition: "Limited Edition",      barcode: "820650100000", image: "♠️", marketVal: 8500,  avg30: 8200,  lastSale: 8400  },
+      { id: 3,  name: "Blue Eyes White Dragon 1st Ed",   category: "trading-card",   franchise: "yugioh",     brand: "Konami",                year: "2002", platform: "TCG", edition: "1st Edition",          barcode: "083717850201", image: "👁️", marketVal: 85,    avg30: 82,    lastSale: 88    },
+      { id: 4,  name: "Amazing Spider-Man #1",           category: "comic",          franchise: "marvel",     brand: "Marvel Comics",         year: "1963", platform: "Comic", edition: "Silver Age",         barcode: "761941200316", image: "📗", marketVal: 950,   avg30: 920,   lastSale: 960   },
+      { id: 5,  name: "Sealed Pokemon Base Booster Box", category: "trading-card",   franchise: "pokemon",    brand: "Wizards of the Coast", year: "1999", platform: "TCG", edition: "Base Set Sealed",      barcode: "820650102509", image: "📦", marketVal: 12000, avg30: 11500, lastSale: 12200 },
+      { id: 6,  name: "Super Mario Bros. (NES CIB)",     category: "video-game",     franchise: "nintendo",   brand: "Nintendo",              year: "1985", platform: "NES", edition: "CIB",                  barcode: "045496630553", image: "🎮", marketVal: 120,   avg30: 115,   lastSale: 125   },
+      { id: 7,  name: "The Legend of Zelda (NES CIB)",   category: "video-game",     franchise: "nintendo",   brand: "Nintendo",              year: "1986", platform: "NES", edition: "CIB",                  barcode: "045496630591", image: "🗡️", marketVal: 200,   avg30: 195,   lastSale: 205   },
+      { id: 8,  name: "Star Wars Episode IV VHS",        category: "movie",          franchise: "star-wars",  brand: "20th Century Fox",      year: "1982", platform: "VHS", edition: "Home Release",         barcode: "086162123456", image: "🎬", marketVal: 45,    avg30: 42,    lastSale: 48    },
+      { id: 9,  name: "Hot Wheels Redline Classic",      category: "toy",            franchise: "hot-wheels", brand: "Mattel",                year: "1969", platform: "Die-cast", edition: "Redline",           barcode: "074299098765", image: "🚗", marketVal: 85,    avg30: 80,    lastSale: 88    },
+      { id: 10, name: "Michael Jordan 1986 Fleer RC",    category: "sports-card",    franchise: "nba",        brand: "Fleer",                 year: "1986", platform: "Sports Card", edition: "Rookie Card",      barcode: "041199111111", image: "🏀", marketVal: 8000,  avg30: 7800,  lastSale: 8100  },
+      { id: 11, name: "Tom Brady 2000 Bowman Chrome RC", category: "sports-card",    franchise: "nfl",        brand: "Topps",                 year: "2000", platform: "Sports Card", edition: "Rookie Card",      barcode: "041199222222", image: "🏈", marketVal: 3500,  avg30: 3400,  lastSale: 3600  },
+      { id: 12, name: "Beatles White Album (UK Press)",  category: "music",          franchise: "rock",       brand: "Apple Records",         year: "1968", platform: "Vinyl", edition: "UK First Press",       barcode: "602547777777", image: "🎵", marketVal: 400,   avg30: 385,   lastSale: 420   },
+      { id: 13, name: "LEGO Star Wars Millennium Falcon", category: "building-blocks", franchise: "star-wars", brand: "LEGO",                  year: "2017", platform: "Building Set", edition: "75192",             barcode: "673419264723", image: "🧱", marketVal: 850,   avg30: 820,   lastSale: 860   },
+      { id: 14, name: "Batman #1 (1940 Reprint)",        category: "comic",          franchise: "dc",         brand: "DC Comics",             year: "1990", platform: "Comic", edition: "Reprint",             barcode: "761941343997", image: "🦇", marketVal: 75,    avg30: 72,    lastSale: 78    }
+    ];
+
+    var mockSalesHistory = {
+      1: [{ condition: "near-mint", grade: "", price: 148, soldAt: "2026-03-01" }, { condition: "near-mint", grade: "", price: 151, soldAt: "2026-02-20" }, { condition: "graded", grade: "PSA 8", price: 255, soldAt: "2026-02-11" }],
+      2: [{ condition: "graded", grade: "BGS 9", price: 9100, soldAt: "2026-02-28" }, { condition: "graded", grade: "PSA 8", price: 8420, soldAt: "2026-02-15" }],
+      6: [{ condition: "complete", grade: "", price: 118, soldAt: "2026-02-25" }, { condition: "loose", grade: "", price: 76, soldAt: "2026-02-13" }],
+      10: [{ condition: "graded", grade: "PSA 8", price: 7900, soldAt: "2026-02-21" }, { condition: "graded", grade: "PSA 9", price: 12300, soldAt: "2026-02-08" }]
+    };
+
+    var franchisesByCategory = {
+      "video-game":      [ ["nintendo","Nintendo"], ["playstation","PlayStation"], ["xbox","Xbox"], ["sega","Sega"], ["atari","Atari"], ["pc","PC Games"] ],
+      "movie":           [ ["disney","Disney"], ["marvel","Marvel Studios"], ["dc","DC Films"], ["star-wars","Star Wars"], ["universal","Universal"], ["criterion","Criterion"] ],
+      "toy":             [ ["hot-wheels","Hot Wheels"], ["funko","Funko Pop"], ["barbie","Barbie"], ["transformers","Transformers"], ["gi-joe","G.I. Joe"], ["star-wars","Star Wars"] ],
+      "music":           [ ["rock","Rock"], ["pop","Pop"], ["hip-hop","Hip-Hop"], ["metal","Metal"], ["jazz","Jazz"], ["classical","Classical"] ],
+      "sports-card":     [ ["nba","NBA Basketball"], ["nfl","NFL Football"], ["mlb","MLB Baseball"], ["nhl","NHL Hockey"], ["soccer","Soccer / FIFA"] ],
+      "trading-card":    [ ["pokemon","Pokémon"], ["magic","Magic: The Gathering"], ["yugioh","Yu-Gi-Oh!"], ["dragonball","Dragon Ball Z"], ["onepiece","One Piece"], ["digimon","Digimon"] ],
+      "comic":           [ ["marvel","Marvel"], ["dc","DC Comics"], ["image","Image Comics"], ["dark-horse","Dark Horse"], ["idw","IDW Publishing"] ],
+      "building-blocks": [ ["lego","LEGO"], ["mega","Mega Construx"], ["knex","K'NEX"], ["star-wars","Star Wars LEGO"] ]
+    };
+
+    function updateFranchiseDropdown(category) {
+      var franchises = category ? (franchisesByCategory[category] || []) : [];
+      filterFranchiseEl.innerHTML = '<option value="">All Franchises</option>';
+      franchises.forEach(function(f) {
+        var opt = document.createElement("option");
+        opt.value = f[0];
+        opt.textContent = f[1];
+        filterFranchiseEl.appendChild(opt);
+      });
+      filterFranchiseEl.value = "";
+    }
+
+    var catalogModalEl = document.getElementById("catalog-modal-overlay");
+    var catalogSearchInput = document.getElementById("catalog-search-input");
+    var catalogResults = document.getElementById("catalog-results");
+    var catalogCloseBtn = document.getElementById("catalog-close-btn");
+    var filterCategoryEl = document.getElementById("filter-category");
+    var filterFranchiseEl = document.getElementById("filter-franchise");
+    var filterYearEl = document.getElementById("filter-year");
+    var conditionPanel = document.getElementById("condition-panel");
+    var conditionItemName = document.getElementById("condition-item-name");
+    var conditionCloseBtn = document.getElementById("condition-close-btn");
+    var conditionType = document.getElementById("condition-type");
+    var conditionIsGraded = document.getElementById("condition-is-graded");
+    var gradeGroup = document.getElementById("grade-group");
+    var gradedFields = document.getElementById("graded-fields");
+    var conditionPrice = document.getElementById("condition-price");
+    var conditionAddBtn = document.getElementById("condition-add-btn");
+    var conditionCancelBtn = document.getElementById("condition-cancel-btn");
+    var pricingMarket = document.getElementById("pricing-market");
+    var pricingAvg = document.getElementById("pricing-avg");
+    var pricingLast = document.getElementById("pricing-last");
+    var pricingSuggest = document.getElementById("pricing-suggest");
+    var conditionPlatform = document.getElementById("condition-platform");
+    var conditionEdition = document.getElementById("condition-edition");
+    var conditionBarcode = document.getElementById("condition-barcode");
+    var conditionCatalogueId = document.getElementById("condition-catalogue-id");
+    var currentCatalogMode = null;
+    var selectedCatalogItem = null;
+
+    function openCatalogSearch(mode) {
+      currentCatalogMode = mode;
+      catalogSearchInput.value = "";
+      filterCategoryEl.value = "";
+      updateFranchiseDropdown("");
+      filterFranchiseEl.value = "";
+      filterYearEl.value = "";
+      catalogModalEl.classList.add("open");
+      catalogSearchInput.focus();
+      searchCatalog();
+    }
+
+    function closeCatalogSearch() {
+      catalogModalEl.classList.remove("open");
+      currentCatalogMode = null;
+    }
+
+    function closeConditionPanel() {
+      conditionPanel.classList.remove("open");
+      selectedCatalogItem = null;
+    }
+
+    function searchCatalog() {
+      var query = catalogSearchInput.value.toLowerCase().trim();
+      var category = filterCategoryEl.value;
+      var franchise = filterFranchiseEl.value;
+      var year = filterYearEl.value;
+      var results = mockCatalog.filter(item => {
+        if (query && !item.name.toLowerCase().includes(query)) return false;
+        if (category && item.category !== category) return false;
+        if (franchise && item.franchise !== franchise) return false;
+        if (year) {
+          if (year === "2020-down" && parseInt(item.year) >= 2020) return false;
+          if (year !== "2020-down" && item.year !== year) return false;
+        }
+        return true;
+      });
+      renderCatalogResults(results);
+    }
+
+    function renderCatalogResults(results) {
+      if (results.length === 0) {
+        catalogResults.innerHTML = '<div class="catalog-empty"><div class="catalog-empty-icon">📭</div><p>No items found. Try adjusting your search.</p></div>';
+        return;
+      }
+      catalogResults.innerHTML = '<div class="catalog-grid"></div>';
+      var grid = catalogResults.querySelector(".catalog-grid");
+      results.forEach(item => {
+        var card = document.createElement("div");
+        card.className = "catalog-card";
+        card.innerHTML = '<div class="catalog-card-image">' + item.image + '</div><div class="catalog-card-content"><div class="catalog-card-name">' + escapeHtml(item.name) + '</div><div class="catalog-card-meta">' + escapeHtml(item.brand) + ' • ' + item.year + '</div><div class="catalog-card-pricing">Market: $' + item.marketVal.toFixed(2) + '</div><div class="catalog-card-actions"><button class="catalog-card-btn" data-action="add" data-id="' + item.id + '">Add to TX</button><button class="catalog-card-btn" data-action="details" data-id="' + item.id + '">Details</button></div></div>';
+        grid.appendChild(card);
+      });
+    }
+
+    function openConditionPanel(item) {
+      selectedCatalogItem = item;
+      conditionItemName.textContent = escapeHtml(item.name);
+      conditionType.value = "loose";
+      conditionIsGraded.checked = false;
+      conditionPrice.value = Math.round(item.marketVal * 0.7);
+      pricingMarket.textContent = "$" + item.marketVal.toFixed(2);
+      pricingAvg.textContent = "$" + item.avg30.toFixed(2);
+      pricingLast.textContent = "$" + item.lastSale.toFixed(2);
+      pricingSuggest.textContent = "$" + Math.round(item.marketVal * 0.6).toFixed(2);
+      gradeGroup.style.display = "none";
+      gradedFields.style.display = "none";
+      conditionPlatform.textContent = item.platform || "-";
+      conditionEdition.textContent = item.edition || "-";
+      conditionBarcode.textContent = item.barcode || "-";
+      conditionCatalogueId.textContent = "CAT-" + String(item.id).padStart(5, "0");
+      conditionPanel.classList.add("open");
+    }
+
+    function openItemDetail(item, catalogItem) {
+      selectedDetailItem = item;
+      detailItemTitle.textContent = item.name || "Item Details";
+
+      var attributes = [
+        ["Category", item.category || "-"],
+        ["Item Name", item.name || "-"],
+        ["Brand / Publisher / Studio", item.brand || "-"],
+        ["Release Year", item.year || "-"],
+        ["Platform / Format", item.platform || "-"],
+        ["Edition / Version", item.edition || "-"],
+        ["Barcode / UPC", item.barcode || "-"],
+        ["Catalogue ID", item.catalogueId || "-"]
+      ];
+
+      detailAttributesGrid.innerHTML = attributes.map(function(pair) {
+        return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(pair[1]) + '</div></div>';
+      }).join("");
+
+      if (catalogItem) {
+        detailPricingMarket.textContent = "$" + catalogItem.marketVal.toFixed(2);
+        detailPricingAvg.textContent = "$" + catalogItem.avg30.toFixed(2);
+        detailPricingLast.textContent = "$" + catalogItem.lastSale.toFixed(2);
+        detailOfferPrice.value = Math.round(catalogItem.marketVal * 0.7);
+      } else {
+        detailPricingMarket.textContent = "$0.00";
+        detailPricingAvg.textContent = "$0.00";
+        detailPricingLast.textContent = "$0.00";
+        detailOfferPrice.value = "";
+      }
+
+      detailConditionType.value = item.condition || "loose";
+      detailConditionIsGraded.checked = !!item.grade;
+      detailConditionGrader.value = item.grader || "";
+      detailConditionGrade.value = item.grade ? item.grade.split(" ")[1] : "";
+      detailGradedFields.style.display = detailConditionIsGraded.checked ? "grid" : "none";
+
+      renderSalesHistory(item);
+      selectDetailTab("attributes");
+      detailModalOverlay.classList.add("open");
+    }
+
+    function closeItemDetail() {
+      detailModalOverlay.classList.remove("open");
+      selectedDetailItem = null;
+    }
+
+    function selectDetailTab(tab) {
+      var isAttributes = tab === "attributes";
+      detailTabAttributes.classList.toggle("active", isAttributes);
+      detailTabHistory.classList.toggle("active", !isAttributes);
+      detailPanelAttributes.classList.toggle("active", isAttributes);
+      detailPanelHistory.classList.toggle("active", !isAttributes);
+    }
+
+    function renderSalesHistory(item) {
+      var source = item.catalogItemId ? mockSalesHistory[item.catalogItemId] || [] : [];
+      var selectedCondition = (item.condition || "").toLowerCase();
+      var selectedGrade = item.grade ? String(item.grade).trim().toLowerCase() : "";
+      var rows = source.filter(function(row) {
+        var rowCondition = (row.condition || "").toLowerCase();
+        var rowGrade = (row.grade || "").toLowerCase();
+        if (selectedCondition === "graded") {
+          return rowCondition === "graded" && (!selectedGrade || rowGrade === selectedGrade);
+        }
+        return rowCondition === selectedCondition;
+      });
+
+      if (rows.length === 0) {
+        detailHistoryList.innerHTML = '<div class="catalog-empty"><div class="catalog-empty-icon">📉</div><p>No matching sales found for this condition/grade yet.</p></div>';
+        return;
+      }
+
+      detailHistoryList.innerHTML = rows.map(function(row) {
+        return '<div class="detail-history-row"><div><div>' + escapeHtml((row.condition || "").toUpperCase() + (row.grade ? ' • ' + row.grade : '')) + '</div><div class="detail-history-date">' + escapeHtml(row.soldAt) + '</div></div><div>$' + Number(row.price).toFixed(2) + '</div><div>Sale</div></div>';
+      }).join("");
+    }
+
+    catalogSearchInput.addEventListener("input", searchCatalog);
+    filterCategoryEl.addEventListener("change", () => {
+      updateFranchiseDropdown(filterCategoryEl.value);
+      searchCatalog();
+    });
+    filterFranchiseEl.addEventListener("change", searchCatalog);
+    filterYearEl.addEventListener("change", searchCatalog);
+    catalogCloseBtn.addEventListener("click", closeCatalogSearch);
+    conditionCloseBtn.addEventListener("click", closeConditionPanel);
+    conditionCancelBtn.addEventListener("click", closeConditionPanel);
+
+    conditionIsGraded.addEventListener("change", () => {
+      if (conditionIsGraded.checked) {
+        gradedFields.style.display = "grid";
+      } else {
+        gradedFields.style.display = "none";
+      }
+    });
+
+    catalogResults.addEventListener("click", (e) => {
+      var btn = e.target.closest(".catalog-card-btn");
+      if (!btn) return;
+      var action = btn.getAttribute("data-action");
+      var itemId = parseInt(btn.getAttribute("data-id"));
+      var item = mockCatalog.find(i => i.id === itemId);
+      if (action === "add") {
+        openConditionPanel(item);
+      } else if (action === "details") {
+        openItemDetail({
+          category: item.category,
+          name: item.name,
+          brand: item.brand,
+          year: item.year,
+          platform: item.platform,
+          edition: item.edition,
+          barcode: item.barcode,
+          catalogueId: "CAT-" + String(item.id).padStart(5, "0"),
+          condition: "loose",
+          grade: "",
+          grader: "",
+          catalogItemId: item.id,
+          source: "catalog"
+        }, item);
+      }
+    });
+
+    conditionAddBtn.addEventListener("click", () => {
+      if (!selectedCatalogItem) return;
+      var price = parseFloat(conditionPrice.value);
+      if (isNaN(price) || price < 0) {
+        alert("Please enter a valid price.");
+        return;
+      }
+      var newItem = {
+        category: selectedCatalogItem.category,
+        name: selectedCatalogItem.name,
+        brand: selectedCatalogItem.brand,
+        year: selectedCatalogItem.year,
+        platform: selectedCatalogItem.platform || "",
+        edition: selectedCatalogItem.edition || "",
+        barcode: selectedCatalogItem.barcode || "",
+        catalogueId: "CAT-" + String(selectedCatalogItem.id).padStart(5, "0"),
+        condition: conditionType.value,
+        grade: conditionIsGraded.checked ? (document.getElementById("condition-grader").value.toUpperCase() + " " + document.getElementById("condition-graded-grade").value) : "",
+        grader: conditionIsGraded.checked ? document.getElementById("condition-grader").value : "",
+        price: price
+        ,catalogItemId: selectedCatalogItem.id,
+        source: "catalog"
+      };
+      if (currentCatalogMode === "selling") {
+        sellingItems.push(newItem);
+      } else {
+        buyingItems.push(newItem);
+      }
+      renderItems();
+      closeConditionPanel();
+      closeCatalogSearch();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeCatalogSearch();
+        closeConditionPanel();
+        closeItemDetail();
+      }
+    });
+
+    detailCloseBtn.addEventListener("click", closeItemDetail);
+    detailTabAttributes.addEventListener("click", () => selectDetailTab("attributes"));
+    detailTabHistory.addEventListener("click", () => selectDetailTab("history"));
+
+    document.addEventListener("click", (e) => {
+      var row = e.target.closest(".item-row");
+      if (!row) return;
+      if (e.target.closest(".item-remove")) return;
+      var type = row.getAttribute("data-type");
+      var idx = parseInt(row.getAttribute("data-idx"));
+      var item = type === "selling" ? sellingItems[idx] : buyingItems[idx];
+      if (item) openItemDetail(item, null);
+    });
+
+    detailConditionIsGraded.addEventListener("change", () => {
+      detailGradedFields.style.display = detailConditionIsGraded.checked ? "grid" : "none";
+    });
+
+    detailCancelBtn.addEventListener("click", closeItemDetail);
+
+    detailAddBtn.addEventListener("click", () => {
+      if (!selectedDetailItem) return;
+      var price = parseFloat(detailOfferPrice.value);
+      if (isNaN(price) || price < 0) {
+        alert("Please enter a valid price.");
+        return;
+      }
+      var newItem = {
+        category: selectedDetailItem.category,
+        name: selectedDetailItem.name,
+        brand: selectedDetailItem.brand,
+        year: selectedDetailItem.year,
+        platform: selectedDetailItem.platform,
+        edition: selectedDetailItem.edition,
+        barcode: selectedDetailItem.barcode,
+        catalogueId: selectedDetailItem.catalogueId,
+        condition: detailConditionType.value,
+        grade: detailConditionIsGraded.checked ? (detailConditionGrader.value.toUpperCase() + " " + detailConditionGrade.value) : "",
+        grader: detailConditionIsGraded.checked ? detailConditionGrader.value : "",
+        price: price,
+        catalogItemId: selectedDetailItem.catalogItemId,
+        source: selectedDetailItem.source
+      };
+      var targetMode = currentMode || selectedDetailItem.source === "quick-add" ? "selling" : "selling";
+      if (currentMode === "buying") targetMode = "buying";
+      if (currentMode === "selling") targetMode = "selling";
+      if (!currentMode && selectedDetailItem.source === "catalog") targetMode = "selling";
+      if (targetMode === "selling") {
+        sellingItems.push(newItem);
+      } else {
+        buyingItems.push(newItem);
+      }
+      renderItems();
+      closeItemDetail();
+    });
+
+    renderItems();
+  </script>
+</body>
+</html>

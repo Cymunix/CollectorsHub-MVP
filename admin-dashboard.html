@@ -1,0 +1,1732 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - CollectorsHub Retail</title>
+  <style>
+    :root {
+      --bg: #070d18;
+      --bg-soft: #0d1526;
+      --panel: #121c30;
+      --panel-2: #15233a;
+      --border: #233451;
+      --text: #e7eefb;
+      --text-soft: #9fb0cf;
+      --accent: #33c3ff;
+      --accent-2: #2de0c4;
+      --warn: #f7b955;
+      --ok: #3ed090;
+      --danger: #ff6e81;
+      --shadow: 0 14px 30px rgba(2, 8, 20, 0.45);
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Sora", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(700px 400px at 90% -20%, rgba(51, 195, 255, 0.16), transparent 60%),
+        radial-gradient(600px 350px at -10% 100%, rgba(45, 224, 196, 0.12), transparent 60%),
+        linear-gradient(135deg, #060b14 0%, #0a1424 50%, #0c1a2f 100%);
+      min-height: 100vh;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(10, 18, 33, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .brand {
+      padding: 10px 10px 14px;
+      border-bottom: 1px solid rgba(159, 176, 207, 0.15);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-sub {
+      margin: 6px 0 0;
+      color: var(--text-soft);
+      font-size: 0.82rem;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      color: var(--text-soft);
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+      font-size: 0.9rem;
+    }
+
+    .nav-item:hover {
+      background: rgba(51, 195, 255, 0.09);
+      border-color: rgba(51, 195, 255, 0.26);
+      color: var(--text);
+      transform: translateX(2px);
+    }
+
+    .nav-item.active {
+      background: rgba(51, 195, 255, 0.14);
+      border-color: rgba(51, 195, 255, 0.36);
+      color: #dff6ff;
+      box-shadow: inset 0 0 0 1px rgba(51, 195, 255, 0.12);
+    }
+
+    .nav-icon {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 76px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 16, 30, 0.78);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      padding: 10px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .mobile-menu {
+      display: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      width: 38px;
+      height: 38px;
+      cursor: pointer;
+    }
+
+    .platform-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .admin-badge {
+      background: rgba(45, 224, 196, 0.16);
+      color: #86ffe8;
+      border: 1px solid rgba(45, 224, 196, 0.44);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .topbar-right > * {
+      flex-shrink: 0;
+    }
+
+    .search {
+      width: min(320px, 36vw);
+      min-width: 150px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: rgba(51, 195, 255, 0.6);
+      box-shadow: 0 0 0 3px rgba(51, 195, 255, 0.16);
+    }
+
+    .icon-btn,
+    .store-mode-btn,
+    .user-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+    }
+
+    .icon-btn:hover,
+    .store-mode-btn:hover,
+    .user-btn:hover {
+      border-color: rgba(51, 195, 255, 0.45);
+      transform: translateY(-1px);
+      background: var(--panel-2);
+    }
+
+    .store-mode-btn {
+      background: linear-gradient(135deg, rgba(51, 195, 255, 0.18), rgba(45, 224, 196, 0.16));
+      border-color: rgba(51, 195, 255, 0.4);
+      font-weight: 700;
+    }
+
+    .user-btn {
+      padding-right: 14px;
+    }
+
+    .main {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section {
+      background: rgba(13, 22, 40, 0.76);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .section-sub {
+      color: var(--text-soft);
+      margin: 6px 0 0;
+      font-size: 0.84rem;
+    }
+
+    .stats-grid {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-card {
+      background: linear-gradient(180deg, rgba(20, 33, 56, 0.95), rgba(14, 24, 42, 0.95));
+      border: 1px solid rgba(55, 86, 133, 0.45);
+      border-radius: var(--radius-md);
+      box-shadow: 0 12px 24px rgba(4, 10, 26, 0.4);
+      padding: 16px;
+    }
+
+    .stat-label {
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      margin: 0;
+    }
+
+    .stat-value {
+      margin: 10px 0 8px;
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .stat-trend {
+      margin: 0;
+      font-size: 0.78rem;
+      color: var(--ok);
+    }
+
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .action-btn {
+      border: 1px solid rgba(56, 89, 136, 0.55);
+      background: rgba(18, 31, 53, 0.95);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+    }
+
+    .action-btn:hover {
+      border-color: rgba(51, 195, 255, 0.55);
+      transform: translateY(-1px);
+      background: rgba(25, 41, 66, 0.98);
+    }
+
+    .activity-grid {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .activity-panel {
+      background: rgba(15, 25, 43, 0.95);
+      border: 1px solid rgba(48, 74, 117, 0.5);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+
+    .activity-panel h3 {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #d8e7ff;
+    }
+
+    .activity-list {
+      list-style: none;
+      margin: 12px 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .activity-item {
+      background: rgba(10, 18, 33, 0.85);
+      border: 1px solid rgba(45, 72, 112, 0.5);
+      border-radius: 10px;
+      padding: 10px 11px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.82rem;
+      color: #d6e2f8;
+    }
+
+    .activity-item span {
+      overflow-wrap: anywhere;
+    }
+
+    .activity-item small {
+      color: var(--text-soft);
+      white-space: nowrap;
+    }
+
+    .store-ops-note {
+      margin-top: 14px;
+      padding: 12px 13px;
+      border-radius: 10px;
+      background: rgba(247, 185, 85, 0.08);
+      border: 1px solid rgba(247, 185, 85, 0.3);
+      color: #f8d8a2;
+      font-size: 0.8rem;
+    }
+
+    .menu {
+      position: relative;
+    }
+
+    .menu-pop {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 44px;
+      min-width: 170px;
+      background: #111d33;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .menu-pop.open {
+      display: block;
+    }
+
+    .menu-pop button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      padding: 11px 12px;
+      cursor: pointer;
+      font-size: 0.84rem;
+    }
+
+    .menu-pop button:hover {
+      background: rgba(51, 195, 255, 0.12);
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 10, 20, 0.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 470px;
+      background: #101b2f;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .modal h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .modal p {
+      margin: 8px 0 14px;
+      color: var(--text-soft);
+      font-size: 0.84rem;
+    }
+
+    .store-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+
+    .store-item {
+      border: 1px solid rgba(45, 72, 112, 0.5);
+      background: rgba(12, 22, 38, 0.9);
+      border-radius: 10px;
+      padding: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .store-item:hover {
+      border-color: rgba(51, 195, 255, 0.55);
+    }
+
+    .store-item small {
+      color: var(--text-soft);
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+
+    .field input,
+    .field select {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 0.86rem;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: rgba(51, 195, 255, 0.6);
+      box-shadow: 0 0 0 3px rgba(51, 195, 255, 0.14);
+    }
+
+    .user-type-toggle {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .type-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(45, 72, 112, 0.6);
+      background: rgba(255,255,255,0.03);
+      color: #a0aec0;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .type-btn:hover {
+      background: rgba(51, 195, 255, 0.08);
+      color: #e2e8f0;
+    }
+    .type-btn.active {
+      background: rgba(51, 195, 255, 0.12);
+      border-color: #33c3ff;
+      color: #33c3ff;
+      font-weight: 600;
+    }
+
+    .store-lookup-wrap {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .store-suggestions {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 6px);
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid rgba(45, 72, 112, 0.6);
+      border-radius: 10px;
+      background: rgba(10, 18, 33, 0.98);
+      box-shadow: var(--shadow);
+      z-index: 6;
+    }
+
+    .store-suggestion-item {
+      width: 100%;
+      text-align: left;
+      border: 0;
+      border-bottom: 1px solid rgba(45, 72, 112, 0.35);
+      background: transparent;
+      color: #d6e2f8;
+      padding: 9px 10px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .store-suggestion-item:last-child {
+      border-bottom: 0;
+    }
+
+    .store-suggestion-item:hover {
+      background: rgba(51, 195, 255, 0.14);
+    }
+
+    .selected-stores {
+      min-height: 38px;
+      border: 1px solid rgba(45, 72, 112, 0.5);
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(10, 18, 33, 0.85);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .store-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(51, 195, 255, 0.16);
+      border: 1px solid rgba(51, 195, 255, 0.4);
+      color: #d9f4ff;
+      font-size: 0.78rem;
+    }
+
+    .store-chip button {
+      border: 0;
+      background: transparent;
+      color: #d9f4ff;
+      cursor: pointer;
+      font-size: 0.78rem;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .selected-empty {
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      padding: 3px 2px;
+    }
+
+    .form-status {
+      margin: 0 0 10px;
+      font-size: 0.82rem;
+      color: var(--text-soft);
+      min-height: 18px;
+    }
+
+    .modal-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 1100px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform 170ms ease;
+        z-index: 50;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .mobile-menu {
+        display: inline-block;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        padding: 10px 14px;
+      }
+
+      .topbar-left,
+      .topbar-right {
+        width: 100%;
+      }
+
+      .platform-title {
+        display: none;
+      }
+
+      .search {
+        width: 42vw;
+      }
+
+      .store-mode-btn {
+        display: none;
+      }
+
+      .activity-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .topbar-right {
+        gap: 7px;
+        justify-content: flex-start;
+      }
+
+      .search {
+        display: none;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .main {
+        padding: 14px;
+      }
+
+      .section {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <h1 class="brand-title">CollectorsHub Retail</h1>
+        <p class="brand-sub">Platform Administration</p>
+      </div>
+
+      <nav class="nav" aria-label="Admin navigation">
+        <a class="nav-item active" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>
+          Stores
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2a3 3 0 110 6 3 3 0 010-6zm-5 11a5 5 0 1110 0v1H3z"/></svg>
+          Users
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>
+          Catalog
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13h12v1H2zm1-2l2-5 2 3 2-6 3 8z"/></svg>
+          Pricing Data
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z"/></svg>
+          Marketplace
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h10v12H3zM4 4v1h8V4zm0 3v1h8V7zm0 3v1h5v-1z"/></svg>
+          System Logs
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.7 1l.4 1.6a5.7 5.7 0 011.5.9l1.5-.5.8 1.3-1.2 1a5.8 5.8 0 01.1.9 5.8 5.8 0 01-.1.9l1.2 1-.8 1.3-1.5-.5a5.8 5.8 0 01-1.5.9L9.7 15H8.3l-.4-1.6a5.8 5.8 0 01-1.5-.9l-1.5.5-.8-1.3 1.2-1a5.8 5.8 0 01-.1-.9c0-.3 0-.6.1-.9l-1.2-1 .8-1.3 1.5.5a5.8 5.8 0 011.5-.9L8.3 1zM8 6.2A1.8 1.8 0 108 9.8a1.8 1.8 0 000-3.6z"/></svg>
+          Settings
+        </a>
+      </nav>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu" id="mobile-menu" aria-label="Open menu">=</button>
+          <h2 class="platform-title">CollectorsHub Retail</h2>
+          <span class="admin-badge">Server Admin</span>
+        </div>
+
+        <div class="topbar-right">
+          <input class="search" type="search" placeholder="Search stores, users, catalog..." aria-label="Global search" />
+          <button class="icon-btn" aria-label="Notifications">Notifications</button>
+          <button class="store-mode-btn" id="enter-store-mode">Enter Store Mode</button>
+          <div class="menu">
+            <button class="user-btn" id="user-menu">Admin User</button>
+            <div class="menu-pop" id="menu-pop">
+              <button id="change-password-btn">Change Password</button>
+              <button id="sign-out">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="section">
+          <h2>Platform Statistics</h2>
+          <p class="section-sub">Real-time platform totals across all retail environments.</p>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <p class="stat-label">Total Stores</p>
+              <p class="stat-value" id="stat-total-stores">--</p>
+              <p class="stat-trend" id="stat-total-stores-note">Loading...</p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Total Users</p>
+              <p class="stat-value" id="stat-total-users">--</p>
+              <p class="stat-trend" id="stat-total-users-note">Loading...</p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Catalog Items</p>
+              <p class="stat-value" id="stat-catalog-items">--</p>
+              <p class="stat-trend" id="stat-catalog-items-note">Loading...</p>
+            </article>
+            <article class="stat-card">
+              <p class="stat-label">Active Listings</p>
+              <p class="stat-value" id="stat-active-listings">--</p>
+              <p class="stat-trend" id="stat-active-listings-note">Loading...</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Quick Actions</h2>
+          <p class="section-sub">Platform administration tools only. Store operations run in Store Mode.</p>
+          <div class="actions">
+            <button class="action-btn admin-only" type="button">Create Store</button>
+            <button class="action-btn admin-only" id="create-user-btn" type="button">Create User</button>
+            <button class="action-btn" id="reset-password-btn" type="button">Reset User Password</button>
+            <button class="action-btn admin-only" type="button">Add Catalog Item</button>
+            <button class="action-btn" type="button">View System Logs</button>
+          </div>
+          <div class="store-ops-note">
+            Store operations are isolated from this admin console. Use Enter Store Mode to access store workflows.
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Recent Platform Activity</h2>
+          <p class="section-sub">Operational visibility across stores and core platform services.</p>
+
+          <div class="activity-grid">
+            <article class="activity-panel">
+              <h3>Recent Store Activity</h3>
+              <ul class="activity-list" id="store-activity-list">
+                <li class="activity-item"><span>Loading recent store activity...</span><small>...</small></li>
+              </ul>
+            </article>
+
+            <article class="activity-panel">
+              <h3>System Activity</h3>
+              <ul class="activity-list" id="system-activity-list">
+                <li class="activity-item"><span>Loading system activity...</span><small>...</small></li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="store-modal" role="dialog" aria-modal="true" aria-labelledby="store-modal-title">
+    <div class="modal">
+      <h3 id="store-modal-title">Enter Store Mode</h3>
+      <p>Select an active store environment to continue.</p>
+      <div class="store-list" id="store-list">
+        <div class="activity-item"><span>Loading stores...</span></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" id="close-store-modal" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Own Password Modal -->
+  <div class="modal-overlay" id="change-password-modal" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
+    <div class="modal">
+      <h3 id="change-password-title">Change Password</h3>
+      <p>Enter your current password and choose a new one.</p>
+
+      <div class="field">
+        <label for="cp-current">Current Password</label>
+        <input id="cp-current" type="password" autocomplete="current-password" placeholder="Current password" />
+      </div>
+      <div class="field">
+        <label for="cp-new">New Password</label>
+        <input id="cp-new" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+      </div>
+      <div class="field">
+        <label for="cp-confirm">Confirm New Password</label>
+        <input id="cp-confirm" type="password" autocomplete="new-password" placeholder="Repeat new password" />
+      </div>
+
+      <p class="form-status" id="cp-status"></p>
+
+      <div class="modal-foot">
+        <button class="btn" id="cp-cancel" type="button">Cancel</button>
+        <button class="btn" id="cp-submit" type="button">Update Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Another User's Password Modal -->
+  <div class="modal-overlay" id="reset-password-modal" role="dialog" aria-modal="true" aria-labelledby="reset-password-title">
+    <div class="modal">
+      <h3 id="reset-password-title">Reset User Password</h3>
+      <p>Set a new password for any active user. Server ops cannot reset server admin passwords.</p>
+
+      <div class="field">
+        <label for="rp-username">Username</label>
+        <input id="rp-username" type="text" placeholder="e.g. HaydenM42" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="rp-new">New Password</label>
+        <input id="rp-new" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+      </div>
+      <div class="field">
+        <label for="rp-confirm">Confirm New Password</label>
+        <input id="rp-confirm" type="password" autocomplete="new-password" placeholder="Repeat new password" />
+      </div>
+
+      <p class="form-status" id="rp-status"></p>
+
+      <div class="modal-foot">
+        <button class="btn" id="rp-cancel" type="button">Cancel</button>
+        <button class="btn" id="rp-submit" type="button">Reset Password</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="create-user-modal" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+    <div class="modal">
+      <h3 id="create-user-title">Create User</h3>
+
+      <div class="field">
+        <label>User Type</label>
+        <div class="user-type-toggle">
+          <button class="type-btn active" id="type-btn-retail" type="button" data-type="retail">Retail User</button>
+          <button class="type-btn" id="type-btn-server" type="button" data-type="server">System Admin</button>
+        </div>
+      </div>
+
+      <p id="create-user-desc" style="margin:0 0 8px;">Add a user and connect them to one or more stores.</p>
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="create-user-username">Username</label>
+          <input id="create-user-username" type="text" placeholder="e.g. JaneD14" />
+        </div>
+        <div class="field">
+          <label for="create-user-email">Email</label>
+          <input id="create-user-email" type="email" placeholder="user@domain.com" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="create-user-role">Role</label>
+        <select id="create-user-role">
+          <option value="staff">Staff</option>
+          <option value="manager">Manager</option>
+          <option value="owner">Owner</option>
+        </select>
+      </div>
+
+      <div class="field" id="store-picker-section">
+        <label for="create-user-store-code-input">Store Access (type store code)</label>
+        <div class="store-lookup-wrap">
+          <input id="create-user-store-code-input" type="text" placeholder="Type code like NYC01 or DAL02" autocomplete="off" />
+          <div class="store-suggestions" id="create-user-store-suggestions" hidden></div>
+        </div>
+        <div class="selected-stores" id="create-user-selected-stores">
+          <span class="selected-empty">No stores selected yet.</span>
+        </div>
+      </div>
+
+      <p class="form-status" id="create-user-status"></p>
+
+      <div class="modal-foot">
+        <button class="btn" id="create-user-cancel" type="button">Cancel</button>
+        <button class="btn" id="create-user-submit" type="button">Create User</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var TEST_STORE_KEY = "collectorshub_test_store";
+    var STORE_CODE_KEY = "collectorshub_retail_store_code";
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+
+    var config = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var sidebar = document.getElementById("sidebar");
+    var mobileMenu = document.getElementById("mobile-menu");
+    var userMenu = document.getElementById("user-menu");
+    var menuPop = document.getElementById("menu-pop");
+    var signOutBtn = document.getElementById("sign-out");
+    var enterStoreModeBtn = document.getElementById("enter-store-mode");
+    var storeModal = document.getElementById("store-modal");
+    var storeList = document.getElementById("store-list");
+    var closeStoreModalBtn = document.getElementById("close-store-modal");
+    var storeActivityList = document.getElementById("store-activity-list");
+    var systemActivityList = document.getElementById("system-activity-list");
+    var createUserBtn = document.getElementById("create-user-btn");
+    var createUserModal = document.getElementById("create-user-modal");
+    var createUserCancelBtn = document.getElementById("create-user-cancel");
+    var createUserSubmitBtn = document.getElementById("create-user-submit");
+    var createUserStatus = document.getElementById("create-user-status");
+    var createUserUsernameInput = document.getElementById("create-user-username");
+    var createUserEmailInput = document.getElementById("create-user-email");
+    var createUserRoleSelect = document.getElementById("create-user-role");
+    var createUserStoreCodeInput = document.getElementById("create-user-store-code-input");
+    var createUserStoreSuggestions = document.getElementById("create-user-store-suggestions");
+    var createUserSelectedStores = document.getElementById("create-user-selected-stores");
+    var createUserDesc = document.getElementById("create-user-desc");
+    var storePicker = document.getElementById("store-picker-section");
+    var typeBtnRetail = document.getElementById("type-btn-retail");
+    var typeBtnServer = document.getElementById("type-btn-server");
+    var availableStores = [];
+    var selectedStoreCodes = [];
+    var activeUserType = "retail"; // "retail" or "server"
+    var currentUserRole = null; // set during init
+
+    var RETAIL_ROLES = [
+      { value: "staff",   label: "Staff" },
+      { value: "manager", label: "Manager" },
+      { value: "owner",   label: "Owner" }
+    ];
+    var SERVER_ROLES = [
+      { value: "server_admin", label: "Server Admin" },
+      { value: "server_ops",   label: "Server Ops" },
+      { value: "support",      label: "Support" }
+    ];
+
+    function setUserType(type) {
+      activeUserType = type;
+      if (type === "retail") {
+        typeBtnRetail.classList.add("active");
+        typeBtnServer.classList.remove("active");
+        storePicker.style.display = "";
+        createUserDesc.textContent = "Add a user and connect them to one or more stores.";
+        buildRoleOptions(RETAIL_ROLES, "staff");
+      } else {
+        typeBtnServer.classList.add("active");
+        typeBtnRetail.classList.remove("active");
+        storePicker.style.display = "none";
+        createUserDesc.textContent = "Add a system administrator with platform-level access.";
+        buildRoleOptions(SERVER_ROLES, "server_ops");
+      }
+    }
+
+    function buildRoleOptions(roles, defaultValue) {
+      createUserRoleSelect.innerHTML = "";
+      roles.forEach(function (r) {
+        var opt = document.createElement("option");
+        opt.value = r.value;
+        opt.textContent = r.label;
+        createUserRoleSelect.appendChild(opt);
+      });
+      createUserRoleSelect.value = defaultValue;
+    }
+
+    typeBtnRetail.addEventListener("click", function () { setUserType("retail"); });
+    typeBtnServer.addEventListener("click", function () { setUserType("server"); });
+
+    // ---- Change Own Password ----
+    var changePasswordBtn = document.getElementById("change-password-btn");
+    var changePasswordModal = document.getElementById("change-password-modal");
+    var cpCancel = document.getElementById("cp-cancel");
+    var cpSubmit = document.getElementById("cp-submit");
+    var cpStatus = document.getElementById("cp-status");
+    var cpCurrent = document.getElementById("cp-current");
+    var cpNew = document.getElementById("cp-new");
+    var cpConfirm = document.getElementById("cp-confirm");
+
+    changePasswordBtn.addEventListener("click", function () {
+      menuPop.classList.remove("open");
+      cpStatus.textContent = "";
+      cpCurrent.value = ""; cpNew.value = ""; cpConfirm.value = "";
+      changePasswordModal.classList.add("open");
+    });
+    cpCancel.addEventListener("click", function () {
+      changePasswordModal.classList.remove("open");
+    });
+
+    cpSubmit.addEventListener("click", async function () {
+      var currentPw = cpCurrent.value;
+      var newPw = cpNew.value;
+      var confirmPw = cpConfirm.value;
+
+      if (!currentPw || !newPw || !confirmPw) {
+        cpStatus.textContent = "All fields are required.";
+        return;
+      }
+      if (newPw.length < 8) {
+        cpStatus.textContent = "New password must be at least 8 characters.";
+        return;
+      }
+      if (newPw !== confirmPw) {
+        cpStatus.textContent = "Passwords do not match.";
+        return;
+      }
+
+      cpSubmit.disabled = true;
+      cpStatus.textContent = "Verifying...";
+
+      // Re-authenticate with current password first
+      var sessionResult = await supabase.auth.getSession();
+      var session = sessionResult && sessionResult.data && sessionResult.data.session;
+      if (!session || !session.user || !session.user.email) {
+        cpStatus.textContent = "Session error. Please sign out and back in.";
+        cpSubmit.disabled = false;
+        return;
+      }
+
+      var verifyResult = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: currentPw
+      });
+
+      if (verifyResult.error) {
+        cpStatus.textContent = "Current password is incorrect.";
+        cpSubmit.disabled = false;
+        return;
+      }
+
+      cpStatus.textContent = "Updating...";
+      var updateResult = await supabase.auth.updateUser({ password: newPw });
+      cpSubmit.disabled = false;
+
+      if (updateResult.error) {
+        cpStatus.textContent = "Error: " + (updateResult.error.message || "Could not update password.");
+        return;
+      }
+
+      cpStatus.textContent = "Password updated successfully.";
+      cpCurrent.value = ""; cpNew.value = ""; cpConfirm.value = "";
+    });
+
+    // ---- Reset Another User's Password ----
+    var resetPasswordBtn = document.getElementById("reset-password-btn");
+    var resetPasswordModal = document.getElementById("reset-password-modal");
+    var rpCancel = document.getElementById("rp-cancel");
+    var rpSubmit = document.getElementById("rp-submit");
+    var rpStatus = document.getElementById("rp-status");
+    var rpUsername = document.getElementById("rp-username");
+    var rpNew = document.getElementById("rp-new");
+    var rpConfirm = document.getElementById("rp-confirm");
+
+    resetPasswordBtn.addEventListener("click", function () {
+      rpStatus.textContent = "";
+      rpUsername.value = ""; rpNew.value = ""; rpConfirm.value = "";
+      resetPasswordModal.classList.add("open");
+    });
+    rpCancel.addEventListener("click", function () {
+      resetPasswordModal.classList.remove("open");
+    });
+
+    rpSubmit.addEventListener("click", async function () {
+      var username = rpUsername.value.trim();
+      var newPw = rpNew.value;
+      var confirmPw = rpConfirm.value;
+
+      if (!username || !newPw || !confirmPw) {
+        rpStatus.textContent = "All fields are required.";
+        return;
+      }
+      if (newPw.length < 8) {
+        rpStatus.textContent = "Password must be at least 8 characters.";
+        return;
+      }
+      if (newPw !== confirmPw) {
+        rpStatus.textContent = "Passwords do not match.";
+        return;
+      }
+
+      rpSubmit.disabled = true;
+      rpStatus.textContent = "Resetting password...";
+
+      var response = await supabase.rpc("admin_reset_user_password", {
+        p_username: username,
+        p_new_password: newPw
+      });
+
+      rpSubmit.disabled = false;
+
+      if (response.error) {
+        rpStatus.textContent = "Error: " + (response.error.message || "Could not reset password.");
+        return;
+      }
+
+      rpStatus.textContent = "Password reset for " + escapeHtml(username) + ".";
+      rpUsername.value = ""; rpNew.value = ""; rpConfirm.value = "";
+    });
+
+    mobileMenu.addEventListener("click", function () {
+      sidebar.classList.toggle("open");
+    });
+
+    userMenu.addEventListener("click", function () {
+      menuPop.classList.toggle("open");
+    });
+
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest(".menu")) {
+        menuPop.classList.remove("open");
+      }
+      if (event.target === storeModal) {
+        storeModal.classList.remove("open");
+      }
+      if (event.target === createUserModal) {
+        createUserModal.classList.remove("open");
+      }
+      if (event.target === changePasswordModal) {
+        changePasswordModal.classList.remove("open");
+      }
+      if (event.target === resetPasswordModal) {
+        resetPasswordModal.classList.remove("open");
+      }
+    });
+
+    function renderSelectedStoreChips() {
+      createUserSelectedStores.innerHTML = "";
+
+      if (selectedStoreCodes.length === 0) {
+        createUserSelectedStores.innerHTML = '<span class="selected-empty">No stores selected yet.</span>';
+        return;
+      }
+
+      selectedStoreCodes.forEach(function (code) {
+        var chip = document.createElement("span");
+        chip.className = "store-chip";
+        chip.innerHTML =
+          '<span>' + escapeHtml(code) + '</span>' +
+          '<button type="button" data-remove-store="' + escapeHtml(code) + '" aria-label="Remove ' + escapeHtml(code) + '">x</button>';
+        createUserSelectedStores.appendChild(chip);
+      });
+    }
+
+    function renderStoreSuggestions() {
+      var query = createUserStoreCodeInput.value.trim().toUpperCase();
+      var matches = availableStores.filter(function (store) {
+        if (selectedStoreCodes.indexOf(store.store_code) >= 0) {
+          return false;
+        }
+        if (!query) {
+          return true;
+        }
+        return store.store_code.indexOf(query) >= 0 || store.store_name.toUpperCase().indexOf(query) >= 0;
+      }).slice(0, 8);
+
+      if (matches.length === 0) {
+        createUserStoreSuggestions.hidden = true;
+        createUserStoreSuggestions.innerHTML = "";
+        return;
+      }
+
+      createUserStoreSuggestions.hidden = false;
+      createUserStoreSuggestions.innerHTML = "";
+      matches.forEach(function (store) {
+        var item = document.createElement("button");
+        item.type = "button";
+        item.className = "store-suggestion-item";
+        item.setAttribute("data-store-code", store.store_code);
+        item.textContent = store.store_code + " - " + store.store_name;
+        createUserStoreSuggestions.appendChild(item);
+      });
+    }
+
+    function addSelectedStore(code) {
+      var normalized = String(code || "").trim().toUpperCase();
+      if (!normalized) {
+        return;
+      }
+      if (selectedStoreCodes.indexOf(normalized) >= 0) {
+        return;
+      }
+      selectedStoreCodes.push(normalized);
+      renderSelectedStoreChips();
+      createUserStoreCodeInput.value = "";
+      renderStoreSuggestions();
+    }
+
+    async function loadAvailableStoresForCreateUser() {
+      createUserStoreSuggestions.hidden = true;
+      createUserStoreSuggestions.innerHTML = "";
+      availableStores = [];
+
+      var response = await supabase.rpc("retail_list_stores");
+
+      if (response.error || !response.data) {
+        createUserStatus.textContent = "Could not load stores.";
+        return;
+      }
+
+      if (response.data.length === 0) {
+        createUserStatus.textContent = "No active stores found.";
+        return;
+      }
+
+      availableStores = response.data.map(function (store) {
+        return {
+          store_code: String(store.store_code || "").toUpperCase(),
+          store_name: String(store.store_name || "")
+        };
+      });
+
+      renderStoreSuggestions();
+    }
+
+    function openCreateUserModal() {
+      createUserStatus.textContent = "";
+      createUserUsernameInput.value = "";
+      createUserEmailInput.value = "";
+      createUserStoreCodeInput.value = "";
+      selectedStoreCodes = [];
+      renderSelectedStoreChips();
+      setUserType("retail");
+      createUserModal.classList.add("open");
+      loadAvailableStoresForCreateUser();
+    }
+
+    async function submitCreateUser() {
+      var username = createUserUsernameInput.value.trim();
+      var email = createUserEmailInput.value.trim().toLowerCase();
+      var role = createUserRoleSelect.value;
+
+      if (!username || !email) {
+        createUserStatus.textContent = "Username and email are required.";
+        return;
+      }
+
+      var usernameOk = activeUserType === "server"
+        ? /^[a-z0-9._\-]+$/i.test(username)
+        : /^[a-z0-9]+$/i.test(username);
+      if (!usernameOk) {
+        createUserStatus.textContent = activeUserType === "server"
+          ? "Username may contain letters, numbers, dots, underscores and hyphens."
+          : "Username must contain only letters and numbers.";
+        return;
+      }
+
+      createUserSubmitBtn.disabled = true;
+      createUserStatus.textContent = "Creating user...";
+
+      var response;
+
+      if (activeUserType === "server") {
+        response = await supabase.rpc("admin_create_server_user", {
+          p_username: username,
+          p_email: email,
+          p_role: role,
+          p_is_active: true
+        });
+      } else {
+        var storeCodes = selectedStoreCodes.slice();
+        if (storeCodes.length === 0) {
+          createUserSubmitBtn.disabled = false;
+          createUserStatus.textContent = "Add at least one store using the code lookup.";
+          return;
+        }
+        response = await supabase.rpc("admin_create_retail_user", {
+          p_username: username,
+          p_email: email,
+          p_role: role,
+          p_store_codes: storeCodes,
+          p_is_active: true
+        });
+      }
+
+      createUserSubmitBtn.disabled = false;
+
+      if (response.error) {
+        createUserStatus.textContent = "Error: " + (response.error.message || "Could not create user.");
+        return;
+      }
+
+      var authLinked = response.data && response.data.auth_user_linked;
+      var authCreated = response.data && response.data.auth_user_created;
+      var tempPassword = response.data && response.data.temporary_password;
+      if (authCreated && tempPassword) {
+        createUserStatus.textContent = "User created. Temporary password: " + tempPassword + " (change after first login).";
+      } else {
+        createUserStatus.textContent = authLinked
+          ? "User created and linked to auth account."
+          : "User created. No auth account found for this email yet.";
+      }
+
+      await loadDashboardData();
+    }
+
+    async function verifyServerUser() {
+      var sessionResult = await supabase.auth.getSession();
+      var session = sessionResult && sessionResult.data && sessionResult.data.session;
+      if (!session) {
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      var role = null;
+      var username = null;
+
+      var serverResult = await supabase
+        .from("server_users")
+        .select("role, username")
+        .eq("auth_user_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!serverResult.error && serverResult.data) {
+        role = serverResult.data.role;
+        username = serverResult.data.username;
+      }
+
+      if (!role && localStorage.getItem(USER_ROLE_KEY) === "server_admin") {
+        role = "server_admin";
+      }
+
+      var SERVER_ROLES = ["server_admin", "server_ops", "support"];
+      if (!role || SERVER_ROLES.indexOf(role) < 0) {
+        await supabase.auth.signOut();
+        window.location.href = "/index.html";
+        return null;
+      }
+
+      return { role: role, username: username };
+    }
+
+    async function safeCount(queryPromise) {
+      var result = await queryPromise;
+      if (result.error) {
+        return null;
+      }
+
+      return typeof result.count === "number" ? result.count : 0;
+    }
+
+    function setStatValue(valueId, noteId, value, note) {
+      var valueEl = document.getElementById(valueId);
+      var noteEl = document.getElementById(noteId);
+
+      valueEl.textContent = value === null ? "--" : Number(value).toLocaleString();
+      noteEl.textContent = note;
+    }
+
+    function timeAgo(isoText) {
+      if (!isoText) {
+        return "recent";
+      }
+
+      var deltaMs = Date.now() - new Date(isoText).getTime();
+      var minutes = Math.max(1, Math.floor(deltaMs / 60000));
+      if (minutes < 60) return minutes + " min ago";
+      var hours = Math.floor(minutes / 60);
+      if (hours < 24) return hours + " hr ago";
+      var days = Math.floor(hours / 24);
+      return days + " day" + (days === 1 ? "" : "s") + " ago";
+    }
+
+    function renderActivity(listEl, items, emptyText) {
+      listEl.innerHTML = "";
+
+      if (!items || items.length === 0) {
+        listEl.innerHTML = '<li class="activity-item"><span>' + escapeHtml(emptyText) + '</span><small>-</small></li>';
+        return;
+      }
+
+      items.forEach(function (item) {
+        var li = document.createElement("li");
+        li.className = "activity-item";
+        li.innerHTML =
+          "<span>" + escapeHtml(item.text) + "</span>" +
+          "<small>" + escapeHtml(timeAgo(item.at)) + "</small>";
+        listEl.appendChild(li);
+      });
+    }
+
+    async function loadDashboardData() {
+      var storesCountPromise = safeCount(
+        supabase.from("retail_stores").select("id", { count: "exact", head: true }).eq("is_active", true)
+      );
+      var retailUsersCountPromise = safeCount(
+        supabase.from("retail_users").select("id", { count: "exact", head: true }).eq("is_active", true)
+      );
+      var serverUsersCountPromise = safeCount(
+        supabase.from("server_users").select("id", { count: "exact", head: true }).eq("is_active", true)
+      );
+      var clientUsersCountPromise = safeCount(
+        supabase.from("client_users").select("id", { count: "exact", head: true }).eq("is_active", true)
+      );
+      var catalogCountPromise = safeCount(
+        supabase.from("catalog_items").select("id", { count: "exact", head: true })
+      );
+      var listingsCountPromise = safeCount(
+        supabase.from("marketplace_listings").select("id", { count: "exact", head: true }).eq("is_active", true)
+      );
+
+      var counts = await Promise.all([
+        storesCountPromise,
+        retailUsersCountPromise,
+        serverUsersCountPromise,
+        clientUsersCountPromise,
+        catalogCountPromise,
+        listingsCountPromise
+      ]);
+
+      var storesCount = counts[0];
+      var retailUsersCount = counts[1];
+      var serverUsersCount = counts[2];
+      var clientUsersCount = counts[3];
+      var catalogCount = counts[4];
+      var listingsCount = counts[5];
+
+      var userParts = [retailUsersCount, serverUsersCount, clientUsersCount].filter(function (x) { return x !== null; });
+      var totalUsers = userParts.length ? userParts.reduce(function (sum, n) { return sum + n; }, 0) : null;
+
+      setStatValue("stat-total-stores", "stat-total-stores-note", storesCount, storesCount === null ? "retail_stores not available" : "Active stores");
+      setStatValue("stat-total-users", "stat-total-users-note", totalUsers, totalUsers === null ? "User tables not available" : "retail + server + client users");
+      setStatValue("stat-catalog-items", "stat-catalog-items-note", catalogCount, catalogCount === null ? "catalog_items table not configured" : "Catalog records");
+      setStatValue("stat-active-listings", "stat-active-listings-note", listingsCount, listingsCount === null ? "marketplace_listings table not configured" : "Currently active");
+
+      var storeEvents = [];
+      var storeRowsResult = await supabase
+        .from("retail_stores")
+        .select("store_code, store_name, created_at, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(4);
+
+      if (!storeRowsResult.error && storeRowsResult.data) {
+        storeRowsResult.data.forEach(function (row) {
+          var isCreate = row.created_at && row.updated_at && row.created_at === row.updated_at;
+          storeEvents.push({
+            text: isCreate
+              ? "Store " + (row.store_code || row.store_name || "") + " created"
+              : "Store " + (row.store_code || row.store_name || "") + " updated",
+            at: row.updated_at || row.created_at
+          });
+        });
+      }
+
+      var retailUserRowsResult = await supabase
+        .from("retail_users")
+        .select("username, store_code, created_at, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(4);
+
+      if (!retailUserRowsResult.error && retailUserRowsResult.data) {
+        retailUserRowsResult.data.forEach(function (row) {
+          storeEvents.push({
+            text: "User " + row.username + " updated in store " + row.store_code,
+            at: row.updated_at || row.created_at
+          });
+        });
+      }
+
+      storeEvents.sort(function (a, b) {
+        return new Date(b.at).getTime() - new Date(a.at).getTime();
+      });
+      renderActivity(storeActivityList, storeEvents.slice(0, 4), "No recent store activity.");
+
+      var systemEvents = [];
+
+      var serverUserRowsResult = await supabase
+        .from("server_users")
+        .select("username, role, created_at, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(4);
+
+      if (!serverUserRowsResult.error && serverUserRowsResult.data) {
+        serverUserRowsResult.data.forEach(function (row) {
+          systemEvents.push({
+            text: "Server user " + row.username + " updated (" + row.role + ")",
+            at: row.updated_at || row.created_at
+          });
+        });
+      }
+
+      var clientUserRowsResult = await supabase
+        .from("client_users")
+        .select("username, client_code, created_at, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(4);
+
+      if (!clientUserRowsResult.error && clientUserRowsResult.data) {
+        clientUserRowsResult.data.forEach(function (row) {
+          systemEvents.push({
+            text: "Client user " + row.username + " updated for " + row.client_code,
+            at: row.updated_at || row.created_at
+          });
+        });
+      }
+
+      systemEvents.sort(function (a, b) {
+        return new Date(b.at).getTime() - new Date(a.at).getTime();
+      });
+      renderActivity(systemActivityList, systemEvents.slice(0, 4), "No recent system activity.");
+    }
+
+    async function openStoreModeModal() {
+      storeModal.classList.add("open");
+      storeList.innerHTML = '<div class="activity-item"><span>Loading stores...</span></div>';
+
+      var response = await supabase.rpc("retail_list_stores");
+      if (response.error || !response.data) {
+        storeList.innerHTML = '<div class="activity-item"><span>Could not load stores.</span></div>';
+        return;
+      }
+
+      if (response.data.length === 0) {
+        storeList.innerHTML = '<div class="activity-item"><span>No active stores found.</span></div>';
+        return;
+      }
+
+      storeList.innerHTML = "";
+
+      response.data.forEach(function (store) {
+        var item = document.createElement("button");
+        item.type = "button";
+        item.className = "store-item";
+        item.innerHTML =
+          '<span><strong>' + escapeHtml(store.store_name) + '</strong><br><small>' +
+          escapeHtml(store.timezone) + '</small></span>' +
+          '<small>' + escapeHtml(store.store_code) + '</small>';
+
+        item.addEventListener("click", function () {
+          localStorage.setItem(TEST_STORE_KEY, JSON.stringify(store));
+          localStorage.setItem(STORE_CODE_KEY, store.store_code);
+          storeModal.classList.remove("open");
+          window.location.href = "/store.html";
+        });
+
+        storeList.appendChild(item);
+      });
+    }
+
+    enterStoreModeBtn.addEventListener("click", openStoreModeModal);
+    createUserBtn.addEventListener("click", openCreateUserModal);
+    createUserStoreCodeInput.addEventListener("input", renderStoreSuggestions);
+    createUserStoreCodeInput.addEventListener("focus", renderStoreSuggestions);
+    createUserStoreCodeInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        var first = createUserStoreSuggestions.querySelector("[data-store-code]");
+        if (first) {
+          addSelectedStore(first.getAttribute("data-store-code"));
+        }
+      }
+    });
+    createUserStoreSuggestions.addEventListener("click", function (event) {
+      var target = event.target.closest("[data-store-code]");
+      if (!target) {
+        return;
+      }
+      addSelectedStore(target.getAttribute("data-store-code"));
+    });
+    createUserSelectedStores.addEventListener("click", function (event) {
+      var removeBtn = event.target.closest("[data-remove-store]");
+      if (!removeBtn) {
+        return;
+      }
+
+      var code = removeBtn.getAttribute("data-remove-store");
+      selectedStoreCodes = selectedStoreCodes.filter(function (x) { return x !== code; });
+      renderSelectedStoreChips();
+      renderStoreSuggestions();
+    });
+    createUserCancelBtn.addEventListener("click", function () {
+      createUserModal.classList.remove("open");
+    });
+    createUserSubmitBtn.addEventListener("click", submitCreateUser);
+
+    closeStoreModalBtn.addEventListener("click", function () {
+      storeModal.classList.remove("open");
+    });
+
+    signOutBtn.addEventListener("click", async function () {
+      localStorage.removeItem(TEST_STORE_KEY);
+      localStorage.removeItem(USER_ROLE_KEY);
+      await supabase.auth.signOut();
+      window.location.href = "/index.html";
+    });
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    (async function initPage() {
+      var userInfo = await verifyServerUser();
+      if (!userInfo) {
+        return;
+      }
+
+      currentUserRole = userInfo.role;
+
+      // Update topbar badge and username
+      var adminBadge = document.querySelector(".admin-badge");
+      var userBtn = document.getElementById("user-menu");
+      var ROLE_LABELS = {
+        server_admin: "Server Admin",
+        server_ops: "Server Ops",
+        support: "Support"
+      };
+      if (adminBadge) adminBadge.textContent = ROLE_LABELS[currentUserRole] || currentUserRole;
+      if (userBtn && userInfo.username) userBtn.textContent = userInfo.username;
+
+      // Apply role-based visibility
+      var isAdmin = currentUserRole === "server_admin";
+      var canResetPasswords = currentUserRole === "server_admin" || currentUserRole === "server_ops";
+
+      // Admin-only actions (Create Store, Create User, Add Catalog Item)
+      document.querySelectorAll(".admin-only").forEach(function (el) {
+        el.style.display = isAdmin ? "" : "none";
+      });
+
+      // Reset password — ops and admin only
+      var rpBtn = document.getElementById("reset-password-btn");
+      if (rpBtn) rpBtn.style.display = canResetPasswords ? "" : "none";
+
+      await loadDashboardData();
+    })();
+  </script>
+</body>
+</html>

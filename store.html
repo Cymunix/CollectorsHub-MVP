@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Mode - CollectorsHub Retail</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a1221;
+      --bg-secondary: #141f33;
+      --bg-tertiary: #1a2847;
+      --text-primary: #e2e8f0;
+      --text-secondary: #a0aec0;
+      --border-color: rgba(45, 72, 112, 0.6);
+      --accent: #33c3ff;
+      --accent-hover: #51d3ff;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .store-badge {
+      padding: 4px 12px;
+      background: rgba(51, 195, 255, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .topbar-right {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .topbar button {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .topbar button:hover {
+      background: rgba(51, 195, 255, 0.1);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 40px 20px;
+      gap: 24px;
+    }
+
+    .welcome-box {
+      text-align: center;
+      max-width: 600px;
+    }
+
+    .welcome-box h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .welcome-box p {
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .action-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .action-card:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .action-card-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .action-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .action-card-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .topbar-right {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .welcome-box h1 {
+        font-size: 24px;
+      }
+
+      .action-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h2>CollectorsHub Retail</h2>
+        <span class="store-badge" id="store-code-badge">--</span>
+      </div>
+      <div class="topbar-right">
+        <button id="back-to-admin">← Back to Admin</button>
+        <button id="sign-out">Sign Out</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="welcome-box">
+        <h1>Store Mode</h1>
+        <p id="welcome-text">Welcome to store operations. Select an action below to begin.</p>
+      </div>
+
+      <div class="action-grid">
+        <a href="/transaction.html" class="action-card">
+          <div class="action-card-icon">💳</div>
+          <div class="action-card-title">New Transaction</div>
+          <div class="action-card-desc">Buy and sell items with customers</div>
+        </a>
+
+        <button class="action-card" id="view-inventory-btn">
+          <div class="action-card-icon">📦</div>
+          <div class="action-card-title">View Inventory</div>
+          <div class="action-card-desc">Manage store inventory items</div>
+        </button>
+
+        <button class="action-card" id="transaction-history-btn">
+          <div class="action-card-icon">📋</div>
+          <div class="action-card-title">Transaction History</div>
+          <div class="action-card-desc">View recent transactions</div>
+        </button>
+
+        <button class="action-card" id="store-settings-btn">
+          <div class="action-card-icon">⚙️</div>
+          <div class="action-card-title">Store Settings</div>
+          <div class="action-card-desc">Store information and configuration</div>
+        </button>
+      </div>
+
+      <div class="footer">
+        <p>Store Mode — CollectorsHub Retail Platform</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var config = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var STORE_CODE_KEY = "collectorshub_retail_store_code";
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+
+    var storeBadge = document.getElementById("store-code-badge");
+    var welcomeText = document.getElementById("welcome-text");
+    var backBtn = document.getElementById("back-to-admin");
+    var signOutBtn = document.getElementById("sign-out");
+    var viewInventoryBtn = document.getElementById("view-inventory-btn");
+    var transactionHistoryBtn = document.getElementById("transaction-history-btn");
+    var storeSettingsBtn = document.getElementById("store-settings-btn");
+
+    // Get store code from localStorage
+    var storeCode = localStorage.getItem(STORE_CODE_KEY) || "UNKNOWN";
+    storeBadge.textContent = storeCode;
+    welcomeText.textContent = "Welcome to " + storeCode + " store operations.";
+
+    backBtn.addEventListener("click", () => {
+      window.location.href = "/admin-dashboard.html";
+    });
+
+    signOutBtn.addEventListener("click", async () => {
+      localStorage.removeItem(STORE_CODE_KEY);
+      localStorage.removeItem(USER_ROLE_KEY);
+      await supabase.auth.signOut();
+      window.location.href = "/index.html";
+    });
+
+    viewInventoryBtn.addEventListener("click", () => {
+      alert("Inventory management not yet implemented.");
+    });
+
+    transactionHistoryBtn.addEventListener("click", () => {
+      alert("Transaction history not yet implemented.");
+    });
+
+    storeSettingsBtn.addEventListener("click", () => {
+      alert("Store settings not yet implemented.");
+    });
+  </script>
+</body>
+</html>

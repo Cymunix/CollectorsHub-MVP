@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CollectorsHub Retail Login</title>
+  <style>
+    :root {
+      --bg-1: #080b14;
+      --bg-2: #0f1728;
+      --bg-3: #17223b;
+      --panel: rgba(17, 24, 39, 0.82);
+      --panel-border: rgba(148, 163, 184, 0.2);
+      --text-main: #f1f5f9;
+      --text-muted: #a5b4cc;
+      --input-bg: rgba(15, 23, 42, 0.8);
+      --input-border: rgba(148, 163, 184, 0.35);
+      --input-focus: #38bdf8;
+      --accent: #22d3ee;
+      --accent-hover: #67e8f9;
+      --link: #93c5fd;
+      --danger: #f87171;
+      --shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Sora", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text-main);
+      background:
+        radial-gradient(900px 600px at 85% -10%, rgba(56, 189, 248, 0.2), transparent 60%),
+        radial-gradient(700px 500px at 10% 100%, rgba(34, 211, 238, 0.18), transparent 55%),
+        linear-gradient(145deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .login-shell {
+      width: 100%;
+      max-width: 400px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      padding: 32px 28px;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3.6vw, 2rem);
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+
+    .tagline {
+      margin: 10px 0 0;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: inline-block;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: #dbe6f4;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-md);
+      background: var(--input-bg);
+      color: var(--text-main);
+      padding: 12px 14px;
+      font-size: 0.97rem;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    }
+
+    input::placeholder {
+      color: #7b8aa7;
+    }
+
+    input:focus {
+      border-color: var(--input-focus);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .username-hint {
+      margin: 6px 2px 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+
+    .error-message {
+      min-height: 20px;
+      margin: 4px 2px 10px;
+      color: var(--danger);
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .error-message:not(:empty) {
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .login-btn {
+      width: 100%;
+      border: 0;
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-top: 2px;
+      background: linear-gradient(135deg, #06b6d4 0%, var(--accent) 55%, #67e8f9 100%);
+      color: #04262d;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+      box-shadow: 0 10px 24px rgba(6, 182, 212, 0.28);
+    }
+
+    .login-btn:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .secondary-links {
+      margin-top: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .secondary-links a {
+      color: var(--link);
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 500;
+    }
+
+    .secondary-links a:hover {
+      color: #bfdbfe;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    @media (max-width: 460px) {
+      .login-shell {
+        padding: 26px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="login-shell" aria-labelledby="app-title">
+    <header class="brand">
+      <h1 id="app-title">CollectorsHub Retail</h1>
+      <p class="tagline">Inventory, Pricing, and Sales for Stores</p>
+    </header>
+
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="store-code">Store Code</label>
+        <div class="input-wrap">
+          <input id="store-code" name="storeCode" type="text" autocomplete="organization" placeholder="Enter store code" required />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="username">Username</label>
+        <div class="input-wrap">
+          <input id="username" name="username" type="text" autocomplete="username" placeholder="Example: HaydenM42" required />
+        </div>
+        <p class="username-hint">Store employees: FirstName + MiddleInitial + two digits (e.g. HaydenM42). Not case sensitive.</p>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter password" required />
+        </div>
+      </div>
+
+      <p id="form-error" class="error-message" aria-live="polite"></p>
+
+      <button class="login-btn" type="submit">Login</button>
+
+      <div class="secondary-links">
+        <a href="#" aria-label="Forgot Password">Forgot Password</a>
+      </div>
+    </form>
+  </main>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    console.log("[CollectorsHub] Login module loaded");
+
+    var STORE_CODE_KEY = "collectorshub_retail_store_code";
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+    // Retail store employees: alphanumeric only (e.g. HaydenM42)
+    var usernamePatternRetail = /^[a-z0-9]+$/i;
+    // Server/admin users: letters, numbers, dots, underscores, hyphens allowed
+    var usernamePatternServer = /^[a-z0-9._\-]+$/i;
+    var SERVER_CODES = { SERVER: true, "0000": true, ADMIN: true };
+
+    var form = document.getElementById("login-form");
+    var storeCodeInput = document.getElementById("store-code");
+    var usernameInput = document.getElementById("username");
+    var passwordInput = document.getElementById("password");
+    var formError = document.getElementById("form-error");
+    var loginBtn = form.querySelector(".login-btn");
+
+    function hasServiceRoleKey(jwt) {
+      try {
+        var parts = jwt.split(".");
+        if (parts.length < 2) {
+          return false;
+        }
+
+        var payload = JSON.parse(atob(parts[1]));
+        return payload && payload.role === "service_role";
+      } catch (error) {
+        return false;
+      }
+    }
+
+    var config = window.SUPABASE_CONFIG;
+    if (!config || !config.url || !config.anonKey) {
+      formError.textContent = "Supabase is not configured. Add your keys to supabase-config.js.";
+      loginBtn.disabled = true;
+      loginBtn.style.opacity = "0.65";
+      loginBtn.style.cursor = "not-allowed";
+      throw new Error("Missing SUPABASE_CONFIG in supabase-config.js");
+    }
+
+    if (hasServiceRoleKey(config.anonKey)) {
+      formError.textContent = "Unsafe key detected: never use a Supabase service-role key in frontend code.";
+      loginBtn.disabled = true;
+      loginBtn.style.opacity = "0.65";
+      loginBtn.style.cursor = "not-allowed";
+      throw new Error("Service-role key cannot be used in frontend config");
+    }
+
+    var supabase = createClient(config.url, config.anonKey);
+
+    var savedStoreCode = localStorage.getItem(STORE_CODE_KEY);
+    if (savedStoreCode) {
+      storeCodeInput.value = savedStoreCode;
+    }
+
+    function setStatus(message, isSuccess) {
+      formError.textContent = message;
+      formError.style.color = isSuccess ? "#86efac" : "#f87171";
+    }
+
+    function setLoading(isLoading) {
+      loginBtn.disabled = isLoading;
+      loginBtn.textContent = isLoading ? "Logging in..." : "Login";
+    }
+
+    async function findUserByStoreAndUsername(storeCode, usernameLower) {
+      var attempts = [storeCode, "SERVER", "0000", "ADMIN"];
+      var seen = Object.create(null);
+
+      for (var i = 0; i < attempts.length; i++) {
+        var code = (attempts[i] || "").toUpperCase();
+        if (!code || seen[code]) {
+          continue;
+        }
+        seen[code] = true;
+
+        var response = await supabase.rpc("retail_login_user", {
+          p_store_code: code,
+          p_username: usernameLower
+        });
+
+        if (response.error) {
+          throw response.error;
+        }
+
+        if (response.data && response.data.email) {
+          return response.data;
+        }
+      }
+
+      return null;
+    }
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      setStatus("", false);
+
+      var storeCodeInputValue = storeCodeInput.value.trim();
+      var storeCode = storeCodeInputValue ? storeCodeInputValue.toUpperCase() : "SERVER";
+      var usernameRaw = usernameInput.value.trim();
+      var password = passwordInput.value;
+
+      console.log("[CollectorsHub] Login attempt — store:", storeCode, "user:", usernameRaw);
+
+      if (!usernameRaw || !password) {
+        setStatus("Please enter username and password.", false);
+        return;
+      }
+
+      var isServerRoute = SERVER_CODES[storeCode] === true;
+      var activePattern = isServerRoute ? usernamePatternServer : usernamePatternRetail;
+      if (!activePattern.test(usernameRaw)) {
+        setStatus(
+          isServerRoute
+            ? "Username may contain letters, numbers, dots, underscores and hyphens."
+            : "Username must contain only letters and numbers.",
+          false
+        );
+        return;
+      }
+
+      var normalizedUsername = usernameRaw.toLowerCase();
+
+      try {
+        setLoading(true);
+
+        var userRecord = await findUserByStoreAndUsername(storeCode, normalizedUsername);
+        if (!userRecord || !userRecord.email) {
+          setStatus("No active user was found for this Store Code and Username.", false);
+          return;
+        }
+
+        var authResponse = await supabase.auth.signInWithPassword({
+          email: userRecord.email,
+          password: password
+        });
+
+        if (authResponse.error) {
+          var errMsg = authResponse.error.message || "Invalid username or password.";
+          console.error("[CollectorsHub] signInWithPassword error:", authResponse.error);
+          setStatus("Sign-in failed: " + errMsg, false);
+          return;
+        }
+
+        localStorage.setItem(STORE_CODE_KEY, storeCode);
+        if (userRecord.role) {
+          localStorage.setItem(USER_ROLE_KEY, userRecord.role);
+        }
+        setStatus("Login successful. Redirecting...", true);
+
+        if (userRecord.role === "server_admin") {
+          window.location.href = "/server-admin.html";
+        } else if (config.postLoginRedirectPath) {
+          window.location.href = config.postLoginRedirectPath;
+        }
+      } catch (error) {
+        var catchMsg = error && (error.message || error.hint || JSON.stringify(error));
+        console.error("[CollectorsHub] Login catch:", error);
+        setStatus("Error: " + (catchMsg || "Unable to reach server. Check console."), false);
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

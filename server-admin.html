@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Select Environment — CollectorsHub Retail</title>
+  <style>
+    :root {
+      --bg-1: #080b14;
+      --bg-2: #0f1728;
+      --bg-3: #17223b;
+      --panel: rgba(17, 24, 39, 0.82);
+      --panel-border: rgba(148, 163, 184, 0.2);
+      --panel-hover: rgba(22, 34, 58, 0.95);
+      --text-main: #f1f5f9;
+      --text-muted: #a5b4cc;
+      --input-bg: rgba(15, 23, 42, 0.8);
+      --input-border: rgba(148, 163, 184, 0.35);
+      --input-focus: #38bdf8;
+      --accent: #22d3ee;
+      --link: #93c5fd;
+      --danger: #f87171;
+      --shadow: 0 20px 50px rgba(2, 6, 23, 0.45);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Sora", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text-main);
+      background:
+        radial-gradient(900px 600px at 85% -10%, rgba(56, 189, 248, 0.2), transparent 60%),
+        radial-gradient(700px 500px at 10% 100%, rgba(34, 211, 238, 0.18), transparent 55%),
+        linear-gradient(145deg, var(--bg-1) 0%, var(--bg-2) 45%, var(--bg-3) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 64px;
+    }
+
+    /* ── Header ────────────────────────────────────────────── */
+    .brand {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 3.6vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand .role-badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      background: rgba(34, 211, 238, 0.12);
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .page-subtitle {
+      margin: 28px 0 40px;
+      font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+      font-weight: 600;
+      color: #dbe6f4;
+      text-align: center;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      padding: 36px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+      cursor: default;
+    }
+
+    .card:hover {
+      background: var(--panel-hover);
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 28px 60px rgba(2, 6, 23, 0.55), 0 0 0 1px rgba(56, 189, 248, 0.15);
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.93rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .card-btn {
+      display: inline-block;
+      margin-top: 8px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      padding: 11px 20px;
+      font-size: 0.93rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: filter 120ms ease, transform 120ms ease;
+      text-align: center;
+    }
+
+    .card-btn:hover  { filter: brightness(1.1); transform: translateY(-1px); }
+    .card-btn:active { transform: translateY(0); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4 0%, var(--accent) 55%, #67e8f9 100%);
+      color: #04262d;
+      box-shadow: 0 8px 20px rgba(6, 182, 212, 0.28);
+    }
+
+    .btn-secondary {
+      background: rgba(148, 163, 184, 0.12);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover { background: rgba(148, 163, 184, 0.2); }
+
+    /* ── Footer links ───────────────────────────────────────── */
+    .footer-links {
+      margin-top: 36px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      color: var(--link);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .footer-links a:hover {
+      color: #bfdbfe;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* ── Modal overlay ──────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 20, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #111827;
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 32px 72px rgba(2, 6, 23, 0.7);
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 460px;
+    }
+
+    .modal h3 {
+      margin: 0 0 6px;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .modal .modal-sub {
+      margin: 0 0 24px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+
+    .store-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 280px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+
+    .store-list::-webkit-scrollbar { width: 6px; }
+    .store-list::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 3px; }
+
+    .store-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: border-color 150ms ease, background 150ms ease;
+    }
+
+    .store-option:hover {
+      border-color: var(--input-focus);
+      background: rgba(56, 189, 248, 0.06);
+    }
+
+    .store-option-info strong {
+      display: block;
+      font-size: 0.93rem;
+      font-weight: 600;
+    }
+
+    .store-option-info span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .store-option-code {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      border-radius: 6px;
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .modal-loading, .modal-error {
+      text-align: center;
+      padding: 20px 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .modal-error { color: var(--danger); }
+
+    .modal-cancel {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: color 150ms ease, border-color 150ms ease;
+    }
+
+    .modal-cancel:hover { color: var(--text-main); border-color: rgba(148,163,184,0.5); }
+
+    /* ── Auth loading screen ────────────────────────────────── */
+    #auth-loading {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="auth-loading">Verifying session...</div>
+
+  <header class="brand">
+    <h1>CollectorsHub Retail</h1>
+    <div class="role-badge">Server Admin</div>
+  </header>
+
+  <h2 class="page-subtitle">Select Environment</h2>
+
+  <section class="cards" aria-label="Environment selection">
+    <div class="card">
+      <div class="card-icon">🛠️</div>
+      <h2>Admin Dashboard</h2>
+      <p>Manage stores, users, catalog items, pricing data, and platform settings.</p>
+      <button class="card-btn btn-primary" id="btn-admin-dashboard">Open Admin Dashboard</button>
+    </div>
+
+    <div class="card">
+      <div class="card-icon">🏪</div>
+      <h2>Enter Store Mode</h2>
+      <p>Access the retail system using a test store to simulate the store experience.</p>
+      <button class="card-btn btn-secondary" id="btn-store-mode">Enter Store Mode</button>
+    </div>
+  </section>
+
+  <nav class="footer-links">
+    <a href="#" id="link-signout">Sign Out</a>
+  </nav>
+
+  <!-- Store Mode Modal -->
+  <div class="modal-overlay" id="store-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <h3 id="modal-title">Choose a Test Store</h3>
+      <p class="modal-sub">You are entering Store Mode as a Server Admin. The store will be clearly marked as a test session.</p>
+      <div class="store-list" id="store-list">
+        <div class="modal-loading">Loading stores...</div>
+      </div>
+      <button class="modal-cancel" id="modal-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var TEST_STORE_KEY  = "collectorshub_test_store";
+    var USER_ROLE_KEY   = "collectorshub_retail_user_role";
+    var STORE_CODE_KEY  = "collectorshub_retail_store_code";
+
+    var config   = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var authLoading      = document.getElementById("auth-loading");
+    var storeModal       = document.getElementById("store-modal");
+    var storeList        = document.getElementById("store-list");
+    var btnAdminDash     = document.getElementById("btn-admin-dashboard");
+    var btnStoreMode     = document.getElementById("btn-store-mode");
+    var modalCancel      = document.getElementById("modal-cancel");
+    var linkSignout      = document.getElementById("link-signout");
+
+    // ── Auth guard ────────────────────────────────────────────
+    async function getSessionWithRetry() {
+      for (var attempt = 0; attempt < 3; attempt++) {
+        var result = await supabase.auth.getSession();
+        if (result && result.data && result.data.session) {
+          return result.data.session;
+        }
+
+        await new Promise(function (resolve) { setTimeout(resolve, 250); });
+      }
+
+      return null;
+    }
+
+    async function init() {
+      var session = await getSessionWithRetry();
+
+      if (!session) {
+        window.location.href = "/index.html";
+        return;
+      }
+
+      // Verify role from the dedicated server_users table.
+      // Fallback to retail_users is kept for backward compatibility.
+      var { data: serverUserRow } = await supabase
+        .from("server_users")
+        .select("role")
+        .eq("auth_user_id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      var userRole = serverUserRow && serverUserRow.role;
+
+      if (!userRole) {
+        var { data: retailUserRow } = await supabase
+          .from("retail_users")
+          .select("role")
+          .eq("auth_user_id", session.user.id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        userRole = retailUserRow && retailUserRow.role;
+      }
+
+      // Fallback for environments where auth_user_id mapping has not been synced yet.
+      if (!userRole && localStorage.getItem(USER_ROLE_KEY) === "server_admin") {
+        userRole = "server_admin";
+      }
+
+      if (userRole !== "server_admin") {
+        await supabase.auth.signOut();
+        window.location.href = "/index.html";
+        return;
+      }
+
+      localStorage.setItem(USER_ROLE_KEY, "server_admin");
+
+      authLoading.style.display = "none";
+    }
+
+    init();
+
+    // ── Admin dashboard ───────────────────────────────────────
+    btnAdminDash.addEventListener("click", function () {
+      localStorage.removeItem(TEST_STORE_KEY);
+      window.location.href = "/admin-dashboard.html";
+    });
+
+    // ── Store mode ────────────────────────────────────────────
+    btnStoreMode.addEventListener("click", async function () {
+      storeModal.classList.add("open");
+      storeList.innerHTML = '<div class="modal-loading">Loading stores...</div>';
+
+      var { data: stores, error } = await supabase.rpc("retail_list_stores");
+
+      if (error || !stores) {
+        storeList.innerHTML = '<div class="modal-error">Could not load stores. Try again.</div>';
+        return;
+      }
+
+      if (stores.length === 0) {
+        storeList.innerHTML = '<div class="modal-loading">No active stores found.</div>';
+        return;
+      }
+
+      storeList.innerHTML = "";
+      stores.forEach(function (store) {
+        var item = document.createElement("div");
+        item.className = "store-option";
+        item.innerHTML =
+          '<div class="store-option-info">' +
+            '<strong>' + escapeHtml(store.store_name) + '</strong>' +
+            '<span>' + escapeHtml(store.timezone) + '</span>' +
+          '</div>' +
+          '<span class="store-option-code">' + escapeHtml(store.store_code) + '</span>';
+
+        item.addEventListener("click", function () {
+          enterStoreMode(store);
+        });
+
+        storeList.appendChild(item);
+      });
+    });
+
+    function enterStoreMode(store) {
+      localStorage.setItem(TEST_STORE_KEY, JSON.stringify(store));
+      localStorage.setItem(STORE_CODE_KEY, store.store_code);
+      storeModal.classList.remove("open");
+      window.location.href = "/store.html";
+    }
+
+    modalCancel.addEventListener("click", function () {
+      storeModal.classList.remove("open");
+    });
+
+    storeModal.addEventListener("click", function (e) {
+      if (e.target === storeModal) storeModal.classList.remove("open");
+    });
+
+    // ── Sign out ──────────────────────────────────────────────
+    linkSignout.addEventListener("click", async function (e) {
+      e.preventDefault();
+      localStorage.removeItem(TEST_STORE_KEY);
+      localStorage.removeItem(USER_ROLE_KEY);
+      await supabase.auth.signOut();
+      window.location.href = "/index.html";
+    });
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
