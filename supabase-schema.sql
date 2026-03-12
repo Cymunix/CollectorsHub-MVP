@@ -609,6 +609,158 @@ $$;
 revoke all on function public.admin_create_server_user(text, text, text, boolean) from public;
 grant execute on function public.admin_create_server_user(text, text, text, boolean) to authenticated;
 
+-- ============================================================
+-- Admin User Management RPCs
+-- ============================================================
+
+create or replace function public.admin_list_server_users()
+returns table (
+  id uuid,
+  username text,
+  email text,
+  role text,
+  is_active boolean,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+as $$
+declare
+  v_caller_id uuid;
+  v_caller_role text;
+begin
+  -- Verify the caller is an active server_admin
+  v_caller_id := auth.uid();
+  if v_caller_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select role into v_caller_role
+  from server_users
+  where auth_user_id = v_caller_id and is_active = true
+  limit 1;
+
+  if v_caller_role is distinct from 'server_admin' then
+    raise exception 'Permission denied: server_admin role required';
+  end if;
+
+  -- Return all server users
+  return query
+  select
+    su.id,
+    su.username,
+    su.email,
+    su.role::text,
+    su.is_active,
+    su.created_at
+  from server_users su
+  order by su.created_at desc;
+end;
+$$;
+
+revoke all on function public.admin_list_server_users() from public;
+grant execute on function public.admin_list_server_users() to authenticated;
+
+create or replace function public.admin_list_retail_users()
+returns table (
+  id uuid,
+  username text,
+  email text,
+  role text,
+  store_code text,
+  is_active boolean,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+as $$
+declare
+  v_caller_id uuid;
+  v_caller_role text;
+begin
+  -- Verify the caller is an active server_admin
+  v_caller_id := auth.uid();
+  if v_caller_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select role into v_caller_role
+  from server_users
+  where auth_user_id = v_caller_id and is_active = true
+  limit 1;
+
+  if v_caller_role is distinct from 'server_admin' then
+    raise exception 'Permission denied: server_admin role required';
+  end if;
+
+  -- Return all retail users
+  return query
+  select
+    ru.id,
+    ru.username,
+    ru.email,
+    ru.role::text,
+    ru.store_code,
+    ru.is_active,
+    ru.created_at
+  from retail_users ru
+  order by ru.created_at desc;
+end;
+$$;
+
+revoke all on function public.admin_list_retail_users() from public;
+grant execute on function public.admin_list_retail_users() to authenticated;
+
+create or replace function public.admin_list_client_users()
+returns table (
+  id uuid,
+  username text,
+  email text,
+  role text,
+  client_code text,
+  is_active boolean,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+as $$
+declare
+  v_caller_id uuid;
+  v_caller_role text;
+begin
+  -- Verify the caller is an active server_admin
+  v_caller_id := auth.uid();
+  if v_caller_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select role into v_caller_role
+  from server_users
+  where auth_user_id = v_caller_id and is_active = true
+  limit 1;
+
+  if v_caller_role is distinct from 'server_admin' then
+    raise exception 'Permission denied: server_admin role required';
+  end if;
+
+  -- Return all client users
+  return query
+  select
+    cu.id,
+    cu.username,
+    cu.email,
+    cu.role::text,
+    cu.client_code,
+    cu.is_active,
+    cu.created_at
+  from client_users cu
+  order by cu.created_at desc;
+end;
+$$;
+
+revoke all on function public.admin_list_client_users() from public;
+grant execute on function public.admin_list_client_users() to authenticated;
+
 -- Allow authenticated users to verify their own retail_users row for role checks
 drop policy if exists "Authenticated users can read their own retail_user row" on public.retail_users;
 create policy "Authenticated users can read their own retail_user row"

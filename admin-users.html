@@ -841,10 +841,7 @@
       var tbody = document.querySelector("#server-users-table tbody");
       tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading...</td></tr>';
 
-      var result = await supabase
-        .from("server_users")
-        .select("id, username, email, role, is_active, created_at")
-        .order("created_at", { ascending: false });
+      var result = await supabase.rpc("admin_list_server_users");
 
       if (result.error) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading users: ' + result.error.message + '</td></tr>';
@@ -883,10 +880,7 @@
       var tbody = document.querySelector("#retail-users-table tbody");
       tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading...</td></tr>';
 
-      var result = await supabase
-        .from("retail_users")
-        .select("id, username, store_code, email, role, is_active, created_at")
-        .order("created_at", { ascending: false });
+      var result = await supabase.rpc("admin_list_retail_users");
 
       if (result.error) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading users: ' + result.error.message + '</td></tr>';
@@ -943,10 +937,7 @@
       var tbody = document.querySelector("#client-users-table tbody");
       tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading...</td></tr>';
 
-      var result = await supabase
-        .from("client_users")
-        .select("id, username, client_code, email, role, is_active, created_at")
-        .order("created_at", { ascending: false });
+      var result = await supabase.rpc("admin_list_client_users");
 
       if (result.error) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty">Error loading users: ' + result.error.message + '</td></tr>';
