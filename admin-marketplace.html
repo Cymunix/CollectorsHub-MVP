@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketplace - CollectorsHub Retail</title>
+  <style>
+    :root { --border:#233451; --text:#e7eefb; --soft:#9fb0cf; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Sora","Segoe UI",Tahoma,sans-serif; color:var(--text); background:linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%); }
+    .app { display:grid; grid-template-columns:270px 1fr; min-height:100vh; }
+    .sidebar { border-right:1px solid var(--border); background:rgba(10,18,33,.88); padding:24px 16px; }
+    .brand { padding:10px 10px 14px; border-bottom:1px solid rgba(159,176,207,.15); }
+    .brand h1 { margin:0; font-size:1.15rem; }
+    .brand p { margin:6px 0 0; color:var(--soft); font-size:.82rem; }
+    .nav { display:flex; flex-direction:column; gap:8px; margin-top:18px; }
+    .nav-item { color:var(--soft); text-decoration:none; padding:10px 12px; border-radius:10px; border:1px solid transparent; }
+    .nav-item.active, .nav-item:hover { color:var(--text); border-color:rgba(51,195,255,.36); background:rgba(51,195,255,.12); }
+    .content { display:flex; flex-direction:column; }
+    .topbar { min-height:76px; border-bottom:1px solid var(--border); background:rgba(8,16,30,.78); display:flex; align-items:center; justify-content:space-between; padding:10px 24px; }
+    .main { padding:20px 24px; display:flex; flex-direction:column; gap:16px; }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; }
+    .tab { color:var(--soft); background:none; border:1px solid rgba(56,89,136,.55); border-radius:999px; padding:7px 10px; font-size:.8rem; cursor:pointer; }
+    .tab.active { color:var(--text); border-color:rgba(51,195,255,.6); background:rgba(51,195,255,.14); }
+    .section { border:1px solid var(--border); border-radius:14px; padding:16px; background:rgba(13,22,40,.76); display:none; }
+    .section.active { display:block; }
+    .btn { border:1px solid rgba(56,89,136,.55); background:rgba(18,31,53,.95); color:var(--text); padding:9px 12px; border-radius:10px; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.85rem; }
+    th, td { padding:10px; border-bottom:1px solid rgba(35,52,81,.5); text-align:left; }
+    th { color:var(--soft); font-size:.76rem; text-transform:uppercase; }
+    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+    .field input, .field textarea { width:100%; padding:10px; border-radius:10px; border:1px solid rgba(56,89,136,.7); background:#0e1a2e; color:var(--text); }
+    .status { min-height:18px; color:var(--soft); font-size:.82rem; }
+    @media(max-width:980px){ .app{grid-template-columns:1fr;} .main{padding:14px;} }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><h1>CollectorsHub Retail</h1><p>Platform Administration</p></div>
+    <nav class="nav">
+      <a class="nav-item" href="/admin-dashboard.html">Dashboard</a>
+      <a class="nav-item" href="/admin-stores.html">Stores</a>
+      <a class="nav-item" href="/admin-users.html">Users</a>
+      <a class="nav-item" href="/admin-catalog.html">Catalog</a>
+      <a class="nav-item" href="/admin-pricing-data.html">Pricing Data</a>
+      <a class="nav-item active" href="/admin-marketplace.html">Marketplace</a>
+      <a class="nav-item" href="/admin-system-logs.html">System Logs</a>
+      <a class="nav-item" href="/admin-settings.html">Settings</a>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <header class="topbar"><h2 style="margin:0;font-size:1.05rem;">Marketplace</h2><button class="btn" id="sign-out" type="button">Sign Out</button></header>
+    <main class="main">
+      <div class="tabs">
+        <button class="tab active" data-tab="active">Active Listings</button>
+        <button class="tab" data-tab="flagged">Flagged Listings</button>
+        <button class="tab" data-tab="users">Reported Users</button>
+        <button class="tab" data-tab="removed">Removed Listings</button>
+        <button class="tab" data-tab="settings">Marketplace Settings</button>
+      </div>
+
+      <section id="tab-active" class="section active">
+        <h3 style="margin-top:0;">Active Listings</h3>
+        <table id="active-table"><thead><tr><th>Listing ID</th><th>Item</th><th>Variant</th><th>Seller</th><th>Price</th><th>Condition</th><th>Date Listed</th><th>Actions</th></tr></thead><tbody><tr><td colspan="8">Loading...</td></tr></tbody></table>
+        <p class="status" id="active-status"></p>
+      </section>
+
+      <section id="tab-flagged" class="section">
+        <h3 style="margin-top:0;">Flagged Listings</h3>
+        <table id="flagged-table"><thead><tr><th>Listing</th><th>Seller</th><th>Report Reason</th><th>Reports Count</th><th>Date Reported</th><th>Actions</th></tr></thead><tbody><tr><td colspan="6">Loading...</td></tr></tbody></table>
+        <p class="status" id="flagged-status"></p>
+      </section>
+
+      <section id="tab-users" class="section">
+        <h3 style="margin-top:0;">Reported Users</h3>
+        <table id="users-table"><thead><tr><th>Username</th><th>Reports</th><th>Last Activity</th><th>Account Status</th><th>Actions</th></tr></thead><tbody><tr><td colspan="5">Loading...</td></tr></tbody></table>
+        <p class="status" id="users-status"></p>
+      </section>
+
+      <section id="tab-removed" class="section">
+        <h3 style="margin-top:0;">Removed Listings</h3>
+        <table id="removed-table"><thead><tr><th>Listing</th><th>Removed By</th><th>Reason</th><th>Date Removed</th></tr></thead><tbody><tr><td colspan="4">Loading...</td></tr></tbody></table>
+      </section>
+
+      <section id="tab-settings" class="section">
+        <h3 style="margin-top:0;">Marketplace Settings</h3>
+        <div class="field"><label>Minimum Listing Price</label><input id="setting-min-price" type="number" step="0.01" min="0" /></div>
+        <div class="field"><label>Marketplace Commission Percentage</label><input id="setting-commission" type="number" step="0.01" min="0" max="100" /></div>
+        <div class="field"><label>Listing Expiration Duration (days)</label><input id="setting-expiration" type="number" min="1" /></div>
+        <div class="field"><label>Allowed Condition Types (comma separated)</label><textarea id="setting-conditions" rows="2"></textarea></div>
+        <button class="btn" id="save-settings" type="button">Save Settings</button>
+        <p class="status" id="settings-status"></p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="./supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+var USER_ROLE_KEY='collectorshub_retail_user_role'; var ALLOWED=['server_admin','admin'];
+var supabase=createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+var activeRows=[], flaggedRows=[], userRows=[];
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(v){var d=new Date(v); return Number.isNaN(d.getTime())?'-':d.toLocaleString();}
+function money(v){return '$'+Number(v||0).toFixed(2);} 
+async function verify(){var s=(await supabase.auth.getSession()).data.session; if(!s){window.location.href='/index.html'; return false;} var r=await supabase.from('server_users').select('role').eq('auth_user_id',s.user.id).eq('is_active',true).maybeSingle(); var role=!r.error&&r.data?r.data.role:null; if(!role){var lr=localStorage.getItem(USER_ROLE_KEY); if(lr&&ALLOWED.indexOf(lr)>=0) role=lr;} if(!role||ALLOWED.indexOf(role)<0){await supabase.auth.signOut(); window.location.href='/index.html'; return false;} return true;}
+function bindTabs(){document.querySelectorAll('.tab').forEach(function(btn){btn.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});btn.classList.add('active');document.getElementById('tab-'+btn.getAttribute('data-tab')).classList.add('active');});});}
+
+async function loadActive(){var tbody=document.querySelector('#active-table tbody'); tbody.innerHTML='<tr><td colspan="8">Loading...</td></tr>'; var res=await supabase.from('marketplace_listings').select('id,item_name,variant_label,seller_username,price,condition_label,date_listed,status').eq('status','active').order('date_listed',{ascending:false}).limit(300); if(res.error){tbody.innerHTML='<tr><td colspan="8">'+esc(res.error.message)+'</td></tr>'; return;} activeRows=res.data||[]; if(!activeRows.length){tbody.innerHTML='<tr><td colspan="8">No active listings.</td></tr>'; return;} tbody.innerHTML=activeRows.map(function(l){return '<tr><td>'+esc(l.id)+'</td><td>'+esc(l.item_name||'-')+'</td><td>'+esc(l.variant_label||'-')+'</td><td>'+esc(l.seller_username||'-')+'</td><td>'+money(l.price)+'</td><td>'+esc(l.condition_label||'-')+'</td><td>'+esc(fmt(l.date_listed))+'</td><td><button data-act="view" data-id="'+l.id+'">View</button> <button data-act="edit" data-id="'+l.id+'">Edit</button> <button data-act="remove" data-id="'+l.id+'">Remove</button> <button data-act="contact" data-id="'+l.id+'">Contact Seller</button></td></tr>';}).join('');}
+async function loadFlagged(){var tbody=document.querySelector('#flagged-table tbody'); tbody.innerHTML='<tr><td colspan="6">Loading...</td></tr>'; var res=await supabase.from('marketplace_listings').select('id,item_name,seller_username,last_report_reason,report_count,last_reported_at,status').in('status',['flagged']).order('last_reported_at',{ascending:false}).limit(300); if(res.error){tbody.innerHTML='<tr><td colspan="6">'+esc(res.error.message)+'</td></tr>'; return;} flaggedRows=res.data||[]; if(!flaggedRows.length){tbody.innerHTML='<tr><td colspan="6">No flagged listings.</td></tr>'; return;} tbody.innerHTML=flaggedRows.map(function(l){return '<tr><td>'+esc(l.item_name||l.id)+'</td><td>'+esc(l.seller_username||'-')+'</td><td>'+esc(l.last_report_reason||'-')+'</td><td>'+esc(l.report_count||0)+'</td><td>'+esc(fmt(l.last_reported_at))+'</td><td><button data-act="approve" data-id="'+l.id+'">Approve Listing</button> <button data-act="remove" data-id="'+l.id+'">Remove Listing</button> <button data-act="warn" data-id="'+l.id+'">Warn Seller</button> <button data-act="suspend" data-id="'+l.id+'">Suspend Seller</button></td></tr>';}).join('');}
+async function loadUsers(){var tbody=document.querySelector('#users-table tbody'); tbody.innerHTML='<tr><td colspan="5">Loading...</td></tr>'; var res=await supabase.from('marketplace_user_reports').select('id,username,reports,last_activity,account_status').order('reports',{ascending:false}).limit(300); if(res.error){tbody.innerHTML='<tr><td colspan="5">'+esc(res.error.message)+'</td></tr>'; return;} userRows=res.data||[]; if(!userRows.length){tbody.innerHTML='<tr><td colspan="5">No reported users.</td></tr>'; return;} tbody.innerHTML=userRows.map(function(u){return '<tr><td>'+esc(u.username||'-')+'</td><td>'+esc(u.reports||0)+'</td><td>'+esc(fmt(u.last_activity))+'</td><td>'+esc(u.account_status||'active')+'</td><td><button data-act="profile" data-id="'+u.id+'">View Profile</button> <button data-act="warn" data-id="'+u.id+'">Warn User</button> <button data-act="suspend" data-id="'+u.id+'">Suspend User</button> <button data-act="ban" data-id="'+u.id+'">Ban User</button></td></tr>';}).join('');}
+async function loadRemoved(){var tbody=document.querySelector('#removed-table tbody'); tbody.innerHTML='<tr><td colspan="4">Loading...</td></tr>'; var res=await supabase.from('marketplace_removed_listings').select('listing_label,removed_by,reason,date_removed').order('date_removed',{ascending:false}).limit(300); if(res.error){tbody.innerHTML='<tr><td colspan="4">'+esc(res.error.message)+'</td></tr>'; return;} var rows=res.data||[]; if(!rows.length){tbody.innerHTML='<tr><td colspan="4">No removed listings.</td></tr>'; return;} tbody.innerHTML=rows.map(function(r){return '<tr><td>'+esc(r.listing_label||'-')+'</td><td>'+esc(r.removed_by||'-')+'</td><td>'+esc(r.reason||'-')+'</td><td>'+esc(fmt(r.date_removed))+'</td></tr>';}).join('');}
+async function loadSettings(){var res=await supabase.from('marketplace_settings').select('setting_key,setting_value').in('setting_key',['minimum_listing_price','commission_percent','listing_expiration_days','allowed_condition_types']); if(res.error) return; var map={}; (res.data||[]).forEach(function(r){map[r.setting_key]=r.setting_value;}); document.getElementById('setting-min-price').value=map.minimum_listing_price||0; document.getElementById('setting-commission').value=map.commission_percent||10; document.getElementById('setting-expiration').value=map.listing_expiration_days||30; document.getElementById('setting-conditions').value=Array.isArray(map.allowed_condition_types)?map.allowed_condition_types.join(', '):(map.allowed_condition_types||'New, Like New, Good, Fair');}
+
+async function removeListing(id,reason){
+  var user=(await supabase.auth.getSession()).data.session.user;
+  var listing=activeRows.find(function(l){return l.id===id;}) || flaggedRows.find(function(l){return l.id===id;});
+  var upd=await supabase.from('marketplace_listings').update({status:'removed',removed_reason:reason||'Removed by admin',removed_by:user.id,removed_at:new Date().toISOString()}).eq('id',id);
+  if(upd.error){document.getElementById('active-status').textContent=upd.error.message; return;}
+  await supabase.from('marketplace_removed_listings').insert([{listing_id:id,listing_label:listing?(listing.item_name||String(id)):(String(id)),removed_by:user.id,reason:reason||'Removed by admin',date_removed:new Date().toISOString()}]);
+  loadActive(); loadFlagged(); loadRemoved();
+}
+async function editListing(id){var listing=activeRows.find(function(l){return l.id===id;}); if(!listing) return; var p=prompt('Edit listing price', listing.price); if(p===null) return; var c=prompt('Edit listing condition', listing.condition_label||''); if(c===null) return; var res=await supabase.from('marketplace_listings').update({price:Number(p),condition_label:c}).eq('id',id); document.getElementById('active-status').textContent=res.error?res.error.message:'Listing updated'; if(!res.error) loadActive();}
+async function updateFlaggedAction(id,action){
+  if(action==='approve'){await supabase.from('marketplace_listings').update({status:'active',last_report_reason:null,report_count:0}).eq('id',id);}
+  if(action==='remove'){await removeListing(id,'Removed from flagged queue');}
+  if(action==='warn'||action==='suspend'){
+    var listing=flaggedRows.find(function(l){return l.id===id;});
+    if(listing){
+      await supabase.from('marketplace_user_reports').upsert([{username:listing.seller_username,reports:1,last_activity:new Date().toISOString(),account_status:action==='suspend'?'suspended':'warned'}],{onConflict:'username'});
+    }
+  }
+  loadFlagged(); loadUsers();
+}
+async function updateUser(id,status){var res=await supabase.from('marketplace_user_reports').update({account_status:status,last_activity:new Date().toISOString()}).eq('id',id); document.getElementById('users-status').textContent=res.error?res.error.message:('User '+status); if(!res.error) loadUsers();}
+async function saveSettings(){
+  var vals=[
+    {setting_key:'minimum_listing_price',setting_value:Number(document.getElementById('setting-min-price').value||0)},
+    {setting_key:'commission_percent',setting_value:Number(document.getElementById('setting-commission').value||0)},
+    {setting_key:'listing_expiration_days',setting_value:Number(document.getElementById('setting-expiration').value||30)},
+    {setting_key:'allowed_condition_types',setting_value:document.getElementById('setting-conditions').value.split(',').map(function(x){return x.trim();}).filter(Boolean)}
+  ];
+  var res=await supabase.from('marketplace_settings').upsert(vals,{onConflict:'setting_key'});
+  document.getElementById('settings-status').textContent=res.error?res.error.message:'Settings saved';
+}
+
+async function init(){var ok=await verify(); if(!ok) return; bindTabs(); await Promise.all([loadActive(),loadFlagged(),loadUsers(),loadRemoved(),loadSettings()]);}
+document.getElementById('sign-out').addEventListener('click',async function(){await supabase.auth.signOut(); window.location.href='/index.html';});
+document.querySelector('#active-table tbody').addEventListener('click',function(e){var b=e.target.closest('button'); if(!b) return; var id=b.getAttribute('data-id'); var act=b.getAttribute('data-act'); if(act==='view'){var l=activeRows.find(function(x){return x.id===id;}); if(l) alert('Listing '+l.id+'\n'+(l.item_name||''));} if(act==='edit') editListing(id); if(act==='remove') removeListing(id,'Removed by admin'); if(act==='contact'){var l2=activeRows.find(function(x){return x.id===id;}); alert('Contact seller: '+(l2&&l2.seller_username?l2.seller_username:'unknown'));}});
+document.querySelector('#flagged-table tbody').addEventListener('click',function(e){var b=e.target.closest('button'); if(!b) return; updateFlaggedAction(b.getAttribute('data-id'), b.getAttribute('data-act'));});
+document.querySelector('#users-table tbody').addEventListener('click',function(e){var b=e.target.closest('button'); if(!b) return; var id=b.getAttribute('data-id'); var act=b.getAttribute('data-act'); if(act==='profile'){var u=userRows.find(function(x){return x.id===id;}); if(u) alert('User: '+u.username+'\nReports: '+u.reports);} if(act==='warn') updateUser(id,'warned'); if(act==='suspend') updateUser(id,'suspended'); if(act==='ban') updateUser(id,'banned');});
+document.getElementById('save-settings').addEventListener('click',saveSettings);
+init();
+</script>
+</body>
+</html>

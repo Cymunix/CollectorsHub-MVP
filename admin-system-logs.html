@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System Logs - CollectorsHub Retail</title>
+  <style>
+    :root { --border:#233451; --text:#e7eefb; --soft:#9fb0cf; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Sora","Segoe UI",Tahoma,sans-serif; color:var(--text); background:linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%); }
+    .app { display:grid; grid-template-columns:270px 1fr; min-height:100vh; }
+    .sidebar { border-right:1px solid var(--border); background:rgba(10,18,33,.88); padding:24px 16px; }
+    .brand { padding:10px 10px 14px; border-bottom:1px solid rgba(159,176,207,.15); }
+    .brand h1 { margin:0; font-size:1.15rem; }
+    .brand p { margin:6px 0 0; color:var(--soft); font-size:.82rem; }
+    .nav { display:flex; flex-direction:column; gap:8px; margin-top:18px; }
+    .nav-item { color:var(--soft); text-decoration:none; padding:10px 12px; border-radius:10px; border:1px solid transparent; }
+    .nav-item.active, .nav-item:hover { color:var(--text); border-color:rgba(51,195,255,.36); background:rgba(51,195,255,.12); }
+    .content { display:flex; flex-direction:column; }
+    .topbar { min-height:76px; border-bottom:1px solid var(--border); background:rgba(8,16,30,.78); display:flex; align-items:center; justify-content:space-between; padding:10px 24px; }
+    .main { padding:20px 24px; display:flex; flex-direction:column; gap:16px; }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; }
+    .tab { color:var(--soft); background:none; border:1px solid rgba(56,89,136,.55); border-radius:999px; padding:7px 10px; font-size:.8rem; cursor:pointer; }
+    .tab.active { color:var(--text); border-color:rgba(51,195,255,.6); background:rgba(51,195,255,.14); }
+    .section { border:1px solid var(--border); border-radius:14px; padding:16px; background:rgba(13,22,40,.76); display:none; }
+    .section.active { display:block; }
+    .btn { border:1px solid rgba(56,89,136,.55); background:rgba(18,31,53,.95); color:var(--text); padding:9px 12px; border-radius:10px; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.85rem; }
+    th, td { padding:10px; border-bottom:1px solid rgba(35,52,81,.5); text-align:left; }
+    th { color:var(--soft); font-size:.76rem; text-transform:uppercase; }
+    .status { min-height:18px; color:var(--soft); font-size:.82rem; }
+    @media(max-width:980px){ .app{grid-template-columns:1fr;} .main{padding:14px;} }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><h1>CollectorsHub Retail</h1><p>Platform Administration</p></div>
+    <nav class="nav">
+      <a class="nav-item" href="/admin-dashboard.html">Dashboard</a>
+      <a class="nav-item" href="/admin-stores.html">Stores</a>
+      <a class="nav-item" href="/admin-users.html">Users</a>
+      <a class="nav-item" href="/admin-catalog.html">Catalog</a>
+      <a class="nav-item" href="/admin-pricing-data.html">Pricing Data</a>
+      <a class="nav-item" href="/admin-marketplace.html">Marketplace</a>
+      <a class="nav-item active" href="/admin-system-logs.html">System Logs</a>
+      <a class="nav-item" href="/admin-settings.html">Settings</a>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <header class="topbar"><h2 style="margin:0;font-size:1.05rem;">System Logs</h2><button class="btn" id="refresh-all" type="button">Refresh</button></header>
+    <main class="main">
+      <div class="tabs">
+        <button class="tab active" data-tab="admin">Admin Activity</button>
+        <button class="tab" data-tab="errors">Error Logs</button>
+        <button class="tab" data-tab="auth">Authentication Logs</button>
+        <button class="tab" data-tab="api">API Logs</button>
+      </div>
+
+      <section id="tab-admin" class="section active">
+        <h3 style="margin-top:0;">Admin Activity</h3>
+        <table id="admin-table"><thead><tr><th>Admin User</th><th>Action</th><th>Target Object</th><th>Timestamp</th></tr></thead><tbody><tr><td colspan="4">Loading...</td></tr></tbody></table>
+      </section>
+
+      <section id="tab-errors" class="section">
+        <h3 style="margin-top:0;">Error Logs</h3>
+        <table id="error-table"><thead><tr><th>Error Type</th><th>Message</th><th>Service</th><th>Timestamp</th></tr></thead><tbody><tr><td colspan="4">Loading...</td></tr></tbody></table>
+      </section>
+
+      <section id="tab-auth" class="section">
+        <h3 style="margin-top:0;">Authentication Logs</h3>
+        <table id="auth-table"><thead><tr><th>User</th><th>IP Address</th><th>Location</th><th>Login Time</th><th>Status</th></tr></thead><tbody><tr><td colspan="5">Loading...</td></tr></tbody></table>
+      </section>
+
+      <section id="tab-api" class="section">
+        <h3 style="margin-top:0;">API Logs</h3>
+        <table id="api-table"><thead><tr><th>Endpoint</th><th>User / API Key</th><th>Response Status</th><th>Latency</th><th>Timestamp</th></tr></thead><tbody><tr><td colspan="5">Loading...</td></tr></tbody></table>
+      </section>
+
+      <p class="status" id="logs-status"></p>
+      <button class="btn" id="sign-out" type="button" style="max-width:140px;">Sign Out</button>
+    </main>
+  </div>
+</div>
+
+<script src="./supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+var USER_ROLE_KEY='collectorshub_retail_user_role'; var ALLOWED=['server_admin','admin'];
+var supabase=createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(v){var d=new Date(v); return Number.isNaN(d.getTime())?'-':d.toLocaleString();}
+async function verify(){var s=(await supabase.auth.getSession()).data.session; if(!s){window.location.href='/index.html'; return false;} var r=await supabase.from('server_users').select('role').eq('auth_user_id',s.user.id).eq('is_active',true).maybeSingle(); var role=!r.error&&r.data?r.data.role:null; if(!role){var lr=localStorage.getItem(USER_ROLE_KEY); if(lr&&ALLOWED.indexOf(lr)>=0) role=lr;} if(!role||ALLOWED.indexOf(role)<0){await supabase.auth.signOut(); window.location.href='/index.html'; return false;} return true;}
+function bindTabs(){document.querySelectorAll('.tab').forEach(function(btn){btn.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});btn.classList.add('active');document.getElementById('tab-'+btn.getAttribute('data-tab')).classList.add('active');});});}
+async function loadAdmin(){var tb=document.querySelector('#admin-table tbody'); tb.innerHTML='<tr><td colspan="4">Loading...</td></tr>'; var r=await supabase.from('admin_activity_logs').select('admin_user,action,target_object,timestamp').order('timestamp',{ascending:false}).limit(500); if(r.error){tb.innerHTML='<tr><td colspan="4">'+esc(r.error.message)+'</td></tr>'; return;} var rows=r.data||[]; if(!rows.length){tb.innerHTML='<tr><td colspan="4">No admin activity logs.</td></tr>'; return;} tb.innerHTML=rows.map(function(x){return '<tr><td>'+esc(x.admin_user||'-')+'</td><td>'+esc(x.action||'-')+'</td><td>'+esc(x.target_object||'-')+'</td><td>'+esc(fmt(x.timestamp))+'</td></tr>';}).join('');}
+async function loadErrors(){var tb=document.querySelector('#error-table tbody'); tb.innerHTML='<tr><td colspan="4">Loading...</td></tr>'; var r=await supabase.from('error_logs').select('error_type,message,service,timestamp').order('timestamp',{ascending:false}).limit(500); if(r.error){tb.innerHTML='<tr><td colspan="4">'+esc(r.error.message)+'</td></tr>'; return;} var rows=r.data||[]; if(!rows.length){tb.innerHTML='<tr><td colspan="4">No error logs.</td></tr>'; return;} tb.innerHTML=rows.map(function(x){return '<tr><td>'+esc(x.error_type||'-')+'</td><td>'+esc(x.message||'-')+'</td><td>'+esc(x.service||'-')+'</td><td>'+esc(fmt(x.timestamp))+'</td></tr>';}).join('');}
+async function loadAuth(){var tb=document.querySelector('#auth-table tbody'); tb.innerHTML='<tr><td colspan="5">Loading...</td></tr>'; var r=await supabase.from('authentication_logs').select('user_identifier,ip_address,location,login_time,status').order('login_time',{ascending:false}).limit(500); if(r.error){tb.innerHTML='<tr><td colspan="5">'+esc(r.error.message)+'</td></tr>'; return;} var rows=r.data||[]; if(!rows.length){tb.innerHTML='<tr><td colspan="5">No authentication logs.</td></tr>'; return;} tb.innerHTML=rows.map(function(x){return '<tr><td>'+esc(x.user_identifier||'-')+'</td><td>'+esc(x.ip_address||'-')+'</td><td>'+esc(x.location||'-')+'</td><td>'+esc(fmt(x.login_time))+'</td><td>'+esc(x.status||'-')+'</td></tr>';}).join('');}
+async function loadApi(){var tb=document.querySelector('#api-table tbody'); tb.innerHTML='<tr><td colspan="5">Loading...</td></tr>'; var r=await supabase.from('api_logs').select('endpoint,user_or_api_key,response_status,latency_ms,timestamp').order('timestamp',{ascending:false}).limit(500); if(r.error){tb.innerHTML='<tr><td colspan="5">'+esc(r.error.message)+'</td></tr>'; return;} var rows=r.data||[]; if(!rows.length){tb.innerHTML='<tr><td colspan="5">No API logs.</td></tr>'; return;} tb.innerHTML=rows.map(function(x){return '<tr><td>'+esc(x.endpoint||'-')+'</td><td>'+esc(x.user_or_api_key||'-')+'</td><td>'+esc(x.response_status||'-')+'</td><td>'+esc(x.latency_ms||'-')+' ms</td><td>'+esc(fmt(x.timestamp))+'</td></tr>';}).join('');}
+async function refreshAll(){await Promise.all([loadAdmin(),loadErrors(),loadAuth(),loadApi()]); document.getElementById('logs-status').textContent='Logs refreshed.';}
+
+document.getElementById('refresh-all').addEventListener('click',refreshAll);
+document.getElementById('sign-out').addEventListener('click',async function(){await supabase.auth.signOut(); window.location.href='/index.html';});
+(async function init(){var ok=await verify(); if(!ok) return; bindTabs(); await refreshAll();})();
+</script>
+</body>
+</html>

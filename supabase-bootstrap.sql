@@ -1598,6 +1598,329 @@ $$;
 revoke all on function public.submit_catalog_request(text, text, text) from public;
 grant execute on function public.submit_catalog_request(text, text, text) to authenticated;
 
+-- Operations admin helper for Pricing, Marketplace, and Logs.
+create or replace function public.is_current_user_operations_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.is_active = true
+      and su.role::text in ('server_admin', 'admin')
+  );
+$$;
+
+revoke all on function public.is_current_user_operations_admin() from public;
+grant execute on function public.is_current_user_operations_admin() to authenticated;
+
+-- =========================
+-- Pricing Data tables
+-- =========================
+create table if not exists public.pricing_sources (
+  id uuid primary key default gen_random_uuid(),
+  source_name text not null unique,
+  is_enabled boolean not null default true,
+  last_update timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.pricing_recent_sales (
+  id uuid primary key default gen_random_uuid(),
+  catalog_item_id uuid references public.catalog_items(id) on delete set null,
+  variant_id uuid references public.variants(id) on delete set null,
+  catalog_item_name text,
+  variant_label text,
+  condition_label text,
+  sale_price numeric(12,2) not null,
+  sale_date timestamptz not null,
+  source_name text,
+  is_valid boolean not null default true,
+  invalid_reason text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists pricing_recent_sales_variant_idx on public.pricing_recent_sales(variant_id);
+create index if not exists pricing_recent_sales_date_idx on public.pricing_recent_sales(sale_date desc);
+
+create table if not exists public.pricing_overrides (
+  id uuid primary key default gen_random_uuid(),
+  variant_id uuid not null references public.variants(id) on delete cascade,
+  variant_label text,
+  override_price numeric(12,2) not null,
+  reason text not null,
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  is_active boolean not null default true
+);
+
+create table if not exists public.price_recalculation_jobs (
+  id uuid primary key default gen_random_uuid(),
+  status text not null default 'queued' check (status in ('queued', 'running', 'completed', 'failed')),
+  triggered_by uuid,
+  note text,
+  created_at timestamptz not null default now(),
+  started_at timestamptz,
+  completed_at timestamptz
+);
+
+-- =========================
+-- Marketplace tables
+-- =========================
+create table if not exists public.marketplace_listings (
+  id uuid primary key default gen_random_uuid(),
+  item_name text,
+  variant_label text,
+  seller_user_id uuid,
+  seller_username text,
+  price numeric(12,2) not null,
+  condition_label text,
+  status text not null default 'active' check (status in ('active', 'flagged', 'removed')),
+  report_count integer not null default 0,
+  last_report_reason text,
+  last_reported_at timestamptz,
+  date_listed timestamptz not null default now(),
+  removed_reason text,
+  removed_by uuid,
+  removed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists marketplace_listings_status_idx on public.marketplace_listings(status);
+create index if not exists marketplace_listings_date_idx on public.marketplace_listings(date_listed desc);
+
+create table if not exists public.marketplace_removed_listings (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid,
+  listing_label text,
+  removed_by text,
+  reason text,
+  date_removed timestamptz not null default now()
+);
+
+create table if not exists public.marketplace_user_reports (
+  id uuid primary key default gen_random_uuid(),
+  username text not null unique,
+  reports integer not null default 0,
+  last_activity timestamptz,
+  account_status text not null default 'active' check (account_status in ('active', 'warned', 'suspended', 'banned')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.marketplace_settings (
+  setting_key text primary key,
+  setting_value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+-- =========================
+-- System logs tables
+-- =========================
+create table if not exists public.admin_activity_logs (
+  id uuid primary key default gen_random_uuid(),
+  admin_user text,
+  action text,
+  target_object text,
+  metadata jsonb,
+  "timestamp" timestamptz not null default now()
+);
+
+create table if not exists public.error_logs (
+  id uuid primary key default gen_random_uuid(),
+  error_type text,
+  message text,
+  service text,
+  "timestamp" timestamptz not null default now()
+);
+
+create table if not exists public.authentication_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_identifier text,
+  ip_address text,
+  location text,
+  login_time timestamptz not null default now(),
+  status text
+);
+
+create table if not exists public.api_logs (
+  id uuid primary key default gen_random_uuid(),
+  endpoint text,
+  user_or_api_key text,
+  response_status integer,
+  latency_ms integer,
+  "timestamp" timestamptz not null default now()
+);
+
+-- Shared updated_at trigger for operations tables.
+create or replace function public.set_operations_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists pricing_sources_set_updated_at on public.pricing_sources;
+create trigger pricing_sources_set_updated_at
+before update on public.pricing_sources
+for each row
+execute function public.set_operations_updated_at();
+
+drop trigger if exists marketplace_listings_set_updated_at on public.marketplace_listings;
+create trigger marketplace_listings_set_updated_at
+before update on public.marketplace_listings
+for each row
+execute function public.set_operations_updated_at();
+
+drop trigger if exists marketplace_user_reports_set_updated_at on public.marketplace_user_reports;
+create trigger marketplace_user_reports_set_updated_at
+before update on public.marketplace_user_reports
+for each row
+execute function public.set_operations_updated_at();
+
+drop trigger if exists marketplace_settings_set_updated_at on public.marketplace_settings;
+create trigger marketplace_settings_set_updated_at
+before update on public.marketplace_settings
+for each row
+execute function public.set_operations_updated_at();
+
+-- RLS for operations tables.
+alter table public.pricing_sources enable row level security;
+alter table public.pricing_recent_sales enable row level security;
+alter table public.pricing_overrides enable row level security;
+alter table public.price_recalculation_jobs enable row level security;
+alter table public.marketplace_listings enable row level security;
+alter table public.marketplace_removed_listings enable row level security;
+alter table public.marketplace_user_reports enable row level security;
+alter table public.marketplace_settings enable row level security;
+alter table public.admin_activity_logs enable row level security;
+alter table public.error_logs enable row level security;
+alter table public.authentication_logs enable row level security;
+alter table public.api_logs enable row level security;
+
+drop policy if exists "Operations admins manage pricing_sources" on public.pricing_sources;
+create policy "Operations admins manage pricing_sources"
+on public.pricing_sources
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins manage pricing_recent_sales" on public.pricing_recent_sales;
+create policy "Operations admins manage pricing_recent_sales"
+on public.pricing_recent_sales
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins manage pricing_overrides" on public.pricing_overrides;
+create policy "Operations admins manage pricing_overrides"
+on public.pricing_overrides
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins manage price_recalculation_jobs" on public.price_recalculation_jobs;
+create policy "Operations admins manage price_recalculation_jobs"
+on public.price_recalculation_jobs
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins manage marketplace_listings" on public.marketplace_listings;
+create policy "Operations admins manage marketplace_listings"
+on public.marketplace_listings
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins manage marketplace_removed_listings" on public.marketplace_removed_listings;
+create policy "Operations admins manage marketplace_removed_listings"
+on public.marketplace_removed_listings
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins manage marketplace_user_reports" on public.marketplace_user_reports;
+create policy "Operations admins manage marketplace_user_reports"
+on public.marketplace_user_reports
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins manage marketplace_settings" on public.marketplace_settings;
+create policy "Operations admins manage marketplace_settings"
+on public.marketplace_settings
+for all
+to authenticated
+using (public.is_current_user_operations_admin())
+with check (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins read admin_activity_logs" on public.admin_activity_logs;
+create policy "Operations admins read admin_activity_logs"
+on public.admin_activity_logs
+for select
+to authenticated
+using (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins read error_logs" on public.error_logs;
+create policy "Operations admins read error_logs"
+on public.error_logs
+for select
+to authenticated
+using (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins read authentication_logs" on public.authentication_logs;
+create policy "Operations admins read authentication_logs"
+on public.authentication_logs
+for select
+to authenticated
+using (public.is_current_user_operations_admin());
+
+drop policy if exists "Operations admins read api_logs" on public.api_logs;
+create policy "Operations admins read api_logs"
+on public.api_logs
+for select
+to authenticated
+using (public.is_current_user_operations_admin());
+
+-- Seed defaults for pricing and marketplace settings.
+insert into public.pricing_sources (source_name, is_enabled, last_update)
+values
+  ('Marketplace Sales', true, now()),
+  ('External API', true, now()),
+  ('Manual Admin Entry', true, now())
+on conflict (source_name)
+do update set
+  is_enabled = excluded.is_enabled,
+  last_update = excluded.last_update,
+  updated_at = now();
+
+insert into public.marketplace_settings (setting_key, setting_value)
+values
+  ('minimum_listing_price', to_jsonb(1.00::numeric)),
+  ('commission_percent', to_jsonb(10.00::numeric)),
+  ('listing_expiration_days', to_jsonb(30)),
+  ('allowed_condition_types', '["New", "Like New", "Good", "Fair", "Poor"]'::jsonb)
+on conflict (setting_key)
+do update set
+  setting_value = excluded.setting_value,
+  updated_at = now();
+
 -- Seed rows.
 insert into public.retail_users (store_code, username, role, email, auth_user_id, is_active)
 values
