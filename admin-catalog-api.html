@@ -252,6 +252,8 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 var USER_ROLE_KEY = "collectorshub_retail_user_role";
 var ALLOWED_CATALOG_ROLES = ["server_admin", "admin", "catalog_manager"];
+var BRICKSET_API_KEY_STORAGE = "collectorshub_brickset_api_key";
+var BRICKSET_USER_HASH_STORAGE = "collectorshub_brickset_user_hash";
 var supabase = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
 function setStatus(text) { document.getElementById("status").textContent = text || ""; }
@@ -285,6 +287,28 @@ function parseParamLines(input) {
     }
   });
   return params;
+}
+
+function loadBricksetCredentialsFromSession() {
+  var apiKey = sessionStorage.getItem(BRICKSET_API_KEY_STORAGE) || "";
+  var userHash = sessionStorage.getItem(BRICKSET_USER_HASH_STORAGE) || "";
+  document.getElementById("brickset-api-key").value = apiKey;
+  document.getElementById("brickset-user-hash").value = userHash;
+}
+
+function saveBricksetCredentialsToSession() {
+  var apiKey = document.getElementById("brickset-api-key").value.trim();
+  var userHash = document.getElementById("brickset-user-hash").value.trim();
+  if (apiKey) {
+    sessionStorage.setItem(BRICKSET_API_KEY_STORAGE, apiKey);
+  } else {
+    sessionStorage.removeItem(BRICKSET_API_KEY_STORAGE);
+  }
+  if (userHash) {
+    sessionStorage.setItem(BRICKSET_USER_HASH_STORAGE, userHash);
+  } else {
+    sessionStorage.removeItem(BRICKSET_USER_HASH_STORAGE);
+  }
 }
 
 function applyPreset(name) {
@@ -444,6 +468,8 @@ async function sendBricksetRequest() {
   var userHash = document.getElementById("brickset-user-hash").value.trim();
   var paramsText = document.getElementById("brickset-params").value;
 
+  saveBricksetCredentialsToSession();
+
   if (!baseUrl || !endpoint) {
     setBricksetStatus("Base URL and endpoint are required.");
     return;
@@ -503,11 +529,17 @@ document.getElementById("brickset-clear").addEventListener("click", function () 
   setBricksetResponse("No Brickset response yet.");
 });
 
+document.getElementById("brickset-api-key").addEventListener("change", saveBricksetCredentialsToSession);
+document.getElementById("brickset-user-hash").addEventListener("change", saveBricksetCredentialsToSession);
+
 document.getElementById("sign-out").addEventListener("click", async function () {
+  sessionStorage.removeItem(BRICKSET_API_KEY_STORAGE);
+  sessionStorage.removeItem(BRICKSET_USER_HASH_STORAGE);
   await supabase.auth.signOut();
   window.location.href = "/index.html";
 });
 
+loadBricksetCredentialsFromSession();
 verifyCatalogAccess();
 </script>
 </body>
