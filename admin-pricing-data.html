@@ -5,19 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pricing Data - CollectorsHub Retail</title>
   <style>
-    :root { --border:#233451; --text:#e7eefb; --soft:#9fb0cf; }
+    :root {
+      --border:#233451;
+      --text:#e7eefb;
+      --soft:#9fb0cf;
+      --radius-sm:10px;
+    }
     * { box-sizing:border-box; }
-    body { margin:0; font-family:"Sora","Segoe UI",Tahoma,sans-serif; color:var(--text); background:linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%); }
+    body {
+      margin:0;
+      font-family:"Sora","Segoe UI",Tahoma,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(700px 400px at 90% -20%, rgba(51,195,255,0.16), transparent 60%),
+        radial-gradient(600px 350px at -10% 100%, rgba(45,224,196,0.12), transparent 60%),
+        linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%);
+    }
     .app { display:grid; grid-template-columns:270px 1fr; min-height:100vh; }
-    .sidebar { border-right:1px solid var(--border); background:rgba(10,18,33,.88); padding:24px 16px; }
+    .sidebar { border-right:1px solid var(--border); background:rgba(10,18,33,.88); backdrop-filter:blur(8px); padding:24px 16px; }
     .brand { padding:10px 10px 14px; border-bottom:1px solid rgba(159,176,207,.15); }
     .brand h1 { margin:0; font-size:1.15rem; }
     .brand p { margin:6px 0 0; color:var(--soft); font-size:.82rem; }
     .nav { display:flex; flex-direction:column; gap:8px; margin-top:18px; }
-    .nav-item { color:var(--soft); text-decoration:none; padding:10px 12px; border-radius:10px; border:1px solid transparent; }
+    .nav-item { display:flex; align-items:center; gap:12px; color:var(--soft); text-decoration:none; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid transparent; }
     .nav-item.active, .nav-item:hover { color:var(--text); border-color:rgba(51,195,255,.36); background:rgba(51,195,255,.12); }
+    .nav-icon { width:16px; height:16px; fill:currentColor; flex:0 0 auto; }
     .content { display:flex; flex-direction:column; }
-    .topbar { min-height:76px; border-bottom:1px solid var(--border); background:rgba(8,16,30,.78); display:flex; align-items:center; justify-content:space-between; padding:10px 24px; }
+    .topbar { min-height:76px; border-bottom:1px solid var(--border); background:rgba(8,16,30,.78); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:space-between; padding:10px 24px; }
+    .title-wrap { display:flex; align-items:center; gap:10px; }
+    .admin-badge { background:rgba(45,224,196,0.16); color:#86ffe8; border:1px solid rgba(45,224,196,0.44); border-radius:999px; padding:4px 11px; font-size:.75rem; text-transform:uppercase; font-weight:700; }
     .main { padding:20px 24px; display:flex; flex-direction:column; gap:16px; }
     .tabs { display:flex; flex-wrap:wrap; gap:8px; }
     .tab { color:var(--soft); background:none; border:1px solid rgba(56,89,136,.55); border-radius:999px; padding:7px 10px; font-size:.8rem; cursor:pointer; }
@@ -40,19 +56,19 @@
   <aside class="sidebar">
     <div class="brand"><h1>CollectorsHub Retail</h1><p>Platform Administration</p></div>
     <nav class="nav">
-      <a class="nav-item" href="/admin-dashboard.html">Dashboard</a>
-      <a class="nav-item" href="/admin-stores.html">Stores</a>
-      <a class="nav-item" href="/admin-users.html">Users</a>
-      <a class="nav-item" href="/admin-catalog.html">Catalog</a>
-      <a class="nav-item active" href="/admin-pricing-data.html">Pricing Data</a>
-      <a class="nav-item" href="/admin-marketplace.html">Marketplace</a>
-      <a class="nav-item" href="/admin-system-logs.html">System Logs</a>
-      <a class="nav-item" href="/admin-settings.html">Settings</a>
+      <a class="nav-item" href="/admin-dashboard.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>Dashboard</a>
+      <a class="nav-item" href="/admin-stores.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>Stores</a>
+      <a class="nav-item" href="/admin-users.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 2a3 3 0 110 6 3 3 0 010-6zm-5 11a5 5 0 1110 0v1H3z"/></svg>Users</a>
+      <a class="nav-item" href="/admin-catalog.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>Catalog</a>
+      <a class="nav-item active" href="/admin-pricing-data.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 12h2V8H2zm5 0h2V4H7zm5 0h2V6h-2z"/></svg>Pricing Data</a>
+      <a class="nav-item" href="/admin-marketplace.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 4h12l-1 3H3zm1 4h10v5H3z"/></svg>Marketplace</a>
+      <a class="nav-item" href="/admin-system-logs.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M3 2h8l2 2v10H3zm7 1.5V5h1.5zM5 7h6v1H5zm0 2h6v1H5zm0 2h4v1H5z"/></svg>System Logs</a>
+      <a class="nav-item" href="/admin-settings.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M9.7 1l.4 1.6a5.7 5.7 0 011.5.9l1.5-.5.8 1.3-1.2 1a5.8 5.8 0 01.1.9 5.8 5.8 0 01-.1.9l1.2 1-.8 1.3-1.5-.5a5.8 5.8 0 01-1.5.9L9.7 15H8.3l-.4-1.6a5.8 5.8 0 01-1.5-.9l-1.5.5-.8-1.3 1.2-1a5.8 5.8 0 01-.1-.9c0-.3 0-.6.1-.9l-1.2-1 .8-1.3 1.5.5a5.8 5.8 0 011.5-.9L8.3 1zM8 6.2A1.8 1.8 0 108 9.8a1.8 1.8 0 000-3.6z"/></svg>Settings</a>
     </nav>
   </aside>
 
   <div class="content">
-    <header class="topbar"><h2 style="margin:0;font-size:1.05rem;">Pricing Data</h2><button class="btn" id="sign-out" type="button">Sign Out</button></header>
+    <header class="topbar"><div class="title-wrap"><h2 style="margin:0;font-size:1.05rem;">Pricing Data</h2><span class="admin-badge">Operations</span></div><button class="btn" id="sign-out" type="button">Sign Out</button></header>
     <main class="main">
       <div class="tabs">
         <button class="tab active" data-tab="sources">Price Sources</button>
