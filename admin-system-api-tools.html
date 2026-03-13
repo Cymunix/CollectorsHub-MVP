@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Tools - CollectorsHub Retail</title>
+  <style>
+    :root { --border:#233451; --text:#e7eefb; --soft:#9fb0cf; --radius:12px; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Sora", "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(700px 400px at 90% -20%, rgba(51,195,255,0.16), transparent 60%),
+        radial-gradient(600px 350px at -10% 100%, rgba(45,224,196,0.12), transparent 60%),
+        linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%);
+      min-height: 100vh;
+    }
+    .app { display:grid; grid-template-columns:270px 1fr; min-height:100vh; }
+    .sidebar { border-right:1px solid var(--border); background:rgba(10,18,33,.88); backdrop-filter:blur(8px); padding:24px 16px; }
+    .brand { padding:10px 10px 14px; border-bottom:1px solid rgba(159,176,207,.15); }
+    .brand h1 { margin:0; font-size:1.15rem; }
+    .brand p { margin:6px 0 0; color:var(--soft); font-size:.82rem; }
+    .nav { display:flex; flex-direction:column; gap:8px; margin-top:18px; }
+    .nav-item { display:flex; align-items:center; gap:12px; color:var(--soft); text-decoration:none; padding:10px 12px; border-radius:10px; border:1px solid transparent; }
+    .nav-item.active, .nav-item:hover { color:var(--text); border-color:rgba(51,195,255,.36); background:rgba(51,195,255,.12); }
+    .nav-icon { width:16px; height:16px; fill:currentColor; }
+    .content { display:flex; flex-direction:column; }
+    .topbar { min-height:76px; border-bottom:1px solid var(--border); background:rgba(8,16,30,.78); display:flex; align-items:center; justify-content:space-between; padding:10px 24px; }
+    .main { padding:20px 24px; }
+    .card {
+      border:1px solid rgba(56,89,136,.55);
+      border-radius:var(--radius);
+      background:rgba(14,26,46,.75);
+      padding:16px;
+      max-width:680px;
+    }
+    .card h3 { margin:0; }
+    .card p { color:var(--soft); margin:8px 0 12px; }
+    .btn { border:1px solid rgba(56,89,136,.55); background:rgba(18,31,53,.95); color:var(--text); padding:9px 12px; border-radius:10px; text-decoration:none; display:inline-block; }
+    @media (max-width:980px){ .app{grid-template-columns:1fr;} .main{padding:14px;} }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><h1>CollectorsHub Retail</h1><p>Platform Administration</p></div>
+    <nav class="nav">
+      <a class="nav-item" href="/admin-dashboard.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>Dashboard</a>
+      <a class="nav-item" href="/admin-stores.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>Stores</a>
+      <a class="nav-item" href="/admin-users.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 2a3 3 0 110 6 3 3 0 010-6zm-5 11a5 5 0 1110 0v1H3z"/></svg>Users</a>
+      <a class="nav-item" href="/admin-catalog.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>Catalog</a>
+      <a class="nav-item" href="/admin-pricing-data.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 12h2V8H2zm5 0h2V4H7zm5 0h2V6h-2z"/></svg>Pricing Data</a>
+      <a class="nav-item" href="/admin-marketplace.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 4h12l-1 3H3zm1 4h10v5H3z"/></svg>Marketplace</a>
+      <a class="nav-item" href="/admin-system-logs.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M3 2h8l2 2v10H3zm7 1.5V5h1.5zM5 7h6v1H5zm0 2h6v1H5zm0 2h4v1H5z"/></svg>System Logs</a>
+      <a class="nav-item active" href="/admin-system-api-tools.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>API Tools</a>
+      <a class="nav-item" href="/admin-settings.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M9.7 1l.4 1.6a5.7 5.7 0 011.5.9l1.5-.5.8 1.3-1.2 1a5.8 5.8 0 01.1.9 5.8 5.8 0 01-.1.9l1.2 1-.8 1.3-1.5-.5a5.8 5.8 0 01-1.5.9L9.7 15H8.3l-.4-1.6a5.8 5.8 0 01-1.5-.9l-1.5.5-.8-1.3 1.2-1a5.8 5.8 0 01-.1-.9c0-.3 0-.6.1-.9l-1.2-1 .8-1.3 1.5.5a5.8 5.8 0 011.5-.9L8.3 1zM8 6.2A1.8 1.8 0 108 9.8a1.8 1.8 0 000-3.6z"/></svg>Settings</a>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <h2 style="margin:0;font-size:1.05rem;">API Tools</h2>
+      <a class="btn" href="/admin-system-logs.html">Back to System Logs</a>
+    </header>
+    <main class="main">
+      <section class="card">
+        <h3>Brickset API Debugger</h3>
+        <p>Developer-only tool for testing raw Brickset and catalog endpoint payloads.</p>
+        <a class="btn" href="/admin-catalog-api.html">Open Debugger</a>
+      </section>
+    </main>
+  </div>
+</div>
+</body>
+</html>

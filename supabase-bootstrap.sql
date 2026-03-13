@@ -681,17 +681,25 @@ create index if not exists catalog_items_created_by_idx on public.catalog_items(
 create table if not exists public.variants (
   id uuid primary key default gen_random_uuid(),
   catalog_item_id uuid not null references public.catalog_items(id) on delete cascade,
+  set_number text,
+  piece_count integer,
   platform_or_format text,
   edition text,
   region text,
   packaging text,
   upc text,
+  release_year integer,
   release_date date,
   attributes jsonb not null default '{}'::jsonb,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.variants
+  add column if not exists set_number text,
+  add column if not exists piece_count integer,
+  add column if not exists release_year integer;
 
 alter table public.variants enable row level security;
 
@@ -701,6 +709,9 @@ create policy "Allow read active variants" on public.variants
 
 create index if not exists variants_catalog_item_idx on public.variants(catalog_item_id);
 create index if not exists variants_upc_idx on public.variants(upc);
+create unique index if not exists variants_set_number_unique_idx
+  on public.variants(set_number)
+  where set_number is not null;
 
 -- Trigger for catalog_items updated_at
 drop trigger if exists catalog_items_set_updated_at on public.catalog_items;
