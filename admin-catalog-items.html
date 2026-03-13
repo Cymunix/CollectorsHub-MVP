@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catalog Items - CollectorsHub Retail</title>
+  <style>
+    :root { --bg:#070d18; --panel:#121c30; --panel2:#15233a; --border:#233451; --text:#e7eefb; --soft:#9fb0cf; --accent:#33c3ff; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:"Sora","Segoe UI",Tahoma,Geneva,Verdana,sans-serif; color:var(--text); background:linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%); }
+    .app { display:grid; grid-template-columns:270px 1fr; min-height:100vh; }
+    .sidebar { border-right:1px solid var(--border); background:rgba(10,18,33,.88); padding:24px 16px; }
+    .brand { padding:10px 10px 14px; border-bottom:1px solid rgba(159,176,207,.15); }
+    .brand h1 { margin:0; font-size:1.15rem; }
+    .brand p { margin:6px 0 0; color:var(--soft); font-size:.82rem; }
+    .nav { display:flex; flex-direction:column; gap:8px; margin-top:18px; }
+    .nav-item { display:flex; align-items:center; gap:12px; color:var(--soft); text-decoration:none; padding:10px 12px; border-radius:10px; border:1px solid transparent; }
+    .nav-item.active, .nav-item:hover { color:var(--text); border-color:rgba(51,195,255,.36); background:rgba(51,195,255,.12); }
+    .content { display:flex; flex-direction:column; }
+    .topbar { min-height:76px; border-bottom:1px solid var(--border); background:rgba(8,16,30,.78); display:flex; align-items:center; justify-content:space-between; padding:10px 24px; }
+    .topbar h2 { margin:0; font-size:1.05rem; }
+    .main { padding:20px 24px; display:flex; flex-direction:column; gap:16px; }
+    .subnav { display:flex; flex-wrap:wrap; gap:8px; }
+    .subnav a { color:var(--soft); text-decoration:none; border:1px solid rgba(56,89,136,.55); border-radius:999px; padding:7px 10px; font-size:.8rem; }
+    .subnav a.active { color:var(--text); border-color:rgba(51,195,255,.6); background:rgba(51,195,255,.14); }
+    .section { border:1px solid var(--border); border-radius:14px; padding:16px; background:rgba(13,22,40,.76); }
+    .section-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .section-head p { margin:5px 0 0; color:var(--soft); font-size:.84rem; }
+    .btn { border:1px solid rgba(56,89,136,.55); background:rgba(18,31,53,.95); color:var(--text); padding:9px 12px; border-radius:10px; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.85rem; }
+    th, td { padding:10px; border-bottom:1px solid rgba(35,52,81,.5); text-align:left; }
+    th { color:var(--soft); font-size:.76rem; text-transform:uppercase; }
+    .actions { display:flex; gap:6px; }
+    .actions button { border:1px solid rgba(51,195,255,.4); background:none; color:var(--text); padding:4px 8px; border-radius:8px; cursor:pointer; font-size:.75rem; }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); align-items:center; justify-content:center; padding:20px; }
+    .modal.open { display:flex; }
+    .modal-card { width:100%; max-width:620px; max-height:90vh; overflow:auto; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+    .field input, .field select, .field textarea { width:100%; padding:10px; border-radius:10px; border:1px solid rgba(56,89,136,.7); background:#0e1a2e; color:var(--text); }
+    .status { min-height:18px; font-size:.82rem; color:var(--soft); margin-top:8px; }
+    @media (max-width:980px){ .app{grid-template-columns:1fr;} .main{padding:14px;} .grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><h1>CollectorsHub Retail</h1><p>Platform Administration</p></div>
+      <nav class="nav">
+        <a class="nav-item" href="/admin-dashboard.html">Dashboard</a>
+        <a class="nav-item" href="/admin-stores.html">Stores</a>
+        <a class="nav-item" href="/admin-users.html">Users</a>
+        <a class="nav-item active" href="/admin-catalog.html">Catalog</a>
+        <a class="nav-item" href="/admin-settings.html">Settings</a>
+      </nav>
+    </aside>
+    <div class="content">
+      <header class="topbar">
+        <h2>Catalog Items</h2>
+        <button class="btn" id="sign-out" type="button">Sign Out</button>
+      </header>
+      <main class="main">
+        <div class="subnav">
+          <a class="active" href="/admin-catalog-items.html">Catalog Items</a>
+          <a href="/admin-catalog-variants.html">Variants</a>
+          <a href="/admin-catalog-categories.html">Categories</a>
+          <a href="/admin-catalog-images.html">Images</a>
+          <a href="/admin-catalog-duplicates.html">Duplicate Finder</a>
+          <a href="/admin-catalog-requests.html">Catalog Requests</a>
+        </div>
+
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h3 style="margin:0;">All Catalog Items</h3>
+              <p>Name, category, publisher, release year, and variant count.</p>
+            </div>
+            <button class="btn" id="open-create" type="button">Create Catalog Item</button>
+          </div>
+          <div style="overflow:auto;">
+            <table id="items-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Brand / Publisher</th>
+                  <th>Release Year</th>
+                  <th>Variant Count</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="7">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <p class="status" id="table-status"></p>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal" id="item-modal">
+    <div class="modal-card">
+      <h3 id="modal-title" style="margin-top:0;">Create Catalog Item</h3>
+      <div class="field"><label>Name *</label><input id="name" type="text" /></div>
+      <div class="grid">
+        <div class="field"><label>Category *</label><select id="category"></select></div>
+        <div class="field"><label>Subcategory</label><select id="subcategory"><option value="">None</option></select></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label>Brand / Publisher *</label><input id="publisher" type="text" /></div>
+        <div class="field"><label>Release Year *</label><input id="year" type="number" min="1900" max="2100" /></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label>Primary Image *</label><input id="primary-image" type="url" placeholder="https://..." /></div>
+        <div class="field"><label>Series / Franchise</label><input id="series" type="text" /></div>
+      </div>
+      <div class="field"><label>Description</label><textarea id="description" rows="3"></textarea></div>
+      <p class="status" id="modal-status"></p>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn" id="cancel" type="button">Cancel</button>
+        <button class="btn" id="save" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    var USER_ROLE_KEY = "collectorshub_retail_user_role";
+    var ALLOWED_CATALOG_ROLES = ["server_admin", "admin", "catalog_manager"];
+    var config = window.SUPABASE_CONFIG;
+    var supabase = createClient(config.url, config.anonKey);
+
+    var items = [];
+    var categories = [];
+    var editId = null;
+
+    function fmtDate(v) { var d = new Date(v); return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString(); }
+    function esc(v) { return String(v || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+    async function verifyCatalogAccess() {
+      var session = (await supabase.auth.getSession()).data.session;
+      if (!session) { window.location.href = "/index.html"; return false; }
+      var role = null;
+      var row = await supabase.from("server_users").select("role").eq("auth_user_id", session.user.id).eq("is_active", true).maybeSingle();
+      if (!row.error && row.data) role = row.data.role;
+      if (!role) {
+        var localRole = localStorage.getItem(USER_ROLE_KEY);
+        if (localRole && ALLOWED_CATALOG_ROLES.indexOf(localRole) >= 0) role = localRole;
+      }
+      if (!role || ALLOWED_CATALOG_ROLES.indexOf(role) < 0) { await supabase.auth.signOut(); window.location.href = "/index.html"; return false; }
+      return true;
+    }
+
+    async function loadCategories() {
+      var res = await supabase.from("catalog_categories").select("id,name").eq("is_active", true).order("name");
+      if (res.error) return;
+      categories = res.data || [];
+      var sel = document.getElementById("category");
+      sel.innerHTML = '<option value="">Select...</option>';
+      categories.forEach(function(c){ sel.innerHTML += '<option value="'+c.id+'">'+esc(c.name)+'</option>'; });
+    }
+
+    async function loadSubcategories(categoryId) {
+      var sel = document.getElementById("subcategory");
+      sel.innerHTML = '<option value="">None</option>';
+      if (!categoryId) return;
+      var rpc = await supabase.rpc("admin_list_subcategories", { p_category_id: categoryId });
+      if (rpc.error || !rpc.data) return;
+      rpc.data.forEach(function(s){ sel.innerHTML += '<option value="'+s.id+'">'+esc(s.name)+'</option>'; });
+    }
+
+    async function loadItems() {
+      var tbody = document.querySelector("#items-table tbody");
+      tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+      var res = await supabase.rpc("admin_list_catalog_items", { p_category_id: null, p_search: null, p_limit: 300 });
+      if (res.error || !res.data) { tbody.innerHTML = '<tr><td colspan="7">Error loading catalog items.</td></tr>'; return; }
+      items = res.data.items || [];
+      if (!items.length) { tbody.innerHTML = '<tr><td colspan="7">No catalog items found.</td></tr>'; return; }
+      tbody.innerHTML = items.map(function(i){
+        return '<tr>'+
+          '<td>'+esc(i.name)+'</td>'+
+          '<td>'+esc(i.category_name || "-")+'</td>'+
+          '<td>'+esc(i.brand_or_publisher || "-")+'</td>'+
+          '<td>'+esc(i.release_year || "-")+'</td>'+
+          '<td>'+esc(i.variant_count || 0)+'</td>'+
+          '<td>'+esc(fmtDate(i.created_at))+'</td>'+
+          '<td><div class="actions">'+
+            '<button data-act="view" data-id="'+i.id+'">View</button>'+
+            '<button data-act="edit" data-id="'+i.id+'">Edit</button>'+
+            '<button data-act="delete" data-id="'+i.id+'">Delete</button>'+
+          '</div></td>'+
+        '</tr>';
+      }).join("");
+    }
+
+    function openModal(item) {
+      editId = item ? item.id : null;
+      document.getElementById("modal-title").textContent = item ? "Edit Catalog Item" : "Create Catalog Item";
+      document.getElementById("name").value = item ? (item.name || "") : "";
+      document.getElementById("category").value = item ? (item.category_id || "") : "";
+      document.getElementById("publisher").value = item ? (item.brand_or_publisher || "") : "";
+      document.getElementById("year").value = item ? (item.release_year || "") : "";
+      document.getElementById("primary-image").value = item ? (item.primary_image_url || "") : "";
+      document.getElementById("series").value = item ? (item.series || "") : "";
+      document.getElementById("description").value = item ? (item.description || "") : "";
+      loadSubcategories(item ? item.category_id : "");
+      document.getElementById("subcategory").value = item ? (item.subcategory_id || "") : "";
+      document.getElementById("modal-status").textContent = "";
+      document.getElementById("item-modal").classList.add("open");
+    }
+
+    async function saveItem() {
+      var name = document.getElementById("name").value.trim();
+      var categoryId = document.getElementById("category").value;
+      var subcategoryId = document.getElementById("subcategory").value;
+      var publisher = document.getElementById("publisher").value.trim();
+      var year = document.getElementById("year").value;
+      var primaryImage = document.getElementById("primary-image").value.trim();
+      var series = document.getElementById("series").value.trim();
+      var description = document.getElementById("description").value.trim();
+      var status = document.getElementById("modal-status");
+
+      if (!name || !categoryId || !publisher || !year || !primaryImage) {
+        status.textContent = "Required: Name, Category, Brand/Publisher, Release Year, Primary Image.";
+        return;
+      }
+
+      if (!editId) {
+        var createRes = await supabase.rpc("admin_create_catalog_item", {
+          p_name: name,
+          p_category_id: categoryId,
+          p_subcategory_id: subcategoryId || null,
+          p_brand_or_publisher: publisher,
+          p_release_year: Number(year),
+          p_series: series || null,
+          p_description: description || null,
+          p_primary_image_url: primaryImage
+        });
+        if (createRes.error) { status.textContent = "Error: " + createRes.error.message; return; }
+        status.textContent = "Catalog item created.";
+      } else {
+        var updateRes = await supabase.from("catalog_items").update({
+          name: name,
+          category_id: categoryId,
+          subcategory_id: subcategoryId || null,
+          brand_or_publisher: publisher,
+          release_year: Number(year),
+          primary_image_url: primaryImage,
+          series: series || null,
+          description: description || null
+        }).eq("id", editId);
+        if (updateRes.error) { status.textContent = "Error: " + updateRes.error.message; return; }
+        status.textContent = "Catalog item updated.";
+      }
+
+      setTimeout(function(){ document.getElementById("item-modal").classList.remove("open"); loadItems(); }, 600);
+    }
+
+    async function deleteItem(id) {
+      if (!confirm("Delete this catalog item?")) return;
+      var res = await supabase.from("catalog_items").update({ is_active: false }).eq("id", id);
+      if (res.error) {
+        document.getElementById("table-status").textContent = "Delete failed: " + res.error.message;
+        return;
+      }
+      loadItems();
+    }
+
+    document.getElementById("category").addEventListener("change", function(){ loadSubcategories(this.value); });
+    document.getElementById("open-create").addEventListener("click", function(){ openModal(null); });
+    document.getElementById("cancel").addEventListener("click", function(){ document.getElementById("item-modal").classList.remove("open"); });
+    document.getElementById("save").addEventListener("click", saveItem);
+    document.querySelector("#items-table tbody").addEventListener("click", function(e){
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      var id = btn.getAttribute("data-id");
+      var act = btn.getAttribute("data-act");
+      var item = items.find(function(i){ return i.id === id; });
+      if (act === "view" && item) {
+        alert((item.name || "") + "\n" + (item.category_name || "") + "\n" + (item.brand_or_publisher || ""));
+      } else if (act === "edit" && item) {
+        openModal(item);
+      } else if (act === "delete") {
+        deleteItem(id);
+      }
+    });
+
+    document.getElementById("sign-out").addEventListener("click", async function(){ await supabase.auth.signOut(); window.location.href = "/index.html"; });
+
+    (async function init(){
+      var ok = await verifyCatalogAccess();
+      if (!ok) return;
+      await loadCategories();
+      await loadItems();
+    })();
+  </script>
+</body>
+</html>

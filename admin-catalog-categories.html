@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Categories - CollectorsHub Retail</title>
+  <style>
+    :root{--border:#233451;--text:#e7eefb;--soft:#9fb0cf;}*{box-sizing:border-box;}body{margin:0;font-family:"Sora","Segoe UI",Tahoma,sans-serif;color:var(--text);background:linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%);} .app{display:grid;grid-template-columns:270px 1fr;min-height:100vh;} .sidebar{border-right:1px solid var(--border);background:rgba(10,18,33,.88);padding:24px 16px;} .brand{padding:10px 10px 14px;border-bottom:1px solid rgba(159,176,207,.15);} .brand h1{margin:0;font-size:1.15rem;} .brand p{margin:6px 0 0;color:var(--soft);font-size:.82rem;} .nav{display:flex;flex-direction:column;gap:8px;margin-top:18px;} .nav-item{color:var(--soft);text-decoration:none;padding:10px 12px;border-radius:10px;border:1px solid transparent;} .nav-item.active,.nav-item:hover{color:var(--text);border-color:rgba(51,195,255,.36);background:rgba(51,195,255,.12);} .content{display:flex;flex-direction:column;} .topbar{min-height:76px;border-bottom:1px solid var(--border);background:rgba(8,16,30,.78);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;} .main{padding:20px 24px;display:flex;flex-direction:column;gap:16px;} .subnav{display:flex;flex-wrap:wrap;gap:8px;} .subnav a{color:var(--soft);text-decoration:none;border:1px solid rgba(56,89,136,.55);border-radius:999px;padding:7px 10px;font-size:.8rem;} .subnav a.active{color:var(--text);border-color:rgba(51,195,255,.6);background:rgba(51,195,255,.14);} .section{border:1px solid var(--border);border-radius:14px;padding:16px;background:rgba(13,22,40,.76);} .btn{border:1px solid rgba(56,89,136,.55);background:rgba(18,31,53,.95);color:var(--text);padding:9px 12px;border-radius:10px;cursor:pointer;} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;} .field{display:flex;flex-direction:column;gap:6px;} .field input,.field textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(56,89,136,.7);background:#0e1a2e;color:var(--text);} table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.85rem;} th,td{padding:10px;border-bottom:1px solid rgba(35,52,81,.5);text-align:left;} th{color:var(--soft);font-size:.76rem;text-transform:uppercase;} .badge{display:inline-block;padding:3px 8px;border:1px solid rgba(45,224,196,.44);border-radius:999px;color:#86ffe8;font-size:.73rem;} .status{min-height:18px;color:var(--soft);font-size:.82rem;}
+    @media(max-width:980px){.app{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.main{padding:14px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar"><div class="brand"><h1>CollectorsHub Retail</h1><p>Platform Administration</p></div><nav class="nav"><a class="nav-item" href="/admin-dashboard.html">Dashboard</a><a class="nav-item" href="/admin-stores.html">Stores</a><a class="nav-item" href="/admin-users.html">Users</a><a class="nav-item active" href="/admin-catalog.html">Catalog</a><a class="nav-item" href="/admin-settings.html">Settings</a></nav></aside>
+  <div class="content">
+    <header class="topbar"><h2 style="margin:0;font-size:1.05rem;">Categories</h2><button class="btn" id="sign-out" type="button">Sign Out</button></header>
+    <main class="main">
+      <div class="subnav"><a href="/admin-catalog-items.html">Catalog Items</a><a href="/admin-catalog-variants.html">Variants</a><a class="active" href="/admin-catalog-categories.html">Categories</a><a href="/admin-catalog-images.html">Images</a><a href="/admin-catalog-duplicates.html">Duplicate Finder</a><a href="/admin-catalog-requests.html">Catalog Requests</a></div>
+      <section class="section">
+        <h3 style="margin-top:0;">Create Category</h3>
+        <div class="grid">
+          <div class="field"><label>Name</label><input id="new-name" type="text" /></div>
+          <div class="field"><label>Attributes (comma-separated)</label><input id="new-attrs" type="text" placeholder="Platform, Edition, Region" /></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>Description</label><textarea id="new-desc" rows="2"></textarea></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn" id="create-category" type="button">Create Category</button><button class="btn" id="seed-defaults" type="button">Ensure Default Categories</button></div>
+        <p class="status" id="create-status"></p>
+      </section>
+      <section class="section">
+        <h3 style="margin-top:0;">Existing Categories</h3>
+        <table id="categories-table"><thead><tr><th>Name</th><th>Description</th><th>Attributes</th><th>Actions</th></tr></thead><tbody><tr><td colspan="4">Loading...</td></tr></tbody></table>
+        <p class="status" id="table-status"></p>
+      </section>
+    </main>
+  </div>
+</div>
+<script src="./supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+var USER_ROLE_KEY="collectorshub_retail_user_role"; var ALLOWED=["server_admin","admin","catalog_manager"]; var supabase=createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+var rows=[];
+function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+async function verify(){var s=(await supabase.auth.getSession()).data.session; if(!s){window.location.href="/index.html"; return false;} var r=await supabase.from("server_users").select("role").eq("auth_user_id",s.user.id).eq("is_active",true).maybeSingle(); var role=!r.error&&r.data?r.data.role:null; if(!role){var lr=localStorage.getItem(USER_ROLE_KEY); if(lr&&ALLOWED.indexOf(lr)>=0) role=lr;} if(!role||ALLOWED.indexOf(role)<0){await supabase.auth.signOut(); window.location.href="/index.html"; return false;} return true;}
+async function loadCategories(){var tbody=document.querySelector("#categories-table tbody"); tbody.innerHTML='<tr><td colspan="4">Loading...</td></tr>'; var res=await supabase.from("catalog_categories").select("id,name,description,attributes,is_active").eq("is_active",true).order("name"); if(res.error){tbody.innerHTML='<tr><td colspan="4">Error: '+esc(res.error.message)+'</td></tr>'; return;} rows=res.data||[]; if(!rows.length){tbody.innerHTML='<tr><td colspan="4">No categories found.</td></tr>'; return;} tbody.innerHTML=rows.map(function(c){var attrs=Array.isArray(c.attributes)?c.attributes.join(", "):""; return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.description||"-")+'</td><td>'+esc(attrs)+'</td><td><button data-act="edit" data-id="'+c.id+'">Edit</button> <button data-act="delete" data-id="'+c.id+'">Delete</button></td></tr>';}).join("");}
+async function createCategory(){var n=document.getElementById("new-name").value.trim(); var d=document.getElementById("new-desc").value.trim(); var a=document.getElementById("new-attrs").value.trim(); var status=document.getElementById("create-status"); if(!n){status.textContent="Name is required."; return;} var attrs=a?a.split(",").map(function(x){return x.trim();}).filter(Boolean):[]; var res=await supabase.from("catalog_categories").insert([{name:n,description:d||null,attributes:attrs,is_active:true}]); if(res.error){status.textContent="Error: "+res.error.message; return;} status.textContent="Category created."; document.getElementById("new-name").value=""; document.getElementById("new-desc").value=""; document.getElementById("new-attrs").value=""; loadCategories();}
+async function seedDefaults(){var defaults=["Video Games","Movies","Toys","Music","Sports Cards","Trading Cards","Comics","Building Blocks"]; var payload=defaults.map(function(n){return {name:n,is_active:true,description:n+" category",attributes:[]};}); var res=await supabase.from("catalog_categories").upsert(payload,{onConflict:"name"}); document.getElementById("create-status").textContent=res.error?("Error: "+res.error.message):"Default categories ensured."; loadCategories();}
+async function editCategory(id){var c=rows.find(function(x){return x.id===id;}); if(!c) return; var name=prompt("Category name", c.name||""); if(name===null) return; var desc=prompt("Description", c.description||""); if(desc===null) return; var attrs=prompt("Attributes (comma-separated)", (Array.isArray(c.attributes)?c.attributes.join(", "):"")); if(attrs===null) return; var arr=attrs.split(",").map(function(x){return x.trim();}).filter(Boolean); var res=await supabase.from("catalog_categories").update({name:name.trim(),description:desc.trim()||null,attributes:arr}).eq("id",id); if(res.error){document.getElementById("table-status").textContent="Edit failed: "+res.error.message; return;} loadCategories();}
+async function deleteCategory(id){if(!confirm("Delete this category?")) return; var res=await supabase.from("catalog_categories").update({is_active:false}).eq("id",id); if(res.error){document.getElementById("table-status").textContent="Delete failed: "+res.error.message; return;} loadCategories();}
+document.getElementById("create-category").addEventListener("click",createCategory); document.getElementById("seed-defaults").addEventListener("click",seedDefaults); document.querySelector("#categories-table tbody").addEventListener("click",function(e){var b=e.target.closest("button"); if(!b) return; var id=b.getAttribute("data-id"); var act=b.getAttribute("data-act"); if(act==="edit") editCategory(id); if(act==="delete") deleteCategory(id);}); document.getElementById("sign-out").addEventListener("click",async function(){await supabase.auth.signOut(); window.location.href="/index.html";});
+(async function init(){var ok=await verify(); if(!ok) return; loadCategories();})();
+</script>
+</body>
+</html>
