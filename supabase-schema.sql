@@ -19,6 +19,9 @@ begin
   end if;
 end $$;
 
+alter type public.server_user_role add value if not exists 'admin';
+alter type public.server_user_role add value if not exists 'catalog_manager';
+
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'client_user_role') then
@@ -824,3 +827,225 @@ for all
 to authenticated
 using (public.is_current_user_server_admin())
 with check (public.is_current_user_server_admin());
+
+-- Catalog manager role helper.
+create or replace function public.is_current_user_catalog_manager()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = auth.uid()
+      and su.is_active = true
+      and su.role::text in ('server_admin', 'admin', 'catalog_manager')
+  );
+$$;
+
+revoke all on function public.is_current_user_catalog_manager() from public;
+grant execute on function public.is_current_user_catalog_manager() to authenticated;
+
+-- Catalog image persistence.
+create table if not exists public.variant_images (
+  id uuid primary key default gen_random_uuid(),
+  variant_id uuid not null references public.variants(id) on delete cascade,
+  image_url text not null,
+  storage_path text,
+  alt_text text,
+  is_primary boolean not null default false,
+  sort_order integer not null default 0,
+  thumb_status text not null default 'pending',
+  created_by uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists variant_images_variant_id_idx on public.variant_images(variant_id);
+create unique index if not exists variant_images_primary_per_variant_idx
+  on public.variant_images(variant_id)
+  where is_primary = true;
+
+alter table public.variant_images enable row level security;
+
+drop policy if exists "Allow read variant_images" on public.variant_images;
+create policy "Allow read variant_images"
+on public.variant_images
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Catalog managers can manage variant_images" on public.variant_images;
+create policy "Catalog managers can manage variant_images"
+on public.variant_images
+for all
+to authenticated
+using (public.is_current_user_catalog_manager())
+with check (public.is_current_user_catalog_manager());
+
+create or replace function public.set_variant_images_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists variant_images_set_updated_at on public.variant_images;
+create trigger variant_images_set_updated_at
+before update on public.variant_images
+for each row
+execute function public.set_variant_images_updated_at();
+
+-- Storage bucket for catalog images.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'catalog-images',
+  'catalog-images',
+  true,
+  10485760,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Public read catalog images" on storage.objects;
+create policy "Public read catalog images"
+on storage.objects
+for select
+to public
+using (bucket_id = 'catalog-images');
+
+drop policy if exists "Catalog managers upload catalog images" on storage.objects;
+create policy "Catalog managers upload catalog images"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'catalog-images'
+  and public.is_current_user_catalog_manager()
+);
+
+drop policy if exists "Catalog managers update catalog images" on storage.objects;
+create policy "Catalog managers update catalog images"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'catalog-images'
+  and public.is_current_user_catalog_manager()
+)
+with check (
+  bucket_id = 'catalog-images'
+  and public.is_current_user_catalog_manager()
+);
+
+drop policy if exists "Catalog managers delete catalog images" on storage.objects;
+create policy "Catalog managers delete catalog images"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'catalog-images'
+  and public.is_current_user_catalog_manager()
+);
+
+-- Catalog requests workflow.
+create table if not exists public.catalog_requests (
+  id uuid primary key default gen_random_uuid(),
+  item_name text not null,
+  category_name text,
+  details text,
+  requested_by_user_id uuid,
+  requested_by_email text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  rejection_reason text,
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists catalog_requests_status_idx on public.catalog_requests(status);
+create index if not exists catalog_requests_created_at_idx on public.catalog_requests(created_at desc);
+
+alter table public.catalog_requests enable row level security;
+
+drop policy if exists "Users can submit catalog requests" on public.catalog_requests;
+create policy "Users can submit catalog requests"
+on public.catalog_requests
+for insert
+to authenticated
+with check (requested_by_user_id = auth.uid() or requested_by_user_id is null);
+
+drop policy if exists "Users can view own catalog requests" on public.catalog_requests;
+create policy "Users can view own catalog requests"
+on public.catalog_requests
+for select
+to authenticated
+using (requested_by_user_id = auth.uid());
+
+drop policy if exists "Catalog managers can manage catalog requests" on public.catalog_requests;
+create policy "Catalog managers can manage catalog requests"
+on public.catalog_requests
+for all
+to authenticated
+using (public.is_current_user_catalog_manager())
+with check (public.is_current_user_catalog_manager());
+
+create or replace function public.submit_catalog_request(
+  p_item_name text,
+  p_category_name text default null,
+  p_details text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_email text;
+  v_id uuid;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if btrim(coalesce(p_item_name, '')) = '' then
+    raise exception 'Item name is required';
+  end if;
+
+  select au.email into v_email
+  from auth.users au
+  where au.id = v_uid;
+
+  insert into public.catalog_requests (
+    item_name,
+    category_name,
+    details,
+    requested_by_user_id,
+    requested_by_email,
+    status
+  )
+  values (
+    btrim(p_item_name),
+    case when btrim(coalesce(p_category_name, '')) = '' then null else btrim(p_category_name) end,
+    case when btrim(coalesce(p_details, '')) = '' then null else btrim(p_details) end,
+    v_uid,
+    v_email,
+    'pending'
+  )
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
+
+revoke all on function public.submit_catalog_request(text, text, text) from public;
+grant execute on function public.submit_catalog_request(text, text, text) to authenticated;
