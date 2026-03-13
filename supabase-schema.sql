@@ -1476,3 +1476,18 @@ on conflict (setting_key)
 do update set
   setting_value = excluded.setting_value,
   updated_at = now();
+
+-- LEGO import fields for variants and duplicate detection.
+do $$
+begin
+  if to_regclass('public.variants') is not null then
+    alter table public.variants
+      add column if not exists set_number text,
+      add column if not exists piece_count integer,
+      add column if not exists release_year integer;
+
+    create unique index if not exists variants_set_number_unique_idx
+      on public.variants(set_number)
+      where set_number is not null;
+  end if;
+end $$;
