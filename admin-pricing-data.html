@@ -109,9 +109,15 @@ var USER_ROLE_KEY="collectorshub_retail_user_role";
 var ALLOWED=["server_admin","admin"];
 var supabase=createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 var salesRows=[]; var overrideRows=[]; var outlierRows=[];
+var CONDITION_LABELS={10:'Gem Mint',9:'Mint',8:'Near Mint',7:'Very Fine',6:'Fine',5:'Very Good',4:'Good',3:'Fair',2:'Poor',1:'Very Poor'};
 function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function fmt(v){var d=new Date(v); return Number.isNaN(d.getTime())?"-":d.toLocaleString();}
 function money(v){return "$"+Number(v||0).toFixed(2);} 
+function conditionText(score,label){
+  var n=Number(score);
+  if(Number.isFinite(n)&&n>=1&&n<=10){return n+' '+(CONDITION_LABELS[n]||label||'');}
+  return label||'-';
+}
 
 async function verify(){var s=(await supabase.auth.getSession()).data.session; if(!s){window.location.href="/index.html"; return false;} var r=await supabase.from("server_users").select("role").eq("auth_user_id",s.user.id).eq("is_active",true).maybeSingle(); var role=!r.error&&r.data?r.data.role:null; if(!role){var lr=localStorage.getItem(USER_ROLE_KEY); if(lr&&ALLOWED.indexOf(lr)>=0) role=lr;} if(!role||ALLOWED.indexOf(role)<0){await supabase.auth.signOut(); window.location.href="/index.html"; return false;} return true; }
 
@@ -128,10 +134,10 @@ async function toggleSource(id,en){var res=await supabase.from('pricing_sources'
 
 async function loadSales(){
   var tbody=document.querySelector('#sales-table tbody'); tbody.innerHTML='<tr><td colspan="7">Loading...</td></tr>';
-  var res=await supabase.from('pricing_recent_sales').select('id,catalog_item_name,variant_label,condition_label,sale_price,sale_date,source_name,is_valid').order('sale_date',{ascending:false}).limit(300);
+  var res=await supabase.from('pricing_recent_sales').select('id,catalog_item_name,variant_label,condition_score,condition_label,sale_price,sale_date,source_name,is_valid').order('sale_date',{ascending:false}).limit(300);
   if(res.error){tbody.innerHTML='<tr><td colspan="7">'+esc(res.error.message)+'</td></tr>'; return;}
   salesRows=res.data||[]; if(!salesRows.length){tbody.innerHTML='<tr><td colspan="7">No sales records found.</td></tr>'; return;}
-  tbody.innerHTML=salesRows.map(function(s){return '<tr><td>'+esc(s.catalog_item_name||'-')+'</td><td>'+esc(s.variant_label||'-')+'</td><td>'+esc(s.condition_label||'-')+'</td><td>'+money(s.sale_price)+'</td><td>'+esc(fmt(s.sale_date))+'</td><td>'+esc(s.source_name||'-')+'</td><td><button data-act="remove" data-id="'+s.id+'">Remove</button> <button data-act="invalid" data-id="'+s.id+'">Mark Invalid</button></td></tr>';}).join('');
+  tbody.innerHTML=salesRows.map(function(s){return '<tr><td>'+esc(s.catalog_item_name||'-')+'</td><td>'+esc(s.variant_label||'-')+'</td><td>'+esc(conditionText(s.condition_score,s.condition_label))+'</td><td>'+money(s.sale_price)+'</td><td>'+esc(fmt(s.sale_date))+'</td><td>'+esc(s.source_name||'-')+'</td><td><button data-act="remove" data-id="'+s.id+'">Remove</button> <button data-act="invalid" data-id="'+s.id+'">Mark Invalid</button></td></tr>';}).join('');
 }
 async function removeSale(id){var res=await supabase.from('pricing_recent_sales').delete().eq('id',id); document.getElementById('sales-status').textContent=res.error?res.error.message:'Sale removed'; if(!res.error) loadSales();}
 async function invalidateSale(id){var res=await supabase.from('pricing_recent_sales').update({is_valid:false,invalid_reason:'Marked invalid by admin'}).eq('id',id); document.getElementById('sales-status').textContent=res.error?res.error.message:'Sale marked invalid'; if(!res.error){loadSales(); loadOutliers();}}

@@ -1069,6 +1069,30 @@ $$;
 revoke all on function public.is_current_user_operations_admin() from public;
 grant execute on function public.is_current_user_operations_admin() to authenticated;
 
+-- Canonical item condition scale shared across pricing and marketplace.
+create table if not exists public.condition_grades (
+  score smallint primary key check (score between 1 and 10),
+  label text not null unique,
+  meaning text not null
+);
+
+insert into public.condition_grades (score, label, meaning)
+values
+  (10, 'Gem Mint', 'Perfect condition, no visible defects'),
+  (9, 'Mint', 'Nearly perfect with extremely minor defects'),
+  (8, 'Near Mint', 'Very well preserved with minimal wear'),
+  (7, 'Very Fine', 'Light wear but still excellent condition'),
+  (6, 'Fine', 'Moderate wear but well maintained'),
+  (5, 'Very Good', 'Noticeable wear but fully functional'),
+  (4, 'Good', 'Average condition with visible wear'),
+  (3, 'Fair', 'Heavy wear but still usable'),
+  (2, 'Poor', 'Significant damage or defects'),
+  (1, 'Very Poor', 'Broken, incomplete, or barely usable')
+on conflict (score)
+do update set
+  label = excluded.label,
+  meaning = excluded.meaning;
+
 -- =========================
 -- Pricing Data tables
 -- =========================
@@ -1087,6 +1111,7 @@ create table if not exists public.pricing_recent_sales (
   variant_id uuid references public.variants(id) on delete set null,
   catalog_item_name text,
   variant_label text,
+  condition_score smallint,
   condition_label text,
   sale_price numeric(12,2) not null,
   sale_date timestamptz not null,
@@ -1098,6 +1123,45 @@ create table if not exists public.pricing_recent_sales (
 
 create index if not exists pricing_recent_sales_variant_idx on public.pricing_recent_sales(variant_id);
 create index if not exists pricing_recent_sales_date_idx on public.pricing_recent_sales(sale_date desc);
+
+alter table public.pricing_recent_sales
+  add column if not exists condition_score smallint;
+
+update public.pricing_recent_sales prs
+set condition_score = case lower(btrim(prs.condition_label))
+  when 'gem mint' then 10
+  when 'mint' then 9
+  when 'near mint' then 8
+  when 'very fine' then 7
+  when 'fine' then 6
+  when 'very good' then 5
+  when 'good' then 4
+  when 'fair' then 3
+  when 'poor' then 2
+  when 'very poor' then 1
+  else prs.condition_score
+end
+where prs.condition_score is null
+  and prs.condition_label is not null;
+
+update public.pricing_recent_sales prs
+set condition_label = cg.label
+from public.condition_grades cg
+where prs.condition_score = cg.score
+  and (prs.condition_label is null or prs.condition_label <> cg.label);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'pricing_recent_sales_condition_score_check'
+      and conrelid = 'public.pricing_recent_sales'::regclass
+  ) then
+    alter table public.pricing_recent_sales
+      add constraint pricing_recent_sales_condition_score_check
+      check (condition_score is null or condition_score between 1 and 10);
+  end if;
+end $$;
 
 create table if not exists public.pricing_overrides (
   id uuid primary key default gen_random_uuid(),
@@ -1130,6 +1194,7 @@ create table if not exists public.marketplace_listings (
   seller_user_id uuid,
   seller_username text,
   price numeric(12,2) not null,
+  condition_score smallint,
   condition_label text,
   status text not null default 'active' check (status in ('active', 'flagged', 'removed')),
   report_count integer not null default 0,
@@ -1145,6 +1210,45 @@ create table if not exists public.marketplace_listings (
 
 create index if not exists marketplace_listings_status_idx on public.marketplace_listings(status);
 create index if not exists marketplace_listings_date_idx on public.marketplace_listings(date_listed desc);
+
+alter table public.marketplace_listings
+  add column if not exists condition_score smallint;
+
+update public.marketplace_listings ml
+set condition_score = case lower(btrim(ml.condition_label))
+  when 'gem mint' then 10
+  when 'mint' then 9
+  when 'near mint' then 8
+  when 'very fine' then 7
+  when 'fine' then 6
+  when 'very good' then 5
+  when 'good' then 4
+  when 'fair' then 3
+  when 'poor' then 2
+  when 'very poor' then 1
+  else ml.condition_score
+end
+where ml.condition_score is null
+  and ml.condition_label is not null;
+
+update public.marketplace_listings ml
+set condition_label = cg.label
+from public.condition_grades cg
+where ml.condition_score = cg.score
+  and (ml.condition_label is null or ml.condition_label <> cg.label);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'marketplace_listings_condition_score_check'
+      and conrelid = 'public.marketplace_listings'::regclass
+  ) then
+    alter table public.marketplace_listings
+      add constraint marketplace_listings_condition_score_check
+      check (condition_score is null or condition_score between 1 and 10);
+  end if;
+end $$;
 
 create table if not exists public.marketplace_removed_listings (
   id uuid primary key default gen_random_uuid(),
@@ -1367,7 +1471,7 @@ values
   ('minimum_listing_price', to_jsonb(1.00::numeric)),
   ('commission_percent', to_jsonb(10.00::numeric)),
   ('listing_expiration_days', to_jsonb(30)),
-  ('allowed_condition_types', '["New", "Like New", "Good", "Fair", "Poor"]'::jsonb)
+  ('allowed_condition_types', '["10 Gem Mint", "9 Mint", "8 Near Mint", "7 Very Fine", "6 Fine", "5 Very Good", "4 Good", "3 Fair", "2 Poor", "1 Very Poor"]'::jsonb)
 on conflict (setting_key)
 do update set
   setting_value = excluded.setting_value,
