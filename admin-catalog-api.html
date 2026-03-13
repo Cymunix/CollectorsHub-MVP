@@ -103,10 +103,21 @@
       max-height: 420px;
       overflow: auto;
     }
+    .grid-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .hint {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-left: 3px solid rgba(51,195,255,.7);
+      background: rgba(51,195,255,.08);
+      border-radius: 8px;
+      color: #cfe6ff;
+      font-size: .8rem;
+    }
     @media (max-width: 980px) {
       .app { grid-template-columns: 1fr; }
       .main { padding: 14px; }
       .row { grid-template-columns: 1fr; }
+      .grid-two { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -135,13 +146,17 @@
     <main class="main">
       <section class="section">
         <h3>Quick Presets</h3>
-        <p>Load common catalog API requests, then edit and send.</p>
+        <p>Load common catalog and Brickset requests, then edit and send.</p>
         <div class="btn-row">
           <button class="btn" data-preset="items" type="button">List Items</button>
           <button class="btn" data-preset="variants" type="button">List Variants</button>
           <button class="btn" data-preset="categories" type="button">List Categories</button>
           <button class="btn" data-preset="images" type="button">List Variant Images</button>
           <button class="btn" data-preset="dupes" type="button">Check Duplicates RPC</button>
+          <button class="btn" data-brickset-preset="getSets" type="button">Brickset Search Sets</button>
+          <button class="btn" data-brickset-preset="getSet" type="button">Brickset Set Details</button>
+          <button class="btn" data-brickset-preset="getThemes" type="button">Brickset Themes</button>
+          <button class="btn" data-brickset-preset="getMinifigs" type="button">Brickset Minifigs</button>
         </div>
       </section>
 
@@ -185,6 +200,48 @@
         <p class="status" id="status"></p>
         <div class="response" id="response">No response yet.</div>
       </section>
+
+      <section class="section">
+        <h3>Brickset API Builder</h3>
+        <p>Use Brickset endpoints in the same API Tool page.</p>
+
+        <div class="grid-two">
+          <div class="field">
+            <label for="brickset-base-url">Base URL</label>
+            <input id="brickset-base-url" type="text" value="https://brickset.com/api/v3.asmx" />
+          </div>
+          <div class="field">
+            <label for="brickset-endpoint">Endpoint</label>
+            <input id="brickset-endpoint" type="text" value="getSets" />
+          </div>
+        </div>
+
+        <div class="grid-two">
+          <div class="field">
+            <label for="brickset-api-key">Brickset API Key</label>
+            <input id="brickset-api-key" type="text" placeholder="Enter Brickset API key" />
+          </div>
+          <div class="field">
+            <label for="brickset-user-hash">User Hash (optional)</label>
+            <input id="brickset-user-hash" type="text" placeholder="Enter user hash for account endpoints" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="brickset-params">Query Params (one per line: key=value)</label>
+          <textarea id="brickset-params">params={"query":"Millennium Falcon","pageSize":20,"pageNumber":1}</textarea>
+        </div>
+
+        <div class="hint">Example params line: params={"setNumber":"75367-1"}. apiKey and userHash are appended automatically if filled above.</div>
+
+        <div class="btn-row">
+          <button class="btn" id="brickset-send" type="button">Send Brickset Request</button>
+          <button class="btn" id="brickset-clear" type="button">Clear Brickset Response</button>
+        </div>
+
+        <p class="status" id="brickset-status"></p>
+        <div class="response" id="brickset-response">No Brickset response yet.</div>
+      </section>
     </main>
   </div>
 </div>
@@ -211,6 +268,23 @@ function parseHeaders(input) {
     }
   });
   return headers;
+}
+
+function parseParamLines(input) {
+  var params = new URLSearchParams();
+  String(input || "").split(/\r?\n/).forEach(function (line) {
+    var trimmed = line.trim();
+    if (!trimmed || trimmed.indexOf("=") < 1) {
+      return;
+    }
+    var idx = trimmed.indexOf("=");
+    var key = trimmed.slice(0, idx).trim();
+    var value = trimmed.slice(idx + 1).trim();
+    if (key) {
+      params.append(key, value);
+    }
+  });
+  return params;
 }
 
 function applyPreset(name) {
@@ -246,6 +320,28 @@ function applyPreset(name) {
       p_category_id: "00000000-0000-0000-0000-000000000000",
       p_subcategory_id: null
     }, null, 2);
+  }
+}
+
+function applyBricksetPreset(name) {
+  var endpoint = document.getElementById("brickset-endpoint");
+  var params = document.getElementById("brickset-params");
+
+  if (name === "getSets") {
+    endpoint.value = "getSets";
+    params.value = 'params={"query":"Millennium Falcon","theme":"Star Wars","pageSize":20,"pageNumber":1}';
+  }
+  if (name === "getSet") {
+    endpoint.value = "getSet";
+    params.value = 'params={"setNumber":"75367-1"}';
+  }
+  if (name === "getThemes") {
+    endpoint.value = "getThemes";
+    params.value = "";
+  }
+  if (name === "getMinifigs") {
+    endpoint.value = "getMinifigCollection";
+    params.value = 'params={"owned":"1","wanted":"0"}';
   }
 }
 
@@ -338,14 +434,73 @@ async function sendRequest() {
   }
 }
 
+function setBricksetStatus(text) { document.getElementById("brickset-status").textContent = text || ""; }
+function setBricksetResponse(text) { document.getElementById("brickset-response").textContent = text; }
+
+async function sendBricksetRequest() {
+  var baseUrl = document.getElementById("brickset-base-url").value.trim().replace(/\/$/, "");
+  var endpoint = document.getElementById("brickset-endpoint").value.trim();
+  var apiKey = document.getElementById("brickset-api-key").value.trim();
+  var userHash = document.getElementById("brickset-user-hash").value.trim();
+  var paramsText = document.getElementById("brickset-params").value;
+
+  if (!baseUrl || !endpoint) {
+    setBricksetStatus("Base URL and endpoint are required.");
+    return;
+  }
+
+  var query = parseParamLines(paramsText);
+  if (apiKey && !query.has("apiKey")) {
+    query.append("apiKey", apiKey);
+  }
+  if (userHash && !query.has("userHash")) {
+    query.append("userHash", userHash);
+  }
+
+  var url = baseUrl + "/" + endpoint;
+  var qs = query.toString();
+  if (qs) {
+    url += "?" + qs;
+  }
+
+  setBricksetStatus("Calling Brickset API...");
+  setBricksetResponse("Waiting for response...");
+
+  try {
+    var response = await fetch(url, { method: "GET" });
+    var text = await response.text();
+    var formatted = text;
+    try {
+      formatted = JSON.stringify(JSON.parse(text), null, 2);
+    } catch (e) {
+      formatted = text;
+    }
+    setBricksetStatus("Status " + response.status + " " + response.statusText);
+    setBricksetResponse(formatted || "(empty response)");
+  } catch (err) {
+    setBricksetStatus("Request failed.");
+    setBricksetResponse(String(err && err.message ? err.message : err));
+  }
+}
+
 document.querySelectorAll("[data-preset]").forEach(function (btn) {
   btn.addEventListener("click", function () { applyPreset(btn.getAttribute("data-preset")); });
+});
+
+document.querySelectorAll("[data-brickset-preset]").forEach(function (btn) {
+  btn.addEventListener("click", function () { applyBricksetPreset(btn.getAttribute("data-brickset-preset")); });
 });
 
 document.getElementById("send").addEventListener("click", sendRequest);
 document.getElementById("clear").addEventListener("click", function () {
   setStatus("");
   setResponse("No response yet.");
+});
+
+document.getElementById("brickset-send").addEventListener("click", sendBricksetRequest);
+document.getElementById("brickset-clear").addEventListener("click", function () {
+  setBricksetStatus("");
+  setBricksetResponse("No Brickset response yet.");
 });
 
 document.getElementById("sign-out").addEventListener("click", async function () {
