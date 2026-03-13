@@ -626,6 +626,7 @@ create table if not exists public.catalog_categories (
 
 alter table public.catalog_categories enable row level security;
 
+drop policy if exists "Allow read active catalog_categories" on public.catalog_categories;
 create policy "Allow read active catalog_categories" on public.catalog_categories
   for select using (is_active = true);
 
@@ -642,6 +643,7 @@ create table if not exists public.catalog_subcategories (
 
 alter table public.catalog_subcategories enable row level security;
 
+drop policy if exists "Allow read active catalog_subcategories" on public.catalog_subcategories;
 create policy "Allow read active catalog_subcategories" on public.catalog_subcategories
   for select using (is_active = true);
 
@@ -666,6 +668,7 @@ create table if not exists public.catalog_items (
 
 alter table public.catalog_items enable row level security;
 
+drop policy if exists "Allow read active catalog_items" on public.catalog_items;
 create policy "Allow read active catalog_items" on public.catalog_items
   for select using (is_active = true);
 
@@ -692,6 +695,7 @@ create table if not exists public.variants (
 
 alter table public.variants enable row level security;
 
+drop policy if exists "Allow read active variants" on public.variants;
 create policy "Allow read active variants" on public.variants
   for select using (is_active = true);
 
