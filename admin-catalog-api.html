@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catalog API Tool - CollectorsHub Retail</title>
+  <style>
+    :root {
+      --border: #233451;
+      --text: #e7eefb;
+      --text-soft: #9fb0cf;
+      --radius-sm: 10px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Sora", "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(700px 400px at 90% -20%, rgba(51,195,255,0.16), transparent 60%),
+        radial-gradient(600px 350px at -10% 100%, rgba(45,224,196,0.12), transparent 60%),
+        linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%);
+      min-height: 100vh;
+    }
+    .app { display: grid; grid-template-columns: 270px 1fr; min-height: 100vh; }
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(10,18,33,.88);
+      backdrop-filter: blur(8px);
+      padding: 24px 16px;
+    }
+    .brand { padding: 10px 10px 14px; border-bottom: 1px solid rgba(159,176,207,.15); }
+    .brand h1 { margin: 0; font-size: 1.15rem; }
+    .brand p { margin: 6px 0 0; color: var(--text-soft); font-size: .82rem; }
+    .nav { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-soft);
+      text-decoration: none;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+    }
+    .nav-item.active, .nav-item:hover { color: var(--text); border-color: rgba(51,195,255,.36); background: rgba(51,195,255,.12); }
+    .nav-icon { width: 16px; height: 16px; fill: currentColor; }
+    .content { display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      min-height: 76px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,16,30,.78);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px;
+    }
+    .title-wrap { display: flex; align-items: center; gap: 10px; }
+    .badge { background: rgba(45,224,196,.16); color: #86ffe8; border: 1px solid rgba(45,224,196,.44); border-radius: 999px; padding: 4px 11px; font-size: .75rem; text-transform: uppercase; font-weight: 700; }
+    .main { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .section { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; background: rgba(13,22,40,.76); }
+    .section h3 { margin: 0; font-size: .98rem; }
+    .section p { margin: 8px 0 0; color: var(--text-soft); font-size: .85rem; }
+    .row { display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin-top: 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label { color: var(--text-soft); font-size: .8rem; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(56,89,136,.7);
+      border-radius: 10px;
+      background: #0e1a2e;
+      color: var(--text);
+      padding: 10px;
+      font-size: .86rem;
+      font-family: inherit;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    .btn {
+      border: 1px solid rgba(56,89,136,.55);
+      background: rgba(18,31,53,.95);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: .84rem;
+      font-weight: 600;
+    }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .status { min-height: 18px; color: var(--text-soft); font-size: .82rem; margin-top: 10px; }
+    .response {
+      margin-top: 10px;
+      border: 1px solid rgba(56,89,136,.55);
+      border-radius: 10px;
+      background: rgba(9,16,30,.9);
+      padding: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: .8rem;
+      max-height: 420px;
+      overflow: auto;
+    }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .main { padding: 14px; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><h1>CollectorsHub Retail</h1><p>Platform Administration</p></div>
+    <nav class="nav">
+      <a class="nav-item" href="/admin-dashboard.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M1 8l7-6 7 6v7H9V9H7v6H1z"/></svg>Dashboard</a>
+      <a class="nav-item" href="/admin-stores.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v10H2zm1 1v8h10V4z"/></svg>Stores</a>
+      <a class="nav-item" href="/admin-users.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 2a3 3 0 110 6 3 3 0 010-6zm-5 11a5 5 0 1110 0v1H3z"/></svg>Users</a>
+      <a class="nav-item active" href="/admin-catalog.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg>Catalog</a>
+      <a class="nav-item" href="/admin-pricing-data.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 12h2V8H2zm5 0h2V4H7zm5 0h2V6h-2z"/></svg>Pricing Data</a>
+      <a class="nav-item" href="/admin-marketplace.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 4h12l-1 3H3zm1 4h10v5H3z"/></svg>Marketplace</a>
+      <a class="nav-item" href="/admin-system-logs.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M3 2h8l2 2v10H3zm7 1.5V5h1.5zM5 7h6v1H5zm0 2h6v1H5zm0 2h4v1H5z"/></svg>System Logs</a>
+      <a class="nav-item" href="/admin-settings.html"><svg class="nav-icon" viewBox="0 0 16 16"><path d="M9.7 1l.4 1.6a5.7 5.7 0 011.5.9l1.5-.5.8 1.3-1.2 1a5.8 5.8 0 01.1.9 5.8 5.8 0 01-.1.9l1.2 1-.8 1.3-1.5-.5a5.8 5.8 0 01-1.5.9L9.7 15H8.3l-.4-1.6a5.8 5.8 0 01-1.5-.9l-1.5.5-.8-1.3 1.2-1a5.8 5.8 0 01-.1-.9c0-.3 0-.6.1-.9l-1.2-1 .8-1.3 1.5.5a5.8 5.8 0 011.5-.9L8.3 1zM8 6.2A1.8 1.8 0 108 9.8a1.8 1.8 0 000-3.6z"/></svg>Settings</a>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <header class="topbar">
+      <div class="title-wrap"><h2 style="margin:0;font-size:1.05rem;">Catalog API Tool</h2><span class="badge">Catalog Admin</span></div>
+      <button class="btn" id="sign-out" type="button">Sign Out</button>
+    </header>
+
+    <main class="main">
+      <section class="section">
+        <h3>Quick Presets</h3>
+        <p>Load common catalog API requests, then edit and send.</p>
+        <div class="btn-row">
+          <button class="btn" data-preset="items" type="button">List Items</button>
+          <button class="btn" data-preset="variants" type="button">List Variants</button>
+          <button class="btn" data-preset="categories" type="button">List Categories</button>
+          <button class="btn" data-preset="images" type="button">List Variant Images</button>
+          <button class="btn" data-preset="dupes" type="button">Check Duplicates RPC</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>Request Builder</h3>
+        <p>Use relative paths like /rest/v1/... or /rest/v1/rpc/....</p>
+        <div class="row">
+          <div class="field">
+            <label for="method">Method</label>
+            <select id="method">
+              <option>GET</option>
+              <option>POST</option>
+              <option>PATCH</option>
+              <option>DELETE</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="path">Path</label>
+            <input id="path" type="text" value="/rest/v1/catalog_items?select=id,name,created_at&order=created_at.desc&limit=20" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="headers">Headers (one per line, format: Key: Value)</label>
+          <textarea id="headers">Content-Type: application/json</textarea>
+        </div>
+
+        <div class="field">
+          <label for="body">Body (JSON)</label>
+          <textarea id="body">{
+  "p_name": "Sample Item",
+  "p_category_id": "00000000-0000-0000-0000-000000000000"
+}</textarea>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" id="send" type="button">Send Request</button>
+          <button class="btn" id="clear" type="button">Clear Response</button>
+        </div>
+
+        <p class="status" id="status"></p>
+        <div class="response" id="response">No response yet.</div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="./supabase-config.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+var USER_ROLE_KEY = "collectorshub_retail_user_role";
+var ALLOWED_CATALOG_ROLES = ["server_admin", "admin", "catalog_manager"];
+var supabase = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+
+function setStatus(text) { document.getElementById("status").textContent = text || ""; }
+function setResponse(text) { document.getElementById("response").textContent = text; }
+
+function parseHeaders(input) {
+  var headers = {};
+  String(input || "").split(/\r?\n/).forEach(function (line) {
+    var idx = line.indexOf(":");
+    if (idx > 0) {
+      var key = line.slice(0, idx).trim();
+      var value = line.slice(idx + 1).trim();
+      if (key) headers[key] = value;
+    }
+  });
+  return headers;
+}
+
+function applyPreset(name) {
+  var method = document.getElementById("method");
+  var path = document.getElementById("path");
+  var body = document.getElementById("body");
+
+  if (name === "items") {
+    method.value = "GET";
+    path.value = "/rest/v1/catalog_items?select=id,name,created_at,is_active&order=created_at.desc&limit=20";
+    body.value = "{}";
+  }
+  if (name === "variants") {
+    method.value = "GET";
+    path.value = "/rest/v1/variants?select=id,catalog_item_id,platform_or_format,edition,created_at&order=created_at.desc&limit=20";
+    body.value = "{}";
+  }
+  if (name === "categories") {
+    method.value = "GET";
+    path.value = "/rest/v1/catalog_categories?select=id,name,is_active,created_at&order=name.asc";
+    body.value = "{}";
+  }
+  if (name === "images") {
+    method.value = "GET";
+    path.value = "/rest/v1/variant_images?select=id,variant_id,image_url,is_primary,created_at&order=created_at.desc&limit=20";
+    body.value = "{}";
+  }
+  if (name === "dupes") {
+    method.value = "POST";
+    path.value = "/rest/v1/rpc/check_catalog_duplicates";
+    body.value = JSON.stringify({
+      p_name: "Sample Item",
+      p_category_id: "00000000-0000-0000-0000-000000000000",
+      p_subcategory_id: null
+    }, null, 2);
+  }
+}
+
+async function verifyCatalogAccess() {
+  var sessionResult = await supabase.auth.getSession();
+  var session = sessionResult && sessionResult.data && sessionResult.data.session;
+  if (!session) {
+    window.location.href = "/index.html";
+    return false;
+  }
+
+  var role = null;
+  var serverResult = await supabase
+    .from("server_users")
+    .select("role")
+    .eq("auth_user_id", session.user.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!serverResult.error && serverResult.data && serverResult.data.role) {
+    role = serverResult.data.role;
+  }
+
+  if (!role) {
+    var localRole = localStorage.getItem(USER_ROLE_KEY);
+    if (localRole && ALLOWED_CATALOG_ROLES.indexOf(localRole) >= 0) {
+      role = localRole;
+    }
+  }
+
+  if (!role || ALLOWED_CATALOG_ROLES.indexOf(role) < 0) {
+    await supabase.auth.signOut();
+    window.location.href = "/index.html";
+    return false;
+  }
+
+  return true;
+}
+
+async function sendRequest() {
+  var method = document.getElementById("method").value;
+  var path = document.getElementById("path").value.trim();
+  var headersText = document.getElementById("headers").value;
+  var bodyText = document.getElementById("body").value;
+
+  if (!path) {
+    setStatus("Path is required.");
+    return;
+  }
+
+  var sessionResult = await supabase.auth.getSession();
+  var session = sessionResult && sessionResult.data && sessionResult.data.session;
+  var accessToken = session && session.access_token;
+
+  var headers = parseHeaders(headersText);
+  if (!headers.apikey) headers.apikey = window.SUPABASE_CONFIG.anonKey;
+  if (accessToken && !headers.Authorization) headers.Authorization = "Bearer " + accessToken;
+
+  var url = path.indexOf("http") === 0 ? path : (window.SUPABASE_CONFIG.url + path);
+
+  var options = { method: method, headers: headers };
+  if (method !== "GET" && method !== "DELETE") {
+    try {
+      options.body = bodyText ? JSON.stringify(JSON.parse(bodyText)) : "{}";
+    } catch (e) {
+      setStatus("Body must be valid JSON.");
+      return;
+    }
+  }
+
+  setStatus("Sending request...");
+  setResponse("Waiting for response...");
+
+  try {
+    var response = await fetch(url, options);
+    var text = await response.text();
+    var formatted = text;
+
+    try {
+      formatted = JSON.stringify(JSON.parse(text), null, 2);
+    } catch (e2) {
+      formatted = text;
+    }
+
+    setStatus("Status " + response.status + " " + response.statusText);
+    setResponse(formatted || "(empty response)");
+  } catch (err) {
+    setStatus("Request failed.");
+    setResponse(String(err && err.message ? err.message : err));
+  }
+}
+
+document.querySelectorAll("[data-preset]").forEach(function (btn) {
+  btn.addEventListener("click", function () { applyPreset(btn.getAttribute("data-preset")); });
+});
+
+document.getElementById("send").addEventListener("click", sendRequest);
+document.getElementById("clear").addEventListener("click", function () {
+  setStatus("");
+  setResponse("No response yet.");
+});
+
+document.getElementById("sign-out").addEventListener("click", async function () {
+  await supabase.auth.signOut();
+  window.location.href = "/index.html";
+});
+
+verifyCatalogAccess();
+</script>
+</body>
+</html>
