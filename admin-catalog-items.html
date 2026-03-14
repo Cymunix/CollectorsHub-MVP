@@ -38,6 +38,10 @@
     .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
     .field { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
     .field input, .field select, .field textarea { width:100%; padding:10px; border-radius:10px; border:1px solid rgba(56,89,136,.7); background:#0e1a2e; color:var(--text); }
+    .hint { color:var(--soft); font-size:.78rem; margin:2px 0 0; }
+    .upload-row { display:flex; gap:8px; align-items:center; }
+    .upload-row .btn { white-space:nowrap; }
+    .image-preview { width:100%; max-height:160px; object-fit:contain; border:1px solid rgba(56,89,136,.7); border-radius:10px; background:#0e1a2e; display:none; }
     .status { min-height:18px; font-size:.82rem; color:var(--soft); margin-top:8px; }
     @media (max-width:980px){ .app{grid-template-columns:1fr;} .main{padding:14px;} .grid{grid-template-columns:1fr;} }
   </style>
@@ -122,7 +126,16 @@
         </div>
       </div>
       <div class="grid">
-        <div class="field"><label>Primary Image *</label><input id="primary-image" type="url" placeholder="https://..." /></div>
+        <div class="field">
+          <label>Primary Image *</label>
+          <input id="primary-image" type="url" placeholder="https://..." />
+          <div class="upload-row">
+            <input id="primary-image-file" type="file" accept="image/*" />
+            <button class="btn" id="upload-primary-image" type="button">Upload File</button>
+          </div>
+          <p class="hint">Paste an image URL or upload a file.</p>
+          <img id="primary-image-preview" class="image-preview" alt="Primary image preview" />
+        </div>
         <div class="field"><label>Series</label><input id="series" type="text" /></div>
       </div>
       <div class="grid">
@@ -150,6 +163,7 @@
     var ALLOWED_CATALOG_ROLES = ["server_admin", "admin", "catalog_manager"];
     var config = window.SUPABASE_CONFIG;
     var supabase = createClient(config.url, config.anonKey);
+    var IMAGE_BUCKET = "catalog-images";
 
     var items = [];
     var categories = [];
@@ -158,6 +172,81 @@
 
     function fmtDate(v) { var d = new Date(v); return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString(); }
     function esc(v) { return String(v || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+    function buildItemStoragePath(itemName, fileName) {
+      var safeItem = String(itemName || "item")
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "item";
+      var safeFile = String(fileName || "image")
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "image";
+      return "items/" + safeItem + "/" + Date.now() + "-" + safeFile;
+    }
+
+    function updatePrimaryImagePreview(url) {
+      var img = document.getElementById("primary-image-preview");
+      var finalUrl = String(url || "").trim();
+      if (!finalUrl) {
+        img.removeAttribute("src");
+        img.style.display = "none";
+        return;
+      }
+      img.src = finalUrl;
+      img.style.display = "block";
+    }
+
+    function previewSelectedPrimaryImageFile() {
+      var fileInput = document.getElementById("primary-image-file");
+      var file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+      if (!file) {
+        updatePrimaryImagePreview(document.getElementById("primary-image").value);
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(event) {
+        updatePrimaryImagePreview(event && event.target ? event.target.result : "");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function uploadPrimaryImageFile(itemName) {
+      var status = document.getElementById("modal-status");
+      var fileInput = document.getElementById("primary-image-file");
+      var file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+
+      if (!file) {
+        return document.getElementById("primary-image").value.trim();
+      }
+
+      status.textContent = "Uploading image file...";
+
+      var storagePath = buildItemStoragePath(itemName, file.name);
+      var upload = await supabase.storage
+        .from(IMAGE_BUCKET)
+        .upload(storagePath, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false
+        });
+
+      if (upload.error) {
+        status.textContent = "Upload failed: " + upload.error.message;
+        return null;
+      }
+
+      var publicUrlResult = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(storagePath);
+      var finalUrl = publicUrlResult && publicUrlResult.data ? publicUrlResult.data.publicUrl : "";
+      if (!finalUrl) {
+        status.textContent = "Could not determine image URL after upload.";
+        return null;
+      }
+
+      document.getElementById("primary-image").value = finalUrl;
+      updatePrimaryImagePreview(finalUrl);
+      status.textContent = "Image uploaded.";
+      return finalUrl;
+    }
 
     async function verifyCatalogAccess() {
       var session = (await supabase.auth.getSession()).data.session;
@@ -236,6 +325,7 @@
       document.getElementById("publisher").value = item ? (item.brand_or_publisher || "") : "";
       document.getElementById("year").value = item ? (item.release_year || "") : "";
       document.getElementById("primary-image").value = item ? (item.primary_image_url || "") : "";
+      document.getElementById("primary-image-file").value = "";
       document.getElementById("series").value = item ? (item.series || "") : "";
       document.getElementById("set-number").value = item ? (item.set_number || "") : "";
       document.getElementById("piece-count").value = item ? (item.piece_count || "") : "";
@@ -248,6 +338,7 @@
       document.getElementById("franchise").value = item ? (item.franchise_id || "") : "";
       document.getElementById("new-franchise").value = "";
       document.getElementById("modal-status").textContent = "";
+      updatePrimaryImagePreview(item ? (item.primary_image_url || "") : "");
       document.getElementById("item-modal").classList.add("open");
     }
 
@@ -280,6 +371,7 @@
       var publisher = document.getElementById("publisher").value.trim();
       var year = document.getElementById("year").value;
       var primaryImage = document.getElementById("primary-image").value.trim();
+      var primaryImageFile = document.getElementById("primary-image-file").files[0];
       var series = document.getElementById("series").value.trim();
       var franchiseId = document.getElementById("franchise").value;
       var setNumber = document.getElementById("set-number").value.trim();
@@ -289,9 +381,17 @@
       var description = document.getElementById("description").value.trim();
       var status = document.getElementById("modal-status");
 
-      if (!name || !categoryId || !publisher || !year || !primaryImage) {
-        status.textContent = "Required: Name, Category, Brand/Publisher, Release Year, Primary Image.";
+      if (!name || !categoryId || !publisher || !year || (!primaryImage && !primaryImageFile)) {
+        status.textContent = "Required: Name, Category, Brand/Publisher, Release Year, and an image URL or file.";
         return;
+      }
+
+      if (primaryImageFile) {
+        var uploadedUrl = await uploadPrimaryImageFile(name);
+        if (!uploadedUrl) {
+          return;
+        }
+        primaryImage = uploadedUrl;
       }
 
       if (!editId) {
@@ -346,6 +446,12 @@
     }
 
     document.getElementById("category").addEventListener("change", function(){ loadSubcategories(this.value); loadFranchises(""); });
+    document.getElementById("primary-image").addEventListener("input", function() { updatePrimaryImagePreview(this.value); });
+    document.getElementById("primary-image-file").addEventListener("change", previewSelectedPrimaryImageFile);
+    document.getElementById("upload-primary-image").addEventListener("click", async function() {
+      var name = document.getElementById("name").value.trim() || "item";
+      await uploadPrimaryImageFile(name);
+    });
     document.getElementById("create-franchise").addEventListener("click", createFranchise);
     document.getElementById("open-create").addEventListener("click", function(){ openModal(null); });
     document.getElementById("cancel").addEventListener("click", function(){ document.getElementById("item-modal").classList.remove("open"); });
