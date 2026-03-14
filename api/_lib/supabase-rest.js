@@ -1,15 +1,34 @@
-function requiredEnv(name) {
-  var value = process.env[name];
+function firstEnv(names) {
+  for (var i = 0; i < names.length; i++) {
+    var value = process.env[names[i]];
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
+
+function requiredEnv(names, label) {
+  var value = firstEnv(names);
   if (!value) {
-    throw new Error("Missing required environment variable: " + name);
+    throw new Error(
+      "Missing required environment variable: " + label +
+      ". Set one of [" + names.join(", ") + "] in your deployment/local env."
+    );
   }
   return value;
 }
 
 function supabaseConfig() {
   return {
-    url: requiredEnv("SUPABASE_URL").replace(/\/$/, ""),
-    serviceRoleKey: requiredEnv("SUPABASE_SERVICE_ROLE_KEY")
+    url: requiredEnv(
+      ["SUPABASE_URL", "SUPABASE_PROJECT_URL", "NEXT_PUBLIC_SUPABASE_URL", "VITE_SUPABASE_URL", "PUBLIC_SUPABASE_URL"],
+      "SUPABASE_URL"
+    ).replace(/\/$/, ""),
+    serviceRoleKey: requiredEnv(
+      ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY", "SERVICE_ROLE_KEY"],
+      "SUPABASE_SERVICE_ROLE_KEY"
+    )
   };
 }
 
