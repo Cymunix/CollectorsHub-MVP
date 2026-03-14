@@ -112,6 +112,8 @@
     .preview { display: grid; grid-template-columns: 180px 1fr; gap: 14px; margin-top: 12px; }
     .preview img { width: 100%; border-radius: 10px; border: 1px solid rgba(56,89,136,.55); background: rgba(12,22,40,.85); }
     .preview-details { line-height: 1.8; font-size: .88rem; }
+    .edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .edit-grid .full { grid-column: 1 / -1; }
     .k { color: var(--text-soft); margin-right: 6px; }
     @media (max-width: 980px) {
       .app { grid-template-columns: 1fr; }
@@ -120,6 +122,7 @@
       .cred-grid { grid-template-columns: 1fr; }
       .theme-grid { grid-template-columns: 1fr; }
       .preview { grid-template-columns: 1fr; }
+      .edit-grid { grid-template-columns: 1fr; }
       table { display: block; overflow-x: auto; }
     }
   </style>
@@ -149,7 +152,7 @@
     <main class="main">
       <section class="section">
         <h3 style="margin-bottom:12px;">Import LEGO Sets</h3>
-        <p>Brickset credentials are stored in this browser session only.</p>
+        <p>Brickset credentials are stored in this browser and server env fallback is supported.</p>
         <div class="cred-grid">
           <div class="field">
             <label for="brickset-api-key">Brickset API Key</label>
@@ -227,10 +230,23 @@
 
       <section class="section">
         <h3>Preview</h3>
-        <p>Preview set details before importing.</p>
+        <p>Load a set into preview, edit details, pick category and subcategory, then add to catalog.</p>
         <div id="preview-wrap" class="preview" style="display:none;">
           <div><img id="preview-image" alt="Set image" /></div>
           <div class="preview-details" id="preview-details"></div>
+        </div>
+        <div id="preview-edit-wrap" class="edit-grid" style="display:none;">
+          <div class="field full"><label for="edit-name">Name</label><input id="edit-name" type="text" /></div>
+          <div class="field"><label for="edit-set-number">Set Number</label><input id="edit-set-number" type="text" readonly /></div>
+          <div class="field"><label for="edit-theme">Theme</label><input id="edit-theme" type="text" /></div>
+          <div class="field"><label for="edit-year">Release Year</label><input id="edit-year" type="number" min="1949" max="2100" /></div>
+          <div class="field"><label for="edit-piece-count">Piece Count</label><input id="edit-piece-count" type="number" min="0" /></div>
+          <div class="field"><label for="edit-image-url">Primary Image URL</label><input id="edit-image-url" type="text" /></div>
+          <div class="field"><label for="edit-category">Category</label><select id="edit-category"><option value="">Loading categories...</option></select></div>
+          <div class="field"><label for="edit-subcategory">Subcategory</label><select id="edit-subcategory"><option value="">None</option></select></div>
+          <div class="field full btn-row">
+            <button class="btn" id="preview-import-btn" type="button">Add To Catalog</button>
+          </div>
         </div>
         <p id="preview-status" class="status"></p>
       </section>
@@ -248,6 +264,8 @@ var BRICKSET_USER_HASH_STORAGE_KEY = "collectorshub_brickset_user_hash";
 var ALLOWED_CATALOG_ROLES = ["server_admin", "admin", "catalog_manager"];
 var supabase = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 var searchResults = [];
+var categoryRows = [];
+var stagedSet = null;
 
 function setStatus(id, text, cls) {
   var el = document.getElementById(id);
@@ -353,7 +371,7 @@ function renderResults() {
       '<td>' + esc(set.pieceCount || "-") + '</td>' +
       '<td><div class="btn-row">' +
       '<button class="btn" data-act="preview" data-set="' + esc(set.setNumber || "") + '">Preview</button>' +
-      '<button class="btn" data-act="import" data-set="' + esc(set.setNumber || "") + '">Import</button>' +
+      '<button class="btn" data-act="import" data-set="' + esc(set.setNumber || "") + '">Load & Edit</button>' +
       '</div></td>' +
       '</tr>';
   }).join("");
@@ -381,6 +399,61 @@ function renderPreview(set) {
   }
 
   wrap.style.display = "grid";
+}
+
+function setPreviewEditor(set) {
+  stagedSet = set;
+  document.getElementById("edit-name").value = set.name || "";
+  document.getElementById("edit-set-number").value = set.setNumber || "";
+  document.getElementById("edit-theme").value = set.theme || "";
+  document.getElementById("edit-year").value = set.year || "";
+  document.getElementById("edit-piece-count").value = set.pieceCount || "";
+  document.getElementById("edit-image-url").value = set.imageUrl || "";
+
+  var defaultCategory = categoryRows.find(function (c) {
+    return String(c.name || "").toLowerCase() === "building blocks";
+  });
+  document.getElementById("edit-category").value = defaultCategory ? defaultCategory.id : "";
+  loadPreviewSubcategories(document.getElementById("edit-category").value);
+  document.getElementById("edit-subcategory").value = "";
+  document.getElementById("preview-edit-wrap").style.display = "grid";
+}
+
+async function loadPreviewCategories() {
+  var res = await supabase
+    .from("catalog_categories")
+    .select("id,name")
+    .eq("is_active", true)
+    .order("name");
+
+  var sel = document.getElementById("edit-category");
+  if (res.error) {
+    sel.innerHTML = '<option value="">Failed to load categories</option>';
+    return;
+  }
+
+  categoryRows = res.data || [];
+  sel.innerHTML = '<option value="">Select category...</option>' +
+    categoryRows.map(function (c) {
+      return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>';
+    }).join("");
+}
+
+async function loadPreviewSubcategories(categoryId) {
+  var sel = document.getElementById("edit-subcategory");
+  sel.innerHTML = '<option value="">None</option>';
+  if (!categoryId) {
+    return;
+  }
+
+  var rpc = await supabase.rpc("admin_list_subcategories", { p_category_id: categoryId });
+  if (rpc.error || !Array.isArray(rpc.data)) {
+    return;
+  }
+
+  sel.innerHTML += rpc.data.map(function (s) {
+    return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>';
+  }).join("");
 }
 
 async function searchSets() {
@@ -423,6 +496,7 @@ async function previewSet(setNumber) {
     }
 
     renderPreview(data);
+    setPreviewEditor(data);
     setStatus("preview-status", "Preview loaded.", "ok");
   } catch (error) {
     setStatus("preview-status", error.message || "Preview failed.", "err");
@@ -435,12 +509,39 @@ async function importSet(setNumber) {
     return;
   }
 
-  setStatus("preview-status", "Importing set...", "");
+  // Import button now stages the set in preview editor first.
+  await previewSet(setNumber);
+  setStatus("preview-status", "Set loaded into preview. Edit details, choose category/subcategory, then click Add To Catalog.", "ok");
+}
+
+async function addPreviewToCatalog() {
+  if (!stagedSet) {
+    setStatus("preview-status", "Load a set preview first.", "warn");
+    return;
+  }
+
+  var payload = {
+    setNumber: document.getElementById("edit-set-number").value.trim(),
+    name: document.getElementById("edit-name").value.trim(),
+    theme: document.getElementById("edit-theme").value.trim(),
+    year: document.getElementById("edit-year").value ? Number(document.getElementById("edit-year").value) : null,
+    pieceCount: document.getElementById("edit-piece-count").value ? Number(document.getElementById("edit-piece-count").value) : null,
+    imageUrl: document.getElementById("edit-image-url").value.trim(),
+    categoryId: document.getElementById("edit-category").value || null,
+    subcategoryId: document.getElementById("edit-subcategory").value || null
+  };
+
+  if (!payload.name || !payload.setNumber || !payload.categoryId) {
+    setStatus("preview-status", "Name, Set Number and Category are required.", "warn");
+    return;
+  }
+
+  setStatus("preview-status", "Adding to catalog...", "");
   try {
     var response = await bricksetFetch("/api/brickset/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ setNumber: setNumber })
+      body: JSON.stringify(payload)
     });
 
     var data = await response.json();
@@ -452,7 +553,7 @@ async function importSet(setNumber) {
       throw new Error(data && data.error ? data.error : "Import failed");
     }
 
-    setStatus("preview-status", "Import successful. Catalog item ID: " + data.catalogItemId + ", Variant ID: " + data.variantId, "ok");
+    setStatus("preview-status", "Added to catalog. Catalog item ID: " + data.catalogItemId + ", Variant ID: " + data.variantId, "ok");
   } catch (error) {
     setStatus("preview-status", error.message || "Import failed.", "err");
   }
@@ -615,6 +716,10 @@ document.getElementById("save-brickset-credentials").addEventListener("click", f
 });
 document.getElementById("theme-preview-btn").addEventListener("click", previewTheme);
 document.getElementById("theme-import-btn").addEventListener("click", importTheme);
+document.getElementById("preview-import-btn").addEventListener("click", addPreviewToCatalog);
+document.getElementById("edit-category").addEventListener("change", function () {
+  loadPreviewSubcategories(this.value);
+});
 document.getElementById("search-query").addEventListener("keydown", function (event) {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -646,6 +751,7 @@ document.getElementById("sign-out").addEventListener("click", async function () 
 
 verifyCatalogAccess().then(function (ok) {
   if (ok) {
+    loadPreviewCategories();
     loadBricksetCredentialsFromSession();
     var hasStoredApiKey = Boolean(localStorage.getItem(BRICKSET_API_KEY_STORAGE_KEY));
     if (hasStoredApiKey) {

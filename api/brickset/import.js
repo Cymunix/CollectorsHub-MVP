@@ -10,6 +10,11 @@ function asNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function normalizeText(value) {
+  var s = String(value == null ? "" : value).trim();
+  return s || null;
+}
+
 function getBricksetCredentials(req, body) {
   var headers = req && req.headers ? req.headers : {};
   var apiKey = String(headers["x-brickset-api-key"] || "").trim();
@@ -50,8 +55,17 @@ module.exports = async function handler(req, res) {
       return responseUtils.sendJson(res, 404, { error: "Set not found in Brickset" });
     }
 
+    var mergedSet = {
+      setNumber: requestedSetNumber,
+      name: normalizeText(body.name) || setData.name,
+      theme: normalizeText(body.theme) || setData.theme,
+      year: asNumber(body.year) != null ? asNumber(body.year) : setData.year,
+      pieceCount: asNumber(body.pieceCount) != null ? asNumber(body.pieceCount) : setData.pieceCount,
+      imageUrl: normalizeText(body.imageUrl) || setData.imageUrl
+    };
+
     var duplicateRows = await supabaseRest.supabaseRequest(
-      "variants?select=id,catalog_item_id,set_number&set_number=eq." + encodeURIComponent(setData.setNumber) + "&limit=1"
+      "variants?select=id,catalog_item_id,set_number&set_number=eq." + encodeURIComponent(mergedSet.setNumber) + "&limit=1"
     );
 
     if (Array.isArray(duplicateRows) && duplicateRows.length > 0) {
@@ -61,21 +75,25 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    var categories = await supabaseRest.supabaseRequest(
-      "catalog_categories?select=id,name&name=eq." + encodeURIComponent("Building Blocks") + "&limit=1"
-    );
+    var categoryId = normalizeText(body.categoryId);
+    if (!categoryId) {
+      var categories = await supabaseRest.supabaseRequest(
+        "catalog_categories?select=id,name&name=eq." + encodeURIComponent("Building Blocks") + "&limit=1"
+      );
 
-    if (!Array.isArray(categories) || categories.length === 0) {
-      return responseUtils.sendJson(res, 500, {
-        error: "Building Blocks category not found. Seed catalog categories first."
-      });
+      if (!Array.isArray(categories) || categories.length === 0) {
+        return responseUtils.sendJson(res, 500, {
+          error: "Building Blocks category not found. Seed catalog categories first."
+        });
+      }
+      categoryId = categories[0].id;
     }
 
-    var categoryId = categories[0].id;
-    var itemName = setData.name;
-    var series = setData.theme || null;
-    var releaseYear = asNumber(setData.year);
-    var pieceCount = asNumber(setData.pieceCount);
+    var subcategoryId = normalizeText(body.subcategoryId);
+    var itemName = mergedSet.name;
+    var series = mergedSet.theme || null;
+    var releaseYear = asNumber(mergedSet.year);
+    var pieceCount = asNumber(mergedSet.pieceCount);
 
     var existingItems = await supabaseRest.supabaseRequest(
       "catalog_items?select=id,name&name=eq." + encodeURIComponent(itemName) +
@@ -98,10 +116,11 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           name: itemName,
           category_id: categoryId,
+          subcategory_id: subcategoryId,
           brand_or_publisher: "LEGO",
           series: series,
           release_year: releaseYear,
-          primary_image_url: setData.imageUrl,
+          primary_image_url: mergedSet.imageUrl,
           is_active: true
         })
       });
@@ -122,14 +141,14 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         catalog_item_id: catalogItemId,
-        set_number: setData.setNumber,
+        set_number: mergedSet.setNumber,
         piece_count: pieceCount,
         edition: "Standard",
         release_year: releaseYear,
         platform_or_format: "LEGO Set",
         attributes: {
           brickset_theme: series,
-          set_number: setData.setNumber,
+          set_number: mergedSet.setNumber,
           piece_count: pieceCount
         },
         is_active: true
@@ -145,7 +164,7 @@ module.exports = async function handler(req, res) {
       catalogItemCreated: createdCatalogItem,
       catalogItemId: catalogItemId,
       variantId: newVariants[0].id,
-      set: setData
+      set: mergedSet
     });
   } catch (error) {
     return responseUtils.sendJson(res, 500, { error: error.message });
