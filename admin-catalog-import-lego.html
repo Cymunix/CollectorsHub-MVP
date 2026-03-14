@@ -221,6 +221,21 @@
               <button class="btn" id="theme-import-btn" type="button">Import All Sets</button>
             </div>
           </div>
+          <table id="theme-results-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Set Number</th>
+                <th>Name</th>
+                <th>Year</th>
+                <th>Theme</th>
+                <th>Piece Count</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6">No sets loaded.</td></tr>
+            </tbody>
+          </table>
           <div class="progress-bar-wrap" id="theme-progress-wrap">
             <div class="progress-bar" id="theme-progress-bar"></div>
           </div>
@@ -266,6 +281,7 @@ var supabase = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.a
 var searchResults = [];
 var categoryRows = [];
 var stagedSet = null;
+var themeSampleSets = [];
 
 function setStatus(id, text, cls) {
   var el = document.getElementById(id);
@@ -373,6 +389,28 @@ function renderResults() {
       '<button class="btn" data-act="preview" data-set="' + esc(set.setNumber || "") + '">Preview</button>' +
       '<button class="btn" data-act="import" data-set="' + esc(set.setNumber || "") + '">Load & Edit</button>' +
       '</div></td>' +
+      '</tr>';
+  }).join("");
+}
+
+function renderThemeResults() {
+  var table = document.getElementById("theme-results-table");
+  var body = table.querySelector("tbody");
+  if (!themeSampleSets.length) {
+    table.style.display = "none";
+    body.innerHTML = '<tr><td colspan="6">No sets loaded.</td></tr>';
+    return;
+  }
+
+  table.style.display = "table";
+  body.innerHTML = themeSampleSets.map(function (set) {
+    return '<tr>' +
+      '<td>' + esc(set.setNumber || "-") + '</td>' +
+      '<td>' + esc(set.name || "-") + '</td>' +
+      '<td>' + esc(set.year || "-") + '</td>' +
+      '<td>' + esc(set.theme || "-") + '</td>' +
+      '<td>' + esc(set.pieceCount || "-") + '</td>' +
+      '<td><button class="btn" data-theme-act="load-preview" data-set="' + esc(set.setNumber || "") + '">Load & Edit</button></td>' +
       '</tr>';
   }).join("");
 }
@@ -596,6 +634,8 @@ async function previewTheme() {
 
   setStatus("theme-preview-status", "Fetching set count...", "");
   document.getElementById("theme-preview-info").style.display = "none";
+  themeSampleSets = [];
+  renderThemeResults();
   try {
     var url = "/api/brickset/themes/preview?theme=" + encodeURIComponent(theme);
     if (year) url += "&year=" + encodeURIComponent(year);
@@ -610,6 +650,16 @@ async function previewTheme() {
       (data.total === 0 ? " Nothing to import." : " Press <em>Import All Sets</em> to begin.");
     document.getElementById("theme-import-btn").disabled = data.total === 0;
     document.getElementById("theme-preview-info").style.display = "block";
+
+    var sampleUrl = "/api/brickset/theme-sets?theme=" + encodeURIComponent(theme) + "&limit=20";
+    if (year) sampleUrl += "&year=" + encodeURIComponent(year);
+    var sampleResponse = await bricksetFetch(sampleUrl);
+    var sampleData = await sampleResponse.json();
+    if (sampleResponse.ok) {
+      themeSampleSets = Array.isArray(sampleData.results) ? sampleData.results : [];
+      renderThemeResults();
+    }
+
     setStatus("theme-preview-status", "", "");
   } catch (error) {
     themePreviewData = null;
@@ -652,6 +702,11 @@ async function importTheme() {
     if (!response.ok) throw new Error(data && data.error ? data.error : "Import failed");
 
     var msg = "Done. Imported: " + data.imported + ", Skipped (duplicates): " + data.skipped + ", Errors: " + data.errorCount + ".";
+    if (data.errorCount && Array.isArray(data.errors) && data.errors.length) {
+      msg += " First errors: " + data.errors.slice(0, 5).map(function (e) {
+        return (e.setNumber || "unknown") + " - " + (e.reason || "unknown error");
+      }).join(" | ");
+    }
     setStatus("theme-import-status", msg, "ok");
     btn.disabled = false;
   } catch (error) {
@@ -746,6 +801,20 @@ document.querySelector("#results-table tbody").addEventListener("click", functio
   }
   if (action === "import") {
     importSet(setNumber);
+  }
+});
+
+document.querySelector("#theme-results-table tbody").addEventListener("click", function (event) {
+  var target = event.target;
+  if (!target || !target.getAttribute) {
+    return;
+  }
+
+  var action = target.getAttribute("data-theme-act");
+  var setNumber = target.getAttribute("data-set");
+  if (action === "load-preview") {
+    previewSet(setNumber);
+    document.querySelector('[data-tab="set"]').click();
   }
 });
 
