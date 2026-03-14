@@ -10,6 +10,61 @@ function asNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function isMissingColumnError(error, tableName, columnName) {
+  var msg = String(error && error.message ? error.message : "");
+  return msg.indexOf('"code":"42703"') >= 0 && msg.indexOf(tableName + "." + columnName) >= 0;
+}
+
+async function findDuplicateVariant(setNumber) {
+  var encoded = encodeURIComponent(setNumber);
+  try {
+    return await supabaseRest.supabaseRequest(
+      "variants?select=id,catalog_item_id,set_number&set_number=eq." + encoded + "&limit=1"
+    );
+  } catch (error) {
+    if (!isMissingColumnError(error, "variants", "set_number")) {
+      throw error;
+    }
+
+    return await supabaseRest.supabaseRequest(
+      "variants?select=id,catalog_item_id,attributes&attributes->>set_number=eq." + encoded + "&limit=1"
+    );
+  }
+}
+
+async function insertVariantWithFallback(variantPayload) {
+  var payload = Object.assign({}, variantPayload);
+
+  for (var attempt = 0; attempt < 4; attempt++) {
+    try {
+      return await supabaseRest.supabaseRequest("variants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      if (isMissingColumnError(error, "variants", "set_number")) {
+        delete payload.set_number;
+        continue;
+      }
+      if (isMissingColumnError(error, "variants", "piece_count")) {
+        delete payload.piece_count;
+        continue;
+      }
+      if (isMissingColumnError(error, "variants", "release_year")) {
+        delete payload.release_year;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error("Failed to insert variant due to schema mismatch");
+}
+
 function getBricksetCredentials(req, body) {
   var headers = req && req.headers ? req.headers : {};
   var apiKey = String(headers["x-brickset-api-key"] || "").trim();
@@ -29,11 +84,7 @@ function getBricksetCredentials(req, body) {
 }
 
 async function importOneSet(setData, categoryId) {
-  var duplicateRows = await supabaseRest.supabaseRequest(
-    "variants?select=id,catalog_item_id,set_number&set_number=eq." +
-      encodeURIComponent(setData.setNumber) +
-      "&limit=1"
-  );
+  var duplicateRows = await findDuplicateVariant(setData.setNumber);
 
   if (Array.isArray(duplicateRows) && duplicateRows.length > 0) {
     return { status: "skipped", reason: "duplicate" };
@@ -81,26 +132,19 @@ async function importOneSet(setData, categoryId) {
     catalogItemId = newCatalogItems[0].id;
   }
 
-  var newVariants = await supabaseRest.supabaseRequest("variants", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Prefer: "return=representation"
-    },
-    body: JSON.stringify({
-      catalog_item_id: catalogItemId,
+  var newVariants = await insertVariantWithFallback({
+    catalog_item_id: catalogItemId,
+    set_number: setData.setNumber,
+    piece_count: pieceCount,
+    edition: "Standard",
+    release_year: releaseYear,
+    platform_or_format: "LEGO Set",
+    attributes: {
+      brickset_theme: series,
       set_number: setData.setNumber,
-      piece_count: pieceCount,
-      edition: "Standard",
-      release_year: releaseYear,
-      platform_or_format: "LEGO Set",
-      attributes: {
-        brickset_theme: series,
-        set_number: setData.setNumber,
-        piece_count: pieceCount
-      },
-      is_active: true
-    })
+      piece_count: pieceCount
+    },
+    is_active: true
   });
 
   if (!Array.isArray(newVariants) || newVariants.length === 0) {
