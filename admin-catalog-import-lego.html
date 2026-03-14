@@ -596,7 +596,7 @@ async function addPreviewToCatalog() {
       throw new Error(data && data.error ? data.error : "Import failed");
     }
 
-    setStatus("preview-status", "Added to catalog. Catalog item ID: " + data.catalogItemId + ", Variant ID: " + data.variantId, "ok");
+    setStatus("preview-status", "Added to catalog. Catalog item ID: " + data.catalogItemId, "ok");
   } catch (error) {
     setStatus("preview-status", error.message || "Import failed.", "err");
   }

@@ -15,60 +15,48 @@ function normalizeText(value) {
   return s || null;
 }
 
-function isMissingColumnError(error, tableName, columnName) {
-  var msg = String(error && error.message ? error.message : "");
-  return msg.indexOf('"code":"42703"') >= 0 && msg.indexOf(tableName + "." + columnName) >= 0;
-}
-
-async function findDuplicateVariant(setNumber) {
-  var encoded = encodeURIComponent(setNumber);
-  try {
-    return await supabaseRest.supabaseRequest(
-      "variants?select=id,catalog_item_id,set_number&set_number=eq." + encoded + "&limit=1"
-    );
-  } catch (error) {
-    if (!isMissingColumnError(error, "variants", "set_number")) {
-      throw error;
-    }
-
-    // Compatibility mode for older schemas: dedupe by JSON attributes.set_number.
-    return await supabaseRest.supabaseRequest(
-      "variants?select=id,catalog_item_id,attributes&attributes->>set_number=eq." + encoded + "&limit=1"
-    );
+function buildCatalogItemDescription(setData) {
+  var parts = ["Imported from Brickset."];
+  if (setData.setNumber) {
+    parts.push("Set Number: " + setData.setNumber + ".");
   }
+  if (setData.pieceCount != null) {
+    parts.push("Piece Count: " + setData.pieceCount + ".");
+  }
+  if (setData.theme) {
+    parts.push("Theme: " + setData.theme + ".");
+  }
+  return parts.join(" ");
 }
 
-async function insertVariantWithFallback(variantPayload) {
-  var payload = Object.assign({}, variantPayload);
+async function findDuplicateCatalogItem(setData, categoryId) {
+  var rows = await supabaseRest.supabaseRequest(
+    "catalog_items?select=id,name,series,release_year,description&category_id=eq." +
+      encodeURIComponent(categoryId) +
+      "&name=eq." +
+      encodeURIComponent(setData.name) +
+      "&is_active=eq.true&limit=20"
+  );
 
-  for (var attempt = 0; attempt < 4; attempt++) {
-    try {
-      return await supabaseRest.supabaseRequest("variants", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
-        body: JSON.stringify(payload)
-      });
-    } catch (error) {
-      if (isMissingColumnError(error, "variants", "set_number")) {
-        delete payload.set_number;
-        continue;
-      }
-      if (isMissingColumnError(error, "variants", "piece_count")) {
-        delete payload.piece_count;
-        continue;
-      }
-      if (isMissingColumnError(error, "variants", "release_year")) {
-        delete payload.release_year;
-        continue;
-      }
-      throw error;
+  if (!Array.isArray(rows) || !rows.length) {
+    return null;
+  }
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var description = String(row.description || "");
+    if (setData.setNumber && description.indexOf("Set Number: " + setData.setNumber) >= 0) {
+      return row;
+    }
+    if (
+      String(row.series || "") === String(setData.theme || "") &&
+      Number(row.release_year || 0) === Number(setData.year || 0)
+    ) {
+      return row;
     }
   }
 
-  throw new Error("Failed to insert variant due to schema mismatch");
+  return null;
 }
 
 function getBricksetCredentials(req, body) {
@@ -120,12 +108,12 @@ module.exports = async function handler(req, res) {
       imageUrl: normalizeText(body.imageUrl) || setData.imageUrl
     };
 
-    var duplicateRows = await findDuplicateVariant(mergedSet.setNumber);
+    var duplicateItem = await findDuplicateCatalogItem(mergedSet, categoryId);
 
-    if (Array.isArray(duplicateRows) && duplicateRows.length > 0) {
+    if (duplicateItem) {
       return responseUtils.sendJson(res, 409, {
         error: "This LEGO set already exists in the catalog.",
-        existingVariant: duplicateRows[0]
+        existingCatalogItem: duplicateItem
       });
     }
 
@@ -147,7 +135,6 @@ module.exports = async function handler(req, res) {
     var itemName = mergedSet.name;
     var series = mergedSet.theme || null;
     var releaseYear = asNumber(mergedSet.year);
-    var pieceCount = asNumber(mergedSet.pieceCount);
 
     var catalogItemId = null;
     var createdCatalogItem = false;
@@ -164,6 +151,7 @@ module.exports = async function handler(req, res) {
         brand_or_publisher: "LEGO",
         series: series,
         release_year: releaseYear,
+        description: buildCatalogItemDescription(mergedSet),
         primary_image_url: mergedSet.imageUrl,
         is_active: true
       })
@@ -176,30 +164,10 @@ module.exports = async function handler(req, res) {
     catalogItemId = newCatalogItems[0].id;
     createdCatalogItem = true;
 
-    var newVariants = await insertVariantWithFallback({
-      catalog_item_id: catalogItemId,
-      set_number: mergedSet.setNumber,
-      piece_count: pieceCount,
-      edition: "Standard",
-      release_year: releaseYear,
-      platform_or_format: "LEGO Set",
-      attributes: {
-        brickset_theme: series,
-        set_number: mergedSet.setNumber,
-        piece_count: pieceCount
-      },
-      is_active: true
-    });
-
-    if (!Array.isArray(newVariants) || newVariants.length === 0) {
-      throw new Error("Failed to create variant");
-    }
-
     return responseUtils.sendJson(res, 200, {
       imported: true,
       catalogItemCreated: createdCatalogItem,
       catalogItemId: catalogItemId,
-      variantId: newVariants[0].id,
       set: mergedSet
     });
   } catch (error) {
