@@ -320,7 +320,6 @@ function getBricksetCredentialHeaders() {
   var apiKey = (localStorage.getItem(BRICKSET_API_KEY_STORAGE_KEY) || "").trim();
   var userHash = (localStorage.getItem(BRICKSET_USER_HASH_STORAGE_KEY) || "").trim();
   if (!apiKey) {
-    setStatus("brickset-credentials-status", "Enter and save Brickset API Key first.", "warn");
     return null;
   }
 
@@ -333,12 +332,8 @@ function getBricksetCredentialHeaders() {
 
 async function bricksetFetch(url, options) {
   var headers = getBricksetCredentialHeaders();
-  if (!headers) {
-    throw new Error("Brickset API Key is required.");
-  }
-
   var finalOptions = options || {};
-  finalOptions.headers = Object.assign({}, finalOptions.headers || {}, headers);
+  finalOptions.headers = Object.assign({}, finalOptions.headers || {}, headers || {});
   return fetch(url, finalOptions);
 }
 
@@ -654,12 +649,16 @@ verifyCatalogAccess().then(function (ok) {
     loadBricksetCredentialsFromSession();
     var hasStoredApiKey = Boolean(localStorage.getItem(BRICKSET_API_KEY_STORAGE_KEY));
     if (hasStoredApiKey) {
+      setStatus("brickset-credentials-status", "Using saved Brickset credentials from this browser.", "ok");
       loadThemes();
       return;
     }
 
     loadBricksetCredentialsFromFile().then(function (loadedFromFile) {
       if (loadedFromFile) {
+        loadThemes();
+      } else {
+        setStatus("brickset-credentials-status", "No local Brickset key saved. Server env credentials will be used if configured.", "warn");
         loadThemes();
       }
     });
