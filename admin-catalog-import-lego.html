@@ -484,7 +484,7 @@ async function searchSets() {
 async function previewSet(setNumber) {
   if (!setNumber) {
     setStatus("preview-status", "Set number is missing.", "warn");
-    return;
+    return false;
   }
 
   setStatus("preview-status", "Loading preview...", "");
@@ -498,8 +498,11 @@ async function previewSet(setNumber) {
     renderPreview(data);
     setPreviewEditor(data);
     setStatus("preview-status", "Preview loaded.", "ok");
+    document.getElementById("preview-edit-wrap").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    return true;
   } catch (error) {
     setStatus("preview-status", error.message || "Preview failed.", "err");
+    return false;
   }
 }
 
@@ -510,8 +513,10 @@ async function importSet(setNumber) {
   }
 
   // Import button now stages the set in preview editor first.
-  await previewSet(setNumber);
-  setStatus("preview-status", "Set loaded into preview. Edit details, choose category/subcategory, then click Add To Catalog.", "ok");
+  var loaded = await previewSet(setNumber);
+  if (loaded) {
+    setStatus("preview-status", "Set loaded into preview. Edit details, choose category/subcategory, then click Add To Catalog.", "ok");
+  }
 }
 
 async function addPreviewToCatalog() {
