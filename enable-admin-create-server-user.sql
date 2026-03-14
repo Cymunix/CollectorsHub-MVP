@@ -101,6 +101,36 @@ BEGIN
     v_auth_created := true;
   END IF;
 
+  BEGIN
+    INSERT INTO auth.identities (
+      id,
+      user_id,
+      identity_data,
+      provider,
+      provider_id,
+      last_sign_in_at,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      gen_random_uuid(),
+      v_auth_user_id,
+      jsonb_build_object(
+        'sub', v_auth_user_id::text,
+        'email', lower(trim(p_email))
+      ),
+      'email',
+      lower(trim(p_email)),
+      now(),
+      now(),
+      now()
+    )
+    ON CONFLICT DO NOTHING;
+  EXCEPTION
+    WHEN undefined_table OR undefined_column THEN
+      RAISE EXCEPTION 'auth.identities schema is unavailable for email/password login setup';
+  END;
+
   -- Check if username already exists
   SELECT id INTO v_existing_id
   FROM server_users

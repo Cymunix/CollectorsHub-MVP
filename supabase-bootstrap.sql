@@ -570,6 +570,36 @@ begin
     v_auth_created := true;
   end if;
 
+  begin
+    insert into auth.identities (
+      id,
+      user_id,
+      identity_data,
+      provider,
+      provider_id,
+      last_sign_in_at,
+      created_at,
+      updated_at
+    )
+    values (
+      gen_random_uuid(),
+      v_auth_user_id,
+      jsonb_build_object(
+        'sub', v_auth_user_id::text,
+        'email', lower(btrim(p_email))
+      ),
+      'email',
+      lower(btrim(p_email)),
+      now(),
+      now(),
+      now()
+    )
+    on conflict do nothing;
+  exception
+    when undefined_table or undefined_column then
+      raise exception 'auth.identities schema is unavailable for email/password login setup';
+  end;
+
   select su.id
   into v_existing_id
   from public.server_users su
@@ -609,6 +639,44 @@ $$;
 
 revoke all on function public.admin_create_server_user(text, text, text, boolean) from public;
 grant execute on function public.admin_create_server_user(text, text, text, boolean) to authenticated;
+
+do $$
+begin
+  insert into auth.identities (
+    id,
+    user_id,
+    identity_data,
+    provider,
+    provider_id,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  )
+  select
+    gen_random_uuid(),
+    au.id,
+    jsonb_build_object(
+      'sub', au.id::text,
+      'email', lower(au.email)
+    ),
+    'email',
+    lower(au.email),
+    now(),
+    now(),
+    now()
+  from auth.users au
+  where au.email is not null
+    and au.encrypted_password is not null
+    and not exists (
+      select 1
+      from auth.identities ai
+      where ai.user_id = au.id
+        and ai.provider = 'email'
+    );
+exception
+  when undefined_table or undefined_column then
+    raise notice 'Skipped auth.identities backfill because schema does not expose expected columns.';
+end $$;
 
 -- ============================================================
 -- CATALOG MANAGEMENT SYSTEM
