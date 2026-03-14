@@ -6,6 +6,27 @@ function requiredEnv(name) {
   return value;
 }
 
+function firstEnv(names) {
+  for (var i = 0; i < names.length; i++) {
+    var value = process.env[names[i]];
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
+
+function requiredAnyEnv(names, label) {
+  var value = firstEnv(names);
+  if (!value) {
+    throw new Error(
+      "Missing required environment variable: " + label +
+      ". Set one of [" + names.join(", ") + "] in Vercel project env vars and redeploy."
+    );
+  }
+  return value;
+}
+
 function cleanString(value) {
   return String(value == null ? "" : value).trim();
 }
@@ -72,9 +93,23 @@ function normalizeSet(source) {
 
 async function callBrickset(endpoint, paramsObject, credentials) {
   var cred = normalizeCredentials(credentials);
-  var apiKey = cred.apiKey || requiredEnv("BRICKSET_API_KEY");
+  var apiKey = cred.apiKey || requiredAnyEnv(
+    [
+      "BRICKSET_API_KEY",
+      "BRICKSET_KEY",
+      "BRICKSET_APIKEY",
+      "NEXT_PUBLIC_BRICKSET_API_KEY",
+      "PUBLIC_BRICKSET_API_KEY"
+    ],
+    "BRICKSET_API_KEY"
+  );
   var baseUrl = process.env.BRICKSET_API_BASE_URL || "https://brickset.com/api/v3.asmx";
-  var userHash = cred.userHash || process.env.BRICKSET_USER_HASH || "";
+  var userHash = cred.userHash || firstEnv([
+    "BRICKSET_USER_HASH",
+    "BRICKSET_USERHASH",
+    "NEXT_PUBLIC_BRICKSET_USER_HASH",
+    "PUBLIC_BRICKSET_USER_HASH"
+  ]) || "";
 
   var query = new URLSearchParams();
   query.set("apiKey", apiKey);
