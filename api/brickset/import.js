@@ -10,6 +10,24 @@ function asNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function getBricksetCredentials(req, body) {
+  var headers = req && req.headers ? req.headers : {};
+  var apiKey = String(headers["x-brickset-api-key"] || "").trim();
+  var userHash = String(headers["x-brickset-user-hash"] || "").trim();
+
+  if (!apiKey && body && typeof body === "object") {
+    apiKey = String(body.apiKey || "").trim();
+  }
+  if (!userHash && body && typeof body === "object") {
+    userHash = String(body.userHash || "").trim();
+  }
+
+  return {
+    apiKey: apiKey || null,
+    userHash: userHash || null
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return responseUtils.methodNotAllowed(res, ["POST"]);
@@ -26,7 +44,8 @@ module.exports = async function handler(req, res) {
       return responseUtils.sendJson(res, 400, { error: "setNumber is required" });
     }
 
-    var setData = await brickset.getSetByNumber(requestedSetNumber);
+    var credentials = getBricksetCredentials(req, body);
+    var setData = await brickset.getSetByNumber(requestedSetNumber, credentials);
     if (!setData) {
       return responseUtils.sendJson(res, 404, { error: "Set not found in Brickset" });
     }

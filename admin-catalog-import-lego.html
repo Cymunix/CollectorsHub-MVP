@@ -79,6 +79,7 @@
     .field { display: flex; flex-direction: column; }
     .progress-bar-wrap { height: 8px; background: rgba(56,89,136,.3); border-radius: 999px; margin-top: 10px; overflow: hidden; display: none; }
     .progress-bar { height: 100%; background: rgba(51,195,255,.8); border-radius: 999px; transition: width 0.3s; width: 0; }
+    .cred-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin: 8px 0 14px; align-items: end; }
     input {
       width: 100%;
       border: 1px solid rgba(56,89,136,.7);
@@ -116,6 +117,7 @@
       .app { grid-template-columns: 1fr; }
       .main { padding: 14px; }
       .search-row { grid-template-columns: 1fr; }
+      .cred-grid { grid-template-columns: 1fr; }
       .theme-grid { grid-template-columns: 1fr; }
       .preview { grid-template-columns: 1fr; }
       table { display: block; overflow-x: auto; }
@@ -147,6 +149,22 @@
     <main class="main">
       <section class="section">
         <h3 style="margin-bottom:12px;">Import LEGO Sets</h3>
+        <p>Brickset credentials are stored in this browser session only.</p>
+        <div class="cred-grid">
+          <div class="field">
+            <label for="brickset-api-key">Brickset API Key</label>
+            <input id="brickset-api-key" type="text" placeholder="Enter Brickset API Key" />
+          </div>
+          <div class="field">
+            <label for="brickset-user-hash">Brickset User Hash (optional)</label>
+            <input id="brickset-user-hash" type="text" placeholder="Enter Brickset User Hash" />
+          </div>
+          <div class="field">
+            <button class="btn" id="save-brickset-credentials" type="button">Save Keys</button>
+          </div>
+        </div>
+        <p id="brickset-credentials-status" class="status"></p>
+
         <div class="tabs">
           <button class="tab-btn active" data-tab="set">Import by Set</button>
           <button class="tab-btn" data-tab="theme">Import by Theme</button>
@@ -225,6 +243,8 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 var USER_ROLE_KEY = "collectorshub_retail_user_role";
+var BRICKSET_API_KEY_SESSION_KEY = "collectorshub_brickset_api_key";
+var BRICKSET_USER_HASH_SESSION_KEY = "collectorshub_brickset_user_hash";
 var ALLOWED_CATALOG_ROLES = ["server_admin", "admin", "catalog_manager"];
 var supabase = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 var searchResults = [];
@@ -240,6 +260,59 @@ function esc(value) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function loadBricksetCredentialsFromSession() {
+  var apiKey = sessionStorage.getItem(BRICKSET_API_KEY_SESSION_KEY) || "";
+  var userHash = sessionStorage.getItem(BRICKSET_USER_HASH_SESSION_KEY) || "";
+  document.getElementById("brickset-api-key").value = apiKey;
+  document.getElementById("brickset-user-hash").value = userHash;
+}
+
+function saveBricksetCredentialsToSession() {
+  var apiKey = document.getElementById("brickset-api-key").value.trim();
+  var userHash = document.getElementById("brickset-user-hash").value.trim();
+
+  if (!apiKey) {
+    setStatus("brickset-credentials-status", "Brickset API Key is required.", "warn");
+    return false;
+  }
+
+  sessionStorage.setItem(BRICKSET_API_KEY_SESSION_KEY, apiKey);
+  if (userHash) {
+    sessionStorage.setItem(BRICKSET_USER_HASH_SESSION_KEY, userHash);
+  } else {
+    sessionStorage.removeItem(BRICKSET_USER_HASH_SESSION_KEY);
+  }
+
+  setStatus("brickset-credentials-status", "Brickset credentials saved for this session.", "ok");
+  return true;
+}
+
+function getBricksetCredentialHeaders() {
+  var apiKey = (sessionStorage.getItem(BRICKSET_API_KEY_SESSION_KEY) || "").trim();
+  var userHash = (sessionStorage.getItem(BRICKSET_USER_HASH_SESSION_KEY) || "").trim();
+  if (!apiKey) {
+    setStatus("brickset-credentials-status", "Enter and save Brickset API Key first.", "warn");
+    return null;
+  }
+
+  var headers = { "x-brickset-api-key": apiKey };
+  if (userHash) {
+    headers["x-brickset-user-hash"] = userHash;
+  }
+  return headers;
+}
+
+async function bricksetFetch(url, options) {
+  var headers = getBricksetCredentialHeaders();
+  if (!headers) {
+    throw new Error("Brickset API Key is required.");
+  }
+
+  var finalOptions = options || {};
+  finalOptions.headers = Object.assign({}, finalOptions.headers || {}, headers);
+  return fetch(url, finalOptions);
 }
 
 function renderResults() {
@@ -297,7 +370,7 @@ async function searchSets() {
 
   setStatus("search-status", "Searching Brickset...", "");
   try {
-    var response = await fetch("/api/brickset/search?q=" + encodeURIComponent(query));
+    var response = await bricksetFetch("/api/brickset/search?q=" + encodeURIComponent(query));
     var data = await response.json();
     if (!response.ok) {
       throw new Error(data && data.error ? data.error : "Search failed");
@@ -321,7 +394,7 @@ async function previewSet(setNumber) {
 
   setStatus("preview-status", "Loading preview...", "");
   try {
-    var response = await fetch("/api/brickset/set/" + encodeURIComponent(setNumber));
+    var response = await bricksetFetch("/api/brickset/set/" + encodeURIComponent(setNumber));
     var data = await response.json();
     if (!response.ok) {
       throw new Error(data && data.error ? data.error : "Preview failed");
@@ -342,7 +415,7 @@ async function importSet(setNumber) {
 
   setStatus("preview-status", "Importing set...", "");
   try {
-    var response = await fetch("/api/brickset/import", {
+    var response = await bricksetFetch("/api/brickset/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ setNumber: setNumber })
@@ -370,7 +443,7 @@ async function loadThemes() {
   var sel = document.getElementById("theme-select");
   var btn = document.getElementById("theme-preview-btn");
   try {
-    var response = await fetch("/api/brickset/themes");
+    var response = await bricksetFetch("/api/brickset/themes");
     var data = await response.json();
     if (!response.ok) throw new Error(data && data.error ? data.error : "Failed to load themes");
     var themes = Array.isArray(data.themes) ? data.themes : [];
@@ -398,7 +471,7 @@ async function previewTheme() {
   try {
     var url = "/api/brickset/themes/preview?theme=" + encodeURIComponent(theme);
     if (year) url += "&year=" + encodeURIComponent(year);
-    var response = await fetch(url);
+    var response = await bricksetFetch(url);
     var data = await response.json();
     if (!response.ok) throw new Error(data && data.error ? data.error : "Preview failed");
 
@@ -439,7 +512,7 @@ async function importTheme() {
       }
     }, 600);
 
-    var response = await fetch("/api/brickset/import-theme", {
+    var response = await bricksetFetch("/api/brickset/import-theme", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
@@ -512,6 +585,12 @@ async function verifyCatalogAccess() {
 }
 
 document.getElementById("search-btn").addEventListener("click", searchSets);
+document.getElementById("save-brickset-credentials").addEventListener("click", function () {
+  var saved = saveBricksetCredentialsToSession();
+  if (saved) {
+    loadThemes();
+  }
+});
 document.getElementById("theme-preview-btn").addEventListener("click", previewTheme);
 document.getElementById("theme-import-btn").addEventListener("click", importTheme);
 document.getElementById("search-query").addEventListener("keydown", function (event) {
@@ -539,12 +618,19 @@ document.querySelector("#results-table tbody").addEventListener("click", functio
 });
 
 document.getElementById("sign-out").addEventListener("click", async function () {
+  sessionStorage.removeItem(BRICKSET_API_KEY_SESSION_KEY);
+  sessionStorage.removeItem(BRICKSET_USER_HASH_SESSION_KEY);
   await supabase.auth.signOut();
   window.location.href = "/index.html";
 });
 
 verifyCatalogAccess().then(function (ok) {
-  if (ok) loadThemes();
+  if (ok) {
+    loadBricksetCredentialsFromSession();
+    if (sessionStorage.getItem(BRICKSET_API_KEY_SESSION_KEY)) {
+      loadThemes();
+    }
+  }
 });
 </script>
 </body>

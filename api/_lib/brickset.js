@@ -6,6 +6,20 @@ function requiredEnv(name) {
   return value;
 }
 
+function cleanString(value) {
+  return String(value == null ? "" : value).trim();
+}
+
+function normalizeCredentials(credentials) {
+  var source = credentials && typeof credentials === "object" ? credentials : {};
+  var apiKey = cleanString(source.apiKey || source.key);
+  var userHash = cleanString(source.userHash);
+  return {
+    apiKey: apiKey || null,
+    userHash: userHash || null
+  };
+}
+
 function tryParseJson(value) {
   if (typeof value !== "string") {
     return value;
@@ -56,10 +70,11 @@ function normalizeSet(source) {
   };
 }
 
-async function callBrickset(endpoint, paramsObject) {
-  var apiKey = requiredEnv("BRICKSET_API_KEY");
+async function callBrickset(endpoint, paramsObject, credentials) {
+  var cred = normalizeCredentials(credentials);
+  var apiKey = cred.apiKey || requiredEnv("BRICKSET_API_KEY");
   var baseUrl = process.env.BRICKSET_API_BASE_URL || "https://brickset.com/api/v3.asmx";
-  var userHash = process.env.BRICKSET_USER_HASH || "";
+  var userHash = cred.userHash || process.env.BRICKSET_USER_HASH || "";
 
   var query = new URLSearchParams();
   query.set("apiKey", apiKey);
@@ -100,24 +115,24 @@ function extractSetList(payload) {
   return [];
 }
 
-async function searchSets(query) {
+async function searchSets(query, credentials) {
   var payload = await callBrickset("getSets", {
     query: query,
     pageSize: 50,
     pageNumber: 1
-  });
+  }, credentials);
 
   return extractSetList(payload).map(normalizeSet).filter(function (set) {
     return Boolean(set.setNumber && set.name);
   });
 }
 
-async function getSetByNumber(setNumber) {
+async function getSetByNumber(setNumber, credentials) {
   var payload = await callBrickset("getSets", {
     setNumber: setNumber,
     pageSize: 1,
     pageNumber: 1
-  });
+  }, credentials);
 
   var sets = extractSetList(payload);
   if (!sets.length) {
@@ -127,8 +142,8 @@ async function getSetByNumber(setNumber) {
   return normalizeSet(sets[0]);
 }
 
-async function getThemes() {
-  var payload = await callBrickset("getThemes", {});
+async function getThemes(credentials) {
+  var payload = await callBrickset("getThemes", {}, credentials);
   if (payload && Array.isArray(payload.themes)) {
     return payload.themes
       .map(function (t) { return { theme: t.theme, setCount: t.setCount || 0 }; })
@@ -138,7 +153,7 @@ async function getThemes() {
   return [];
 }
 
-async function getSetsByThemePage(theme, pageNumber, year) {
+async function getSetsByThemePage(theme, pageNumber, year, credentials) {
   var params = {
     theme: theme,
     pageSize: 500,
@@ -147,17 +162,17 @@ async function getSetsByThemePage(theme, pageNumber, year) {
   if (year) {
     params.year = year;
   }
-  var payload = await callBrickset("getSets", params);
+  var payload = await callBrickset("getSets", params, credentials);
   return extractSetList(payload).map(normalizeSet).filter(function (set) {
     return Boolean(set.setNumber && set.name);
   });
 }
 
-async function getAllSetsByTheme(theme, year) {
+async function getAllSetsByTheme(theme, year, credentials) {
   var allSets = [];
   var pageNumber = 1;
   while (true) {
-    var page = await getSetsByThemePage(theme, pageNumber, year);
+    var page = await getSetsByThemePage(theme, pageNumber, year, credentials);
     allSets = allSets.concat(page);
     if (page.length < 500) {
       break;

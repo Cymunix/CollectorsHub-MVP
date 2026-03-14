@@ -10,6 +10,24 @@ function asNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
+function getBricksetCredentials(req, body) {
+  var headers = req && req.headers ? req.headers : {};
+  var apiKey = String(headers["x-brickset-api-key"] || "").trim();
+  var userHash = String(headers["x-brickset-user-hash"] || "").trim();
+
+  if (!apiKey && body && typeof body === "object") {
+    apiKey = String(body.apiKey || "").trim();
+  }
+  if (!userHash && body && typeof body === "object") {
+    userHash = String(body.userHash || "").trim();
+  }
+
+  return {
+    apiKey: apiKey || null,
+    userHash: userHash || null
+  };
+}
+
 async function importOneSet(setData, categoryId) {
   var duplicateRows = await supabaseRest.supabaseRequest(
     "variants?select=id,catalog_item_id,set_number&set_number=eq." +
@@ -109,6 +127,7 @@ module.exports = async function handler(req, res) {
     }
 
     var year = body.year ? asNumber(body.year) : null;
+    var credentials = getBricksetCredentials(req, body);
 
     var categories = await supabaseRest.supabaseRequest(
       "catalog_categories?select=id,name&name=eq." +
@@ -123,7 +142,7 @@ module.exports = async function handler(req, res) {
     }
 
     var categoryId = categories[0].id;
-    var sets = await brickset.getAllSetsByTheme(theme, year);
+    var sets = await brickset.getAllSetsByTheme(theme, year, credentials);
 
     if (!sets.length) {
       return responseUtils.sendJson(res, 200, {
