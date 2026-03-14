@@ -1767,30 +1767,127 @@
     // ========== CATALOG SEARCH ==========
     // Now uses real catalog from Supabase instead of mock data
 
-    async function searchCatalogItems(searchTerm, category) {
-      var response = await supabase.rpc("search_catalog", {
-        p_category: category || null,
-        p_search_term: searchTerm || null,
-        p_limit: 50,
-        p_offset: 0
-      });
+    var categorySlugToName = {
+      "video-game": "Video Games",
+      "movie": "Movies",
+      "toy": "Toys",
+      "music": "Music",
+      "sports-card": "Sports Cards",
+      "trading-card": "Trading Cards",
+      "comic": "Comics",
+      "building-blocks": "Building Blocks"
+    };
 
-      if (response.error || !response.data) {
+    async function searchCatalogItems(searchTerm, categorySlug, franchiseName, yearFilter) {
+      var query = supabase
+        .from("catalog_items")
+        .select("id,name,brand_or_publisher,release_year,set_number,category_id,franchise_id,catalog_categories(name),catalog_franchises(name),variants(id,display_name,platform_or_format,edition,region,is_active,variant_images(image_url,is_primary))")
+        .eq("is_active", true)
+        .order("name", { ascending: true })
+        .limit(200);
+
+      var response = await query;
+      if (response.error || !Array.isArray(response.data)) {
         return { items: [], total: 0 };
       }
 
-      return response.data;
+      var normalizedSearch = String(searchTerm || "").trim().toLowerCase();
+      var selectedCategoryName = categorySlugToName[categorySlug] || "";
+      var selectedFranchise = String(franchiseName || "").trim().toLowerCase();
+      var selectedYear = String(yearFilter || "").trim();
+
+      var mapped = response.data.map(function (row) {
+        var categoryRow = Array.isArray(row.catalog_categories)
+          ? row.catalog_categories[0]
+          : row.catalog_categories;
+        var franchiseRow = Array.isArray(row.catalog_franchises)
+          ? row.catalog_franchises[0]
+          : row.catalog_franchises;
+
+        var categoryName = categoryRow && categoryRow.name
+          ? categoryRow.name
+          : "Uncategorized";
+
+        var franchise = franchiseRow && franchiseRow.name
+          ? franchiseRow.name
+          : "";
+
+        var variants = Array.isArray(row.variants) ? row.variants : [];
+        var activeVariants = variants
+          .filter(function (v) { return v && v.is_active === true; })
+          .map(function (v) {
+            var images = Array.isArray(v.variant_images) ? v.variant_images : [];
+            var primaryImage = images.find(function (img) { return img && img.is_primary === true; });
+            return {
+              id: v.id,
+              display_name: v.display_name || "",
+              platform_or_format: v.platform_or_format || "",
+              edition: v.edition || "",
+              region: v.region || "",
+              preview_image: primaryImage ? primaryImage.image_url : null
+            };
+          });
+
+        return {
+          id: row.id,
+          name: row.name || "",
+          category: categoryName,
+          franchise: franchise,
+          brand_or_publisher: row.brand_or_publisher || "",
+          release_year: row.release_year,
+          set_number: row.set_number || "",
+          variants: activeVariants
+        };
+      }).filter(function (item) {
+        if (selectedCategoryName && item.category !== selectedCategoryName) {
+          return false;
+        }
+
+        if (selectedFranchise && String(item.franchise || "").toLowerCase() !== selectedFranchise) {
+          return false;
+        }
+
+        if (selectedYear) {
+          var itemYear = Number(item.release_year || 0);
+          if (selectedYear === "2020-down") {
+            if (!itemYear || itemYear >= 2020) {
+              return false;
+            }
+          } else if (itemYear !== Number(selectedYear)) {
+            return false;
+          }
+        }
+
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        var haystack = [
+          item.name,
+          item.brand_or_publisher,
+          item.category,
+          item.franchise,
+          item.set_number
+        ].join(" ").toLowerCase();
+
+        return haystack.indexOf(normalizedSearch) !== -1;
+      });
+
+      return {
+        items: mapped.slice(0, 50),
+        total: mapped.length
+      };
     }
 
     var franchisesByCategory = {
-      "Video Games":      [ ["Nintendo", "Nintendo"], ["PlayStation", "PlayStation"], ["Xbox", "Xbox"], ["Sega", "Sega"], ["Atari", "Atari"], ["PC", "PC Games"] ],
-      "Movies":           [ ["Disney", "Disney"], ["Marvel Studios", "Marvel Studios"], ["DC Films", "DC Films"], ["Star Wars", "Star Wars"], ["Universal", "Universal"], ["Criterion", "Criterion"] ],
-      "Toys":             [ ["Hot Wheels", "Hot Wheels"], ["Funko", "Funko Pop"], ["Barbie", "Barbie"], ["Transformers", "Transformers"], ["G.I. Joe", "G.I. Joe"], ["Star Wars", "Star Wars"] ],
-      "Music":            [ ["Rock", "Rock"], ["Pop", "Pop"], ["Hip-Hop", "Hip-Hop"], ["Metal", "Metal"], ["Jazz", "Jazz"], ["Classical", "Classical"] ],
-      "Sports Cards":     [ ["NBA Basketball", "NBA Basketball"], ["NFL Football", "NFL Football"], ["MLB Baseball", "MLB Baseball"], ["NHL Hockey", "NHL Hockey"], ["Soccer", "Soccer / FIFA"] ],
-      "Trading Cards":    [ ["Pokémon", "Pokémon"], ["Magic: The Gathering", "Magic: The Gathering"], ["Yu-Gi-Oh!", "Yu-Gi-Oh!"], ["Dragon Ball Z", "Dragon Ball Z"], ["One Piece", "One Piece"], ["Digimon", "Digimon"] ],
-      "Comics":           [ ["Marvel", "Marvel"], ["DC Comics", "DC Comics"], ["Image Comics", "Image Comics"], ["Dark Horse", "Dark Horse"], ["IDW Publishing", "IDW Publishing"] ],
-      "Building Blocks":  [ ["LEGO", "LEGO"], ["Mega Construx", "Mega Construx"], ["K'NEX", "K'NEX"], ["Star Wars LEGO", "Star Wars LEGO"] ]
+      "video-game":      [ ["Nintendo", "Nintendo"], ["PlayStation", "PlayStation"], ["Xbox", "Xbox"], ["Sega", "Sega"], ["Atari", "Atari"], ["PC", "PC Games"] ],
+      "movie":           [ ["Disney", "Disney"], ["Marvel Studios", "Marvel Studios"], ["DC Films", "DC Films"], ["Star Wars", "Star Wars"], ["Universal", "Universal"], ["Criterion", "Criterion"] ],
+      "toy":             [ ["Hot Wheels", "Hot Wheels"], ["Funko", "Funko Pop"], ["Barbie", "Barbie"], ["Transformers", "Transformers"], ["G.I. Joe", "G.I. Joe"], ["Star Wars", "Star Wars"] ],
+      "music":           [ ["Rock", "Rock"], ["Pop", "Pop"], ["Hip-Hop", "Hip-Hop"], ["Metal", "Metal"], ["Jazz", "Jazz"], ["Classical", "Classical"] ],
+      "sports-card":     [ ["NBA Basketball", "NBA Basketball"], ["NFL Football", "NFL Football"], ["MLB Baseball", "MLB Baseball"], ["NHL Hockey", "NHL Hockey"], ["Soccer", "Soccer / FIFA"] ],
+      "trading-card":    [ ["Pokémon", "Pokémon"], ["Magic: The Gathering", "Magic: The Gathering"], ["Yu-Gi-Oh!", "Yu-Gi-Oh!"], ["Dragon Ball Z", "Dragon Ball Z"], ["One Piece", "One Piece"], ["Digimon", "Digimon"] ],
+      "comic":           [ ["Marvel", "Marvel"], ["DC Comics", "DC Comics"], ["Image Comics", "Image Comics"], ["Dark Horse", "Dark Horse"], ["IDW Publishing", "IDW Publishing"] ],
+      "building-blocks": [ ["LEGO", "LEGO"], ["Mega Construx", "Mega Construx"], ["K'NEX", "K'NEX"], ["Star Wars LEGO", "Star Wars LEGO"] ]
     };
 
     function updateFranchiseDropdown(category) {
@@ -1858,10 +1955,12 @@
     async function searchCatalog() {
       var query = catalogSearchInput.value.trim();
       var category = filterCategoryEl.value;
+      var franchise = filterFranchiseEl.value;
+      var year = filterYearEl.value;
       
       catalogResults.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);">Searching catalog...</div>';
       
-      var results = await searchCatalogItems(query, category);
+      var results = await searchCatalogItems(query, category, franchise, year);
       renderCatalogResults(results.items || []);
     }
 
