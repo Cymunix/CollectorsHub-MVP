@@ -127,7 +127,50 @@ async function getSetByNumber(setNumber) {
   return normalizeSet(sets[0]);
 }
 
+async function getThemes() {
+  var payload = await callBrickset("getThemes", {});
+  if (payload && Array.isArray(payload.themes)) {
+    return payload.themes
+      .map(function (t) { return { theme: t.theme, setCount: t.setCount || 0 }; })
+      .filter(function (t) { return Boolean(t.theme); })
+      .sort(function (a, b) { return a.theme.localeCompare(b.theme); });
+  }
+  return [];
+}
+
+async function getSetsByThemePage(theme, pageNumber, year) {
+  var params = {
+    theme: theme,
+    pageSize: 500,
+    pageNumber: pageNumber
+  };
+  if (year) {
+    params.year = year;
+  }
+  var payload = await callBrickset("getSets", params);
+  return extractSetList(payload).map(normalizeSet).filter(function (set) {
+    return Boolean(set.setNumber && set.name);
+  });
+}
+
+async function getAllSetsByTheme(theme, year) {
+  var allSets = [];
+  var pageNumber = 1;
+  while (true) {
+    var page = await getSetsByThemePage(theme, pageNumber, year);
+    allSets = allSets.concat(page);
+    if (page.length < 500) {
+      break;
+    }
+    pageNumber++;
+  }
+  return allSets;
+}
+
 module.exports = {
   searchSets: searchSets,
-  getSetByNumber: getSetByNumber
+  getSetByNumber: getSetByNumber,
+  getThemes: getThemes,
+  getSetsByThemePage: getSetsByThemePage,
+  getAllSetsByTheme: getAllSetsByTheme
 };

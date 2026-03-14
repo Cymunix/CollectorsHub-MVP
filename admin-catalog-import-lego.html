@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Import LEGO Set - CollectorsHub Retail</title>
+  <title>Import LEGO Sets - CollectorsHub Retail</title>
   <style>
     :root {
       --border: #233451;
@@ -67,7 +67,18 @@
     .section { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; background: rgba(13,22,40,.76); }
     .section h3 { margin: 0; font-size: .98rem; }
     .section p { margin: 8px 0 0; color: var(--text-soft); font-size: .85rem; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 4px; }
+    .tab-btn { background: none; border: 1px solid rgba(56,89,136,.55); color: var(--text-soft); border-radius: 999px; padding: 6px 14px; font-size: .8rem; cursor: pointer; font-family: inherit; }
+    .tab-btn.active { color: var(--text); border-color: rgba(51,195,255,.6); background: rgba(51,195,255,.14); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
     .search-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 12px; }
+    select { width: 100%; border: 1px solid rgba(56,89,136,.7); border-radius: 10px; background: #0e1a2e; color: var(--text); padding: 10px; font-size: .9rem; font-family: inherit; }
+    .theme-grid { display: grid; grid-template-columns: 1fr 140px auto; gap: 10px; margin-top: 12px; align-items: end; }
+    .field label { color: var(--text-soft); font-size: .8rem; display: block; margin-bottom: 5px; }
+    .field { display: flex; flex-direction: column; }
+    .progress-bar-wrap { height: 8px; background: rgba(56,89,136,.3); border-radius: 999px; margin-top: 10px; overflow: hidden; display: none; }
+    .progress-bar { height: 100%; background: rgba(51,195,255,.8); border-radius: 999px; transition: width 0.3s; width: 0; }
     input {
       width: 100%;
       border: 1px solid rgba(56,89,136,.7);
@@ -105,6 +116,7 @@
       .app { grid-template-columns: 1fr; }
       .main { padding: 14px; }
       .search-row { grid-template-columns: 1fr; }
+      .theme-grid { grid-template-columns: 1fr; }
       .preview { grid-template-columns: 1fr; }
       table { display: block; overflow-x: auto; }
     }
@@ -128,35 +140,71 @@
 
   <div class="content">
     <header class="topbar">
-      <div class="title-wrap"><h2 style="margin:0;font-size:1.05rem;">Import LEGO Set</h2><span class="badge">Catalog Admin</span></div>
+      <div class="title-wrap"><h2 style="margin:0;font-size:1.05rem;">Import LEGO Sets</h2><span class="badge">Catalog Admin</span></div>
       <button class="btn" id="sign-out" type="button">Sign Out</button>
     </header>
 
     <main class="main">
       <section class="section">
-        <h3>Search LEGO Sets</h3>
-        <p>Search Brickset and import a set into the catalog.</p>
-        <div class="search-row">
-          <input id="search-query" type="text" placeholder="Search by set name or set number" />
-          <button class="btn" id="search-btn" type="button">Search</button>
+        <h3 style="margin-bottom:12px;">Import LEGO Sets</h3>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="set">Import by Set</button>
+          <button class="tab-btn" data-tab="theme">Import by Theme</button>
         </div>
-        <p id="search-status" class="status"></p>
 
-        <table id="results-table">
-          <thead>
-            <tr>
-              <th>Set Number</th>
-              <th>Name</th>
-              <th>Year</th>
-              <th>Theme</th>
-              <th>Piece Count</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="6">Search for LEGO sets to begin.</td></tr>
-          </tbody>
-        </table>
+        <!-- Set search tab -->
+        <div id="tab-set" class="tab-panel active">
+          <p>Search Brickset and import an individual set into the catalog.</p>
+          <div class="search-row">
+            <input id="search-query" type="text" placeholder="Search by set name or set number" />
+            <button class="btn" id="search-btn" type="button">Search</button>
+          </div>
+          <p id="search-status" class="status"></p>
+          <table id="results-table">
+            <thead>
+              <tr>
+                <th>Set Number</th>
+                <th>Name</th>
+                <th>Year</th>
+                <th>Theme</th>
+                <th>Piece Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6">Search for LEGO sets to begin.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Theme import tab -->
+        <div id="tab-theme" class="tab-panel">
+          <p>Load all sets for a theme from Brickset and import them in bulk. Duplicates are skipped automatically.</p>
+          <div class="theme-grid">
+            <div class="field">
+              <label for="theme-select">Theme</label>
+              <select id="theme-select"><option value="">Loading themes...</option></select>
+            </div>
+            <div class="field">
+              <label for="theme-year">Year (optional)</label>
+              <input id="theme-year" type="number" placeholder="e.g. 2024" min="1949" max="2100" />
+            </div>
+            <div class="field">
+              <button class="btn" id="theme-preview-btn" type="button" disabled>Preview</button>
+            </div>
+          </div>
+          <p id="theme-preview-status" class="status"></p>
+          <div id="theme-preview-info" style="display:none; margin-top:10px; border:1px solid rgba(56,89,136,.4); border-radius:10px; padding:12px; font-size:.88rem; line-height:1.7;">
+            <div id="theme-preview-text"></div>
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn" id="theme-import-btn" type="button">Import All Sets</button>
+            </div>
+          </div>
+          <div class="progress-bar-wrap" id="theme-progress-wrap">
+            <div class="progress-bar" id="theme-progress-bar"></div>
+          </div>
+          <p id="theme-import-status" class="status"></p>
+        </div>
       </section>
 
       <section class="section">
@@ -315,6 +363,118 @@ async function importSet(setNumber) {
   }
 }
 
+// ── Theme import ─────────────────────────────────────────────
+var themePreviewData = null;
+
+async function loadThemes() {
+  var sel = document.getElementById("theme-select");
+  var btn = document.getElementById("theme-preview-btn");
+  try {
+    var response = await fetch("/api/brickset/themes");
+    var data = await response.json();
+    if (!response.ok) throw new Error(data && data.error ? data.error : "Failed to load themes");
+    var themes = Array.isArray(data.themes) ? data.themes : [];
+    sel.innerHTML = "<option value=\"\">-- Select a theme --</option>" +
+      themes.map(function (t) {
+        return "<option value=\"" + escapeHtml(t.theme) + "\">" + escapeHtml(t.theme) + " (" + t.setCount + " sets)</option>";
+      }).join("");
+    btn.disabled = false;
+  } catch (error) {
+    sel.innerHTML = "<option value=\"\">Failed to load themes</option>";
+    setStatus("theme-preview-status", error.message || "Could not load themes.", "err");
+  }
+}
+
+async function previewTheme() {
+  var theme = document.getElementById("theme-select").value;
+  var year = document.getElementById("theme-year").value.trim();
+  if (!theme) {
+    setStatus("theme-preview-status", "Select a theme first.", "warn");
+    return;
+  }
+
+  setStatus("theme-preview-status", "Fetching set count...", "");
+  document.getElementById("theme-preview-info").style.display = "none";
+  try {
+    var url = "/api/brickset/themes/preview?theme=" + encodeURIComponent(theme);
+    if (year) url += "&year=" + encodeURIComponent(year);
+    var response = await fetch(url);
+    var data = await response.json();
+    if (!response.ok) throw new Error(data && data.error ? data.error : "Preview failed");
+
+    themePreviewData = { theme: theme, year: year || null, total: data.total };
+    var label = "<strong>" + escapeHtml(theme) + "</strong>" + (year ? " (" + escapeHtml(year) + ")" : "");
+    document.getElementById("theme-preview-text").innerHTML =
+      "Found <strong>" + data.total + " sets</strong> in " + label + "." +
+      (data.total === 0 ? " Nothing to import." : " Press <em>Import All Sets</em> to begin.");
+    document.getElementById("theme-import-btn").disabled = data.total === 0;
+    document.getElementById("theme-preview-info").style.display = "block";
+    setStatus("theme-preview-status", "", "");
+  } catch (error) {
+    themePreviewData = null;
+    setStatus("theme-preview-status", error.message || "Preview failed.", "err");
+  }
+}
+
+async function importTheme() {
+  if (!themePreviewData) return;
+  var btn = document.getElementById("theme-import-btn");
+  var wrap = document.getElementById("theme-progress-wrap");
+  var bar = document.getElementById("theme-progress-bar");
+  btn.disabled = true;
+  wrap.style.display = "block";
+  bar.style.width = "0%";
+  setStatus("theme-import-status", "Importing... this may take a while for large themes.", "");
+
+  try {
+    var body = { theme: themePreviewData.theme };
+    if (themePreviewData.year) body.year = parseInt(themePreviewData.year, 10);
+
+    // Animate bar while waiting
+    var progress = 0;
+    var animInterval = setInterval(function () {
+      if (progress < 85) {
+        progress += 1;
+        bar.style.width = progress + "%";
+      }
+    }, 600);
+
+    var response = await fetch("/api/brickset/import-theme", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    clearInterval(animInterval);
+    bar.style.width = "100%";
+
+    var data = await response.json();
+    if (!response.ok) throw new Error(data && data.error ? data.error : "Import failed");
+
+    var msg = "Done. Imported: " + data.imported + ", Skipped (duplicates): " + data.skipped + ", Errors: " + data.errorCount + ".";
+    setStatus("theme-import-status", msg, "ok");
+    btn.disabled = false;
+  } catch (error) {
+    var bar2 = document.getElementById("theme-progress-bar");
+    bar2.style.width = "0%";
+    setStatus("theme-import-status", error.message || "Import failed.", "err");
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+document.querySelectorAll(".tab-btn").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
+    document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("active"); });
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.getAttribute("data-tab")).classList.add("active");
+  });
+});
+
 async function verifyCatalogAccess() {
   var sessionResult = await supabase.auth.getSession();
   var session = sessionResult && sessionResult.data && sessionResult.data.session;
@@ -352,6 +512,8 @@ async function verifyCatalogAccess() {
 }
 
 document.getElementById("search-btn").addEventListener("click", searchSets);
+document.getElementById("theme-preview-btn").addEventListener("click", previewTheme);
+document.getElementById("theme-import-btn").addEventListener("click", importTheme);
 document.getElementById("search-query").addEventListener("keydown", function (event) {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -381,7 +543,9 @@ document.getElementById("sign-out").addEventListener("click", async function () 
   window.location.href = "/index.html";
 });
 
-verifyCatalogAccess();
+verifyCatalogAccess().then(function (ok) {
+  if (ok) loadThemes();
+});
 </script>
 </body>
 </html>
