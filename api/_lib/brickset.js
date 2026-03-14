@@ -71,6 +71,56 @@ function pickSetNumber(source) {
   ).trim();
 }
 
+function normalizeImageUrl(value) {
+  if (!value) {
+    return null;
+  }
+  var url = String(value).trim();
+  if (!url) {
+    return null;
+  }
+  if (url.indexOf("//") === 0) {
+    return "https:" + url;
+  }
+  if (url.indexOf("http://") === 0) {
+    return "https://" + url.slice("http://".length);
+  }
+  return url;
+}
+
+function pickImageUrl(source) {
+  var images = source && source.images && typeof source.images === "object" ? source.images : {};
+  var imageObj = source && source.image && typeof source.image === "object" ? source.image : {};
+
+  var direct = normalizeImageUrl(
+    source.imageUrl ||
+    source.imageURL ||
+    source.thumbnailURL ||
+    source.thumbnailUrl ||
+    source.largeThumbnailURL ||
+    source.largeImageURL ||
+    source.image
+  );
+  if (direct) {
+    return direct;
+  }
+
+  return normalizeImageUrl(
+    images.imageURL ||
+    images.imageUrl ||
+    images.thumbnailURL ||
+    images.thumbnailUrl ||
+    images.largeThumbnailURL ||
+    images.largeImageURL ||
+    imageObj.imageURL ||
+    imageObj.imageUrl ||
+    imageObj.thumbnailURL ||
+    imageObj.thumbnailUrl ||
+    imageObj.largeThumbnailURL ||
+    imageObj.largeImageURL
+  );
+}
+
 function normalizeSet(source) {
   return {
     setNumber: pickSetNumber(source),
@@ -79,14 +129,7 @@ function normalizeSet(source) {
     theme: source.theme || source.themeGroup || source.category || null,
     pieceCount: source.pieces || source.pieceCount || source.piece_count || null,
     minifigCount: source.minifigs || source.minifigCount || source.minifig_count || null,
-    imageUrl:
-      source.image ||
-      source.imageUrl ||
-      source.imageURL ||
-      source.thumbnailURL ||
-      source.thumbnailUrl ||
-      source.largeThumbnailURL ||
-      null,
+    imageUrl: pickImageUrl(source),
     raw: source
   };
 }
