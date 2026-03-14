@@ -652,12 +652,11 @@ create index if not exists catalog_subcategories_category_id_idx on public.catal
 -- Catalog Franchises table
 create table if not exists public.catalog_franchises (
   id uuid primary key default gen_random_uuid(),
-  category_id uuid not null references public.catalog_categories(id) on delete cascade,
+  category_id uuid references public.catalog_categories(id) on delete cascade,
   name text not null,
   description text,
   is_active boolean not null default true,
-  created_at timestamptz not null default now(),
-  unique(category_id, name)
+  created_at timestamptz not null default now()
 );
 
 alter table public.catalog_franchises enable row level security;
@@ -666,8 +665,14 @@ drop policy if exists "Allow read active catalog_franchises" on public.catalog_f
 create policy "Allow read active catalog_franchises" on public.catalog_franchises
   for select using (is_active = true);
 
-create index if not exists catalog_franchises_category_id_idx on public.catalog_franchises(category_id);
-create index if not exists catalog_franchises_name_idx on public.catalog_franchises(lower(name));
+alter table public.catalog_franchises
+  alter column category_id drop not null;
+
+alter table public.catalog_franchises
+  drop constraint if exists catalog_franchises_category_id_name_key;
+
+drop index if exists public.catalog_franchises_name_idx;
+create unique index if not exists catalog_franchises_name_unique_idx on public.catalog_franchises(lower(btrim(name)));
 
 -- Catalog Items table
 create table if not exists public.catalog_items (
@@ -872,14 +877,16 @@ union all
 select id, 'Other Brands', 'Other brick and building systems', true from catalog_categories where name = 'Building Blocks'
 on conflict do nothing;
 
--- Seed starter franchises for Building Blocks
-insert into public.catalog_franchises (category_id, name, description, is_active)
-select id, 'Star Wars', 'Star Wars building sets and tie-in products', true from public.catalog_categories where name = 'Building Blocks'
-union all
-select id, 'Harry Potter', 'Harry Potter building sets and tie-in products', true from public.catalog_categories where name = 'Building Blocks'
-union all
-select id, 'Marvel', 'Marvel building sets and tie-in products', true from public.catalog_categories where name = 'Building Blocks'
-on conflict do nothing;
+-- Seed starter global franchises
+insert into public.catalog_franchises (name, description, is_active)
+values
+  ('Star Wars', 'Star Wars building sets and tie-in products', true),
+  ('Harry Potter', 'Harry Potter building sets and tie-in products', true),
+  ('Marvel', 'Marvel building sets and tie-in products', true)
+on conflict ((lower(btrim(name))))
+do update set
+  description = excluded.description,
+  is_active = excluded.is_active;
 
 -- RPC: Check for duplicate catalog items by name and category
 create or replace function public.check_catalog_duplicates(
@@ -977,15 +984,26 @@ begin
 
   -- Verify subcategory exists if provided
   if p_subcategory_id is not null then
-    if not exists (select 1 from public.catalog_subcategories where id = p_subcategory_id and category_id = p_category_id and is_active = true) then
+    if not exists (
+      select 1
+      from public.catalog_subcategories cs
+      where cs.id = p_subcategory_id
+        and cs.category_id = p_category_id
+        and cs.is_active = true
+    ) then
       raise exception 'Subcategory not found or does not belong to this category';
     end if;
   end if;
 
   -- Verify franchise exists if provided
   if p_franchise_id is not null then
-    if not exists (select 1 from public.catalog_franchises where id = p_franchise_id and category_id = p_category_id and is_active = true) then
-      raise exception 'Franchise not found or does not belong to this category';
+    if not exists (
+      select 1
+      from public.catalog_franchises cf
+      where cf.id = p_franchise_id
+        and cf.is_active = true
+    ) then
+      raise exception 'Franchise not found';
     end if;
   end if;
 
@@ -1114,12 +1132,12 @@ revoke all on function public.admin_list_subcategories(uuid) from public;
 grant execute on function public.admin_list_subcategories(uuid) to authenticated;
 
 -- RPC: Admin list franchises for a category
+drop function if exists public.admin_list_franchises(uuid);
 create or replace function public.admin_list_franchises(p_category_id uuid default null)
 returns table (
   id uuid,
   name text,
   description text,
-  category_id uuid,
   created_at timestamptz
 )
 language sql
@@ -1130,11 +1148,9 @@ as $$
     cf.id,
     cf.name,
     cf.description,
-    cf.category_id,
     cf.created_at
   from public.catalog_franchises cf
   where cf.is_active = true
-    and (p_category_id is null or cf.category_id = p_category_id)
   order by cf.name;
 $$;
 
@@ -1142,15 +1158,14 @@ revoke all on function public.admin_list_franchises(uuid) from public;
 grant execute on function public.admin_list_franchises(uuid) to authenticated;
 
 -- RPC: Admin create franchise
+drop function if exists public.admin_create_franchise(text, text);
 create or replace function public.admin_create_franchise(
   p_name text,
-  p_category_id uuid,
   p_description text default null
 )
 returns table (
   id uuid,
-  name text,
-  category_id uuid
+  name text
 )
 language plpgsql
 security definer
@@ -1180,30 +1195,47 @@ begin
   end if;
 
   v_name := btrim(coalesce(p_name, ''));
-  if v_name = '' or p_category_id is null then
-    raise exception 'Name and category are required';
+  if v_name = '' then
+    raise exception 'Name is required';
   end if;
 
-  if not exists (select 1 from public.catalog_categories where id = p_category_id and is_active = true) then
-    raise exception 'Category not found';
-  end if;
-
-  insert into public.catalog_franchises (category_id, name, description, is_active)
+  insert into public.catalog_franchises (name, description, is_active)
   values (
-    p_category_id,
     v_name,
     case when btrim(coalesce(p_description, '')) = '' then null else btrim(p_description) end,
     true
   )
-  on conflict (category_id, name)
+  on conflict ((lower(btrim(name))))
   do update set
     description = coalesce(excluded.description, public.catalog_franchises.description),
     is_active = true
-  returning catalog_franchises.id, catalog_franchises.name, catalog_franchises.category_id
-  into v_new_id, v_name, p_category_id;
+  returning catalog_franchises.id, catalog_franchises.name
+  into v_new_id, v_name;
 
-  return query select v_new_id, v_name, p_category_id;
+  return query select v_new_id, v_name;
 end;
+$$;
+
+revoke all on function public.admin_create_franchise(text, text) from public;
+grant execute on function public.admin_create_franchise(text, text) to authenticated;
+
+-- Backward-compatible wrapper: ignores p_category_id.
+create or replace function public.admin_create_franchise(
+  p_name text,
+  p_category_id uuid,
+  p_description text default null
+)
+returns table (
+  id uuid,
+  name text,
+  category_id uuid
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select f.id, f.name, null::uuid as category_id
+  from public.admin_create_franchise(p_name, p_description) as f;
 $$;
 
 revoke all on function public.admin_create_franchise(text, uuid, text) from public;

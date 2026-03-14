@@ -29,20 +29,18 @@ async function findDuplicateCatalogItem(setNumber) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
-async function resolveFranchiseId(categoryId, franchiseId, fallbackName) {
+async function resolveFranchiseId(franchiseId, fallbackName) {
   if (franchiseId) {
     return franchiseId;
   }
 
   var name = normalizeText(fallbackName);
-  if (!name || !categoryId) {
+  if (!name) {
     return null;
   }
 
   var existing = await supabaseRest.supabaseRequest(
-    "catalog_franchises?select=id,name&category_id=eq." +
-      encodeURIComponent(categoryId) +
-      "&name=eq." +
+    "catalog_franchises?select=id,name&name=eq." +
       encodeURIComponent(name) +
       "&is_active=eq.true&limit=1"
   );
@@ -57,7 +55,6 @@ async function resolveFranchiseId(categoryId, franchiseId, fallbackName) {
       Prefer: "return=representation"
     },
     body: JSON.stringify({
-      category_id: categoryId,
       name: name,
       is_active: true
     })
@@ -94,7 +91,7 @@ async function importOneSet(setData, categoryId) {
   var itemName = setData.name;
   var series = normalizeText(setData.series) || normalizeText(setData.theme);
   var releaseYear = asNumber(setData.year);
-  var franchiseId = await resolveFranchiseId(categoryId, normalizeText(setData.franchiseId), setData.theme);
+  var franchiseId = await resolveFranchiseId(normalizeText(setData.franchiseId), setData.theme);
   var catalogItemId = null;
   var newCatalogItems = await supabaseRest.supabaseRequest("catalog_items", {
     method: "POST",

@@ -191,12 +191,11 @@
       rpc.data.forEach(function(s){ sel.innerHTML += '<option value="'+s.id+'">'+esc(s.name)+'</option>'; });
     }
 
-    async function loadFranchises(categoryId, selectedFranchiseId) {
+    async function loadFranchises(selectedFranchiseId) {
       var sel = document.getElementById("franchise");
       sel.innerHTML = '<option value="">None</option>';
       franchises = [];
-      if (!categoryId) return;
-      var rpc = await supabase.rpc("admin_list_franchises", { p_category_id: categoryId });
+      var rpc = await supabase.rpc("admin_list_franchises", { p_category_id: null });
       if (rpc.error || !rpc.data) return;
       franchises = rpc.data || [];
       franchises.forEach(function(f){ sel.innerHTML += '<option value="'+f.id+'">'+esc(f.name)+'</option>'; });
@@ -244,7 +243,7 @@
       document.getElementById("upc").value = item ? (item.upc || "") : "";
       document.getElementById("description").value = item ? (item.description || "") : "";
       loadSubcategories(item ? item.category_id : "");
-      loadFranchises(item ? item.category_id : "", item ? item.franchise_id : "");
+      loadFranchises(item ? item.franchise_id : "");
       document.getElementById("subcategory").value = item ? (item.subcategory_id || "") : "";
       document.getElementById("franchise").value = item ? (item.franchise_id || "") : "";
       document.getElementById("new-franchise").value = "";
@@ -253,13 +252,8 @@
     }
 
     async function createFranchise() {
-      var categoryId = document.getElementById("category").value;
       var name = document.getElementById("new-franchise").value.trim();
       var status = document.getElementById("modal-status");
-      if (!categoryId) {
-        status.textContent = "Select a category before creating a franchise.";
-        return;
-      }
       if (!name) {
         status.textContent = "Franchise name is required.";
         return;
@@ -267,7 +261,6 @@
 
       var res = await supabase.rpc("admin_create_franchise", {
         p_name: name,
-        p_category_id: categoryId,
         p_description: null
       });
       if (res.error) {
@@ -276,7 +269,7 @@
       }
 
       document.getElementById("new-franchise").value = "";
-      await loadFranchises(categoryId, res.data && res.data[0] ? res.data[0].id : "");
+      await loadFranchises(res.data && res.data[0] ? res.data[0].id : "");
       status.textContent = "Franchise saved.";
     }
 
@@ -352,7 +345,7 @@
       loadItems();
     }
 
-    document.getElementById("category").addEventListener("change", function(){ loadSubcategories(this.value); loadFranchises(this.value, ""); });
+    document.getElementById("category").addEventListener("change", function(){ loadSubcategories(this.value); loadFranchises(""); });
     document.getElementById("create-franchise").addEventListener("click", createFranchise);
     document.getElementById("open-create").addEventListener("click", function(){ openModal(null); });
     document.getElementById("cancel").addEventListener("click", function(){ document.getElementById("item-modal").classList.remove("open"); });

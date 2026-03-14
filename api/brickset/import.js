@@ -27,20 +27,18 @@ async function findDuplicateCatalogItem(setNumber) {
   return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
-async function resolveFranchiseId(categoryId, franchiseId, fallbackName) {
+async function resolveFranchiseId(franchiseId, fallbackName) {
   if (franchiseId) {
     return franchiseId;
   }
 
   var name = normalizeText(fallbackName);
-  if (!name || !categoryId) {
+  if (!name) {
     return null;
   }
 
   var existing = await supabaseRest.supabaseRequest(
-    "catalog_franchises?select=id,name&category_id=eq." +
-      encodeURIComponent(categoryId) +
-      "&name=eq." +
+    "catalog_franchises?select=id,name&name=eq." +
       encodeURIComponent(name) +
       "&is_active=eq.true&limit=1"
   );
@@ -55,7 +53,6 @@ async function resolveFranchiseId(categoryId, franchiseId, fallbackName) {
       Prefer: "return=representation"
     },
     body: JSON.stringify({
-      category_id: categoryId,
       name: name,
       is_active: true
     })
@@ -142,7 +139,7 @@ module.exports = async function handler(req, res) {
     }
 
     var subcategoryId = normalizeText(body.subcategoryId);
-    var franchiseId = await resolveFranchiseId(categoryId, normalizeText(body.franchiseId), mergedSet.theme);
+    var franchiseId = await resolveFranchiseId(normalizeText(body.franchiseId), mergedSet.theme);
     var itemName = mergedSet.name;
     var series = mergedSet.series || null;
     var releaseYear = asNumber(mergedSet.year);
