@@ -1779,15 +1779,16 @@
     };
 
     async function searchCatalogItems(searchTerm, categorySlug, franchiseName, yearFilter) {
-      var query = supabase
+      // Keep store search on catalog_items only so it works even if relation embeds are blocked.
+      var response = await supabase
         .from("catalog_items")
-        .select("id,name,brand_or_publisher,release_year,set_number,category_id,franchise_id,catalog_categories(name),catalog_franchises(name),variants(id,display_name,platform_or_format,edition,region,is_active,variant_images(image_url,is_primary))")
+        .select("id,name,brand_or_publisher,release_year,set_number,category_id,franchise_id")
         .eq("is_active", true)
         .order("name", { ascending: true })
-        .limit(200);
+        .limit(500);
 
-      var response = await query;
       if (response.error || !Array.isArray(response.data)) {
+        console.error("catalog_items search failed", response.error);
         return { items: [], total: 0 };
       }
 
@@ -1796,37 +1797,42 @@
       var selectedFranchise = String(franchiseName || "").trim().toLowerCase();
       var selectedYear = String(yearFilter || "").trim();
 
+      var categoryById = {};
+      var franchiseById = {};
+
+      var categoryRows = await supabase
+        .from("catalog_categories")
+        .select("id,name")
+        .eq("is_active", true)
+        .limit(500);
+
+      if (!categoryRows.error && Array.isArray(categoryRows.data)) {
+        categoryRows.data.forEach(function (c) {
+          if (c && c.id) {
+            categoryById[c.id] = c.name || "Uncategorized";
+          }
+        });
+      }
+
+      var franchiseRows = await supabase
+        .from("catalog_franchises")
+        .select("id,name")
+        .eq("is_active", true)
+        .limit(500);
+
+      if (!franchiseRows.error && Array.isArray(franchiseRows.data)) {
+        franchiseRows.data.forEach(function (f) {
+          if (f && f.id) {
+            franchiseById[f.id] = f.name || "";
+          }
+        });
+      }
+
       var mapped = response.data.map(function (row) {
-        var categoryRow = Array.isArray(row.catalog_categories)
-          ? row.catalog_categories[0]
-          : row.catalog_categories;
-        var franchiseRow = Array.isArray(row.catalog_franchises)
-          ? row.catalog_franchises[0]
-          : row.catalog_franchises;
+        var categoryName = categoryById[row.category_id] || "Uncategorized";
+        var franchise = franchiseById[row.franchise_id] || "";
 
-        var categoryName = categoryRow && categoryRow.name
-          ? categoryRow.name
-          : "Uncategorized";
-
-        var franchise = franchiseRow && franchiseRow.name
-          ? franchiseRow.name
-          : "";
-
-        var variants = Array.isArray(row.variants) ? row.variants : [];
-        var activeVariants = variants
-          .filter(function (v) { return v && v.is_active === true; })
-          .map(function (v) {
-            var images = Array.isArray(v.variant_images) ? v.variant_images : [];
-            var primaryImage = images.find(function (img) { return img && img.is_primary === true; });
-            return {
-              id: v.id,
-              display_name: v.display_name || "",
-              platform_or_format: v.platform_or_format || "",
-              edition: v.edition || "",
-              region: v.region || "",
-              preview_image: primaryImage ? primaryImage.image_url : null
-            };
-          });
+        var activeVariants = [];
 
         return {
           id: row.id,
