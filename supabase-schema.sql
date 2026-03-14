@@ -1499,7 +1499,12 @@ begin
     raise exception 'Name and category are required';
   end if;
 
-  if not exists (select 1 from public.catalog_categories where id = p_category_id and is_active = true) then
+  if not exists (
+    select 1
+    from public.catalog_categories cc
+    where cc.id = p_category_id
+      and cc.is_active = true
+  ) then
     raise exception 'Category not found';
   end if;
 
