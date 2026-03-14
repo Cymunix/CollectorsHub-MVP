@@ -15,48 +15,53 @@ function normalizeText(value) {
   return s || null;
 }
 
-function buildCatalogItemDescription(setData) {
-  var parts = ["Imported from Brickset."];
-  if (setData.setNumber) {
-    parts.push("Set Number: " + setData.setNumber + ".");
+async function findDuplicateCatalogItem(setNumber) {
+  if (!setNumber) {
+    return null;
   }
-  if (setData.pieceCount != null) {
-    parts.push("Piece Count: " + setData.pieceCount + ".");
-  }
-  if (setData.theme) {
-    parts.push("Theme: " + setData.theme + ".");
-  }
-  return parts.join(" ");
+  var rows = await supabaseRest.supabaseRequest(
+    "catalog_items?select=id,name,set_number&set_number=eq." +
+      encodeURIComponent(setNumber) +
+      "&is_active=eq.true&limit=1"
+  );
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
 }
 
-async function findDuplicateCatalogItem(setData, categoryId) {
-  var rows = await supabaseRest.supabaseRequest(
-    "catalog_items?select=id,name,series,release_year,description&category_id=eq." +
-      encodeURIComponent(categoryId) +
-      "&name=eq." +
-      encodeURIComponent(setData.name) +
-      "&is_active=eq.true&limit=20"
-  );
+async function resolveFranchiseId(categoryId, franchiseId, fallbackName) {
+  if (franchiseId) {
+    return franchiseId;
+  }
 
-  if (!Array.isArray(rows) || !rows.length) {
+  var name = normalizeText(fallbackName);
+  if (!name || !categoryId) {
     return null;
   }
 
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i];
-    var description = String(row.description || "");
-    if (setData.setNumber && description.indexOf("Set Number: " + setData.setNumber) >= 0) {
-      return row;
-    }
-    if (
-      String(row.series || "") === String(setData.theme || "") &&
-      Number(row.release_year || 0) === Number(setData.year || 0)
-    ) {
-      return row;
-    }
+  var existing = await supabaseRest.supabaseRequest(
+    "catalog_franchises?select=id,name&category_id=eq." +
+      encodeURIComponent(categoryId) +
+      "&name=eq." +
+      encodeURIComponent(name) +
+      "&is_active=eq.true&limit=1"
+  );
+  if (Array.isArray(existing) && existing.length) {
+    return existing[0].id;
   }
 
-  return null;
+  var created = await supabaseRest.supabaseRequest("catalog_franchises", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      category_id: categoryId,
+      name: name,
+      is_active: true
+    })
+  });
+
+  return Array.isArray(created) && created.length ? created[0].id : null;
 }
 
 function getBricksetCredentials(req, body) {
@@ -105,17 +110,13 @@ module.exports = async function handler(req, res) {
       theme: normalizeText(body.theme) || setData.theme,
       year: asNumber(body.year) != null ? asNumber(body.year) : setData.year,
       pieceCount: asNumber(body.pieceCount) != null ? asNumber(body.pieceCount) : setData.pieceCount,
-      imageUrl: normalizeText(body.imageUrl) || setData.imageUrl
+      imageUrl: normalizeText(body.imageUrl) || setData.imageUrl,
+      brandOrPublisher: normalizeText(body.brandOrPublisher) || "LEGO",
+      edition: normalizeText(body.edition),
+      upc: normalizeText(body.upc),
+      series: normalizeText(body.series) || normalizeText(body.theme),
+      description: normalizeText(body.description)
     };
-
-    var duplicateItem = await findDuplicateCatalogItem(mergedSet, categoryId);
-
-    if (duplicateItem) {
-      return responseUtils.sendJson(res, 409, {
-        error: "This LEGO set already exists in the catalog.",
-        existingCatalogItem: duplicateItem
-      });
-    }
 
     var categoryId = normalizeText(body.categoryId);
     if (!categoryId) {
@@ -131,9 +132,19 @@ module.exports = async function handler(req, res) {
       categoryId = categories[0].id;
     }
 
+    var duplicateItem = await findDuplicateCatalogItem(mergedSet.setNumber);
+
+    if (duplicateItem) {
+      return responseUtils.sendJson(res, 409, {
+        error: "This LEGO set already exists in the catalog.",
+        existingCatalogItem: duplicateItem
+      });
+    }
+
     var subcategoryId = normalizeText(body.subcategoryId);
+    var franchiseId = await resolveFranchiseId(categoryId, normalizeText(body.franchiseId), mergedSet.theme);
     var itemName = mergedSet.name;
-    var series = mergedSet.theme || null;
+    var series = mergedSet.series || null;
     var releaseYear = asNumber(mergedSet.year);
 
     var catalogItemId = null;
@@ -148,10 +159,15 @@ module.exports = async function handler(req, res) {
         name: itemName,
         category_id: categoryId,
         subcategory_id: subcategoryId,
-        brand_or_publisher: "LEGO",
+        franchise_id: franchiseId,
+        brand_or_publisher: mergedSet.brandOrPublisher,
+        set_number: mergedSet.setNumber,
+        piece_count: asNumber(mergedSet.pieceCount),
+        edition: mergedSet.edition,
+        upc: mergedSet.upc,
         series: series,
         release_year: releaseYear,
-        description: buildCatalogItemDescription(mergedSet),
+        description: mergedSet.description,
         primary_image_url: mergedSet.imageUrl,
         is_active: true
       })

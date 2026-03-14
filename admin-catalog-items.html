@@ -112,8 +112,26 @@
         <div class="field"><label>Release Year *</label><input id="year" type="number" min="1900" max="2100" /></div>
       </div>
       <div class="grid">
+        <div class="field"><label>Franchise</label><select id="franchise"><option value="">None</option></select></div>
+        <div class="field">
+          <label>Create Franchise</label>
+          <div style="display:flex; gap:8px;">
+            <input id="new-franchise" type="text" placeholder="New franchise name" />
+            <button class="btn" id="create-franchise" type="button">Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid">
         <div class="field"><label>Primary Image *</label><input id="primary-image" type="url" placeholder="https://..." /></div>
-        <div class="field"><label>Series / Franchise</label><input id="series" type="text" /></div>
+        <div class="field"><label>Series</label><input id="series" type="text" /></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label>Set Number</label><input id="set-number" type="text" /></div>
+        <div class="field"><label>Piece Count</label><input id="piece-count" type="number" min="0" /></div>
+      </div>
+      <div class="grid">
+        <div class="field"><label>Edition</label><input id="edition" type="text" /></div>
+        <div class="field"><label>UPC</label><input id="upc" type="text" /></div>
       </div>
       <div class="field"><label>Description</label><textarea id="description" rows="3"></textarea></div>
       <p class="status" id="modal-status"></p>
@@ -135,6 +153,7 @@
 
     var items = [];
     var categories = [];
+    var franchises = [];
     var editId = null;
 
     function fmtDate(v) { var d = new Date(v); return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString(); }
@@ -172,6 +191,20 @@
       rpc.data.forEach(function(s){ sel.innerHTML += '<option value="'+s.id+'">'+esc(s.name)+'</option>'; });
     }
 
+    async function loadFranchises(categoryId, selectedFranchiseId) {
+      var sel = document.getElementById("franchise");
+      sel.innerHTML = '<option value="">None</option>';
+      franchises = [];
+      if (!categoryId) return;
+      var rpc = await supabase.rpc("admin_list_franchises", { p_category_id: categoryId });
+      if (rpc.error || !rpc.data) return;
+      franchises = rpc.data || [];
+      franchises.forEach(function(f){ sel.innerHTML += '<option value="'+f.id+'">'+esc(f.name)+'</option>'; });
+      if (selectedFranchiseId) {
+        sel.value = selectedFranchiseId;
+      }
+    }
+
     async function loadItems() {
       var tbody = document.querySelector("#items-table tbody");
       tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
@@ -205,11 +238,46 @@
       document.getElementById("year").value = item ? (item.release_year || "") : "";
       document.getElementById("primary-image").value = item ? (item.primary_image_url || "") : "";
       document.getElementById("series").value = item ? (item.series || "") : "";
+      document.getElementById("set-number").value = item ? (item.set_number || "") : "";
+      document.getElementById("piece-count").value = item ? (item.piece_count || "") : "";
+      document.getElementById("edition").value = item ? (item.edition || "") : "";
+      document.getElementById("upc").value = item ? (item.upc || "") : "";
       document.getElementById("description").value = item ? (item.description || "") : "";
       loadSubcategories(item ? item.category_id : "");
+      loadFranchises(item ? item.category_id : "", item ? item.franchise_id : "");
       document.getElementById("subcategory").value = item ? (item.subcategory_id || "") : "";
+      document.getElementById("franchise").value = item ? (item.franchise_id || "") : "";
+      document.getElementById("new-franchise").value = "";
       document.getElementById("modal-status").textContent = "";
       document.getElementById("item-modal").classList.add("open");
+    }
+
+    async function createFranchise() {
+      var categoryId = document.getElementById("category").value;
+      var name = document.getElementById("new-franchise").value.trim();
+      var status = document.getElementById("modal-status");
+      if (!categoryId) {
+        status.textContent = "Select a category before creating a franchise.";
+        return;
+      }
+      if (!name) {
+        status.textContent = "Franchise name is required.";
+        return;
+      }
+
+      var res = await supabase.rpc("admin_create_franchise", {
+        p_name: name,
+        p_category_id: categoryId,
+        p_description: null
+      });
+      if (res.error) {
+        status.textContent = "Error: " + res.error.message;
+        return;
+      }
+
+      document.getElementById("new-franchise").value = "";
+      await loadFranchises(categoryId, res.data && res.data[0] ? res.data[0].id : "");
+      status.textContent = "Franchise saved.";
     }
 
     async function saveItem() {
@@ -220,6 +288,11 @@
       var year = document.getElementById("year").value;
       var primaryImage = document.getElementById("primary-image").value.trim();
       var series = document.getElementById("series").value.trim();
+      var franchiseId = document.getElementById("franchise").value;
+      var setNumber = document.getElementById("set-number").value.trim();
+      var pieceCount = document.getElementById("piece-count").value;
+      var edition = document.getElementById("edition").value.trim();
+      var upc = document.getElementById("upc").value.trim();
       var description = document.getElementById("description").value.trim();
       var status = document.getElementById("modal-status");
 
@@ -233,7 +306,12 @@
           p_name: name,
           p_category_id: categoryId,
           p_subcategory_id: subcategoryId || null,
+          p_franchise_id: franchiseId || null,
           p_brand_or_publisher: publisher,
+          p_set_number: setNumber || null,
+          p_piece_count: pieceCount ? Number(pieceCount) : null,
+          p_edition: edition || null,
+          p_upc: upc || null,
           p_release_year: Number(year),
           p_series: series || null,
           p_description: description || null,
@@ -246,7 +324,12 @@
           name: name,
           category_id: categoryId,
           subcategory_id: subcategoryId || null,
+          franchise_id: franchiseId || null,
           brand_or_publisher: publisher,
+          set_number: setNumber || null,
+          piece_count: pieceCount ? Number(pieceCount) : null,
+          edition: edition || null,
+          upc: upc || null,
           release_year: Number(year),
           primary_image_url: primaryImage,
           series: series || null,
@@ -269,7 +352,8 @@
       loadItems();
     }
 
-    document.getElementById("category").addEventListener("change", function(){ loadSubcategories(this.value); });
+    document.getElementById("category").addEventListener("change", function(){ loadSubcategories(this.value); loadFranchises(this.value, ""); });
+    document.getElementById("create-franchise").addEventListener("click", createFranchise);
     document.getElementById("open-create").addEventListener("click", function(){ openModal(null); });
     document.getElementById("cancel").addEventListener("click", function(){ document.getElementById("item-modal").classList.remove("open"); });
     document.getElementById("save").addEventListener("click", saveItem);

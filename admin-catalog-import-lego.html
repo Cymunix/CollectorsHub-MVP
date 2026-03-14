@@ -254,12 +254,20 @@
           <div class="field full"><label for="edit-name">Name</label><input id="edit-name" type="text" /></div>
           <div class="field"><label for="edit-set-number">Set Number</label><input id="edit-set-number" type="text" readonly /></div>
           <div class="field"><label for="edit-theme">Theme</label><input id="edit-theme" type="text" /></div>
+          <div class="field"><label for="edit-brand">Brand / Publisher</label><input id="edit-brand" type="text" /></div>
           <div class="field"><label for="edit-year">Release Year</label><input id="edit-year" type="number" min="1949" max="2100" /></div>
           <div class="field"><label for="edit-piece-count">Piece Count</label><input id="edit-piece-count" type="number" min="0" /></div>
+          <div class="field"><label for="edit-edition">Edition</label><input id="edit-edition" type="text" /></div>
+          <div class="field"><label for="edit-upc">UPC</label><input id="edit-upc" type="text" /></div>
+          <div class="field"><label for="edit-series">Series</label><input id="edit-series" type="text" /></div>
           <div class="field"><label for="edit-image-url">Primary Image URL</label><input id="edit-image-url" type="text" /></div>
           <div class="field"><label for="edit-category">Category</label><select id="edit-category"><option value="">Loading categories...</option></select></div>
           <div class="field"><label for="edit-subcategory">Subcategory</label><select id="edit-subcategory"><option value="">None</option></select></div>
+          <div class="field"><label for="edit-franchise">Franchise</label><select id="edit-franchise"><option value="">None</option></select></div>
+          <div class="field"><label for="edit-new-franchise">Create Franchise</label><input id="edit-new-franchise" type="text" placeholder="New franchise name" /></div>
+          <div class="field full"><label for="edit-description">Description</label><input id="edit-description" type="text" placeholder="Optional catalog description" /></div>
           <div class="field full btn-row">
+            <button class="btn" id="preview-create-franchise-btn" type="button">Save Franchise</button>
             <button class="btn" id="preview-import-btn" type="button">Add To Catalog</button>
           </div>
         </div>
@@ -282,6 +290,7 @@ var searchResults = [];
 var categoryRows = [];
 var stagedSet = null;
 var themeSampleSets = [];
+var previewFranchiseRows = [];
 
 function setStatus(id, text, cls) {
   var el = document.getElementById(id);
@@ -419,6 +428,7 @@ function renderPreview(set) {
   var wrap = document.getElementById("preview-wrap");
   var details = document.getElementById("preview-details");
   var image = document.getElementById("preview-image");
+  var previewImageUrl = getBestSetImageUrl(set);
 
   details.innerHTML =
     '<div><span class="k">Set Name:</span>' + esc(set.name || "-") + '</div>' +
@@ -428,8 +438,8 @@ function renderPreview(set) {
     '<div><span class="k">Piece Count:</span>' + esc(set.pieceCount || "-") + '</div>' +
     '<div><span class="k">Minifig Count:</span>' + esc(set.minifigCount || "-") + '</div>';
 
-  if (set.imageUrl) {
-    image.src = set.imageUrl;
+  if (previewImageUrl) {
+    image.src = previewImageUrl;
     image.style.display = "block";
   } else {
     image.removeAttribute("src");
@@ -439,22 +449,78 @@ function renderPreview(set) {
   wrap.style.display = "grid";
 }
 
-function setPreviewEditor(set) {
+async function setPreviewEditor(set) {
+  if (!categoryRows.length) {
+    await loadPreviewCategories();
+  }
+
+  var previewImageUrl = getBestSetImageUrl(set);
   stagedSet = set;
   document.getElementById("edit-name").value = set.name || "";
   document.getElementById("edit-set-number").value = set.setNumber || "";
   document.getElementById("edit-theme").value = set.theme || "";
+  document.getElementById("edit-brand").value = set.brandOrPublisher || "LEGO";
   document.getElementById("edit-year").value = set.year || "";
   document.getElementById("edit-piece-count").value = set.pieceCount || "";
-  document.getElementById("edit-image-url").value = set.imageUrl || "";
+  document.getElementById("edit-edition").value = set.edition || "";
+  document.getElementById("edit-upc").value = set.upc || "";
+  document.getElementById("edit-series").value = set.series || set.theme || "";
+  document.getElementById("edit-image-url").value = previewImageUrl || "";
+  document.getElementById("edit-description").value = set.description || "";
+  document.getElementById("edit-new-franchise").value = "";
 
   var defaultCategory = categoryRows.find(function (c) {
     return String(c.name || "").toLowerCase() === "building blocks";
   });
-  document.getElementById("edit-category").value = defaultCategory ? defaultCategory.id : "";
-  loadPreviewSubcategories(document.getElementById("edit-category").value);
+  var categoryId = defaultCategory ? defaultCategory.id : "";
+  document.getElementById("edit-category").value = categoryId;
+  await loadPreviewSubcategories(categoryId);
+
+  var selectedFranchiseId = "";
+  if (set.franchiseId) {
+    selectedFranchiseId = set.franchiseId;
+  }
+  await loadPreviewFranchises(categoryId, selectedFranchiseId);
+
+  if (!selectedFranchiseId && set.theme && previewFranchiseRows.length) {
+    var matchedByTheme = previewFranchiseRows.find(function (row) {
+      return String(row.name || "").toLowerCase() === String(set.theme || "").toLowerCase();
+    });
+    if (matchedByTheme) {
+      document.getElementById("edit-franchise").value = matchedByTheme.id;
+    }
+  }
+
   document.getElementById("edit-subcategory").value = "";
   document.getElementById("preview-edit-wrap").style.display = "grid";
+}
+
+function getBestSetImageUrl(set) {
+  var direct = String((set && set.imageUrl) || "").trim();
+  if (direct) {
+    return direct;
+  }
+
+  var raw = set && set.raw && typeof set.raw === "object" ? set.raw : {};
+  var images = raw.images && typeof raw.images === "object" ? raw.images : {};
+  var imageObj = raw.image && typeof raw.image === "object" ? raw.image : {};
+
+  var fallback =
+    raw.imageURL || raw.imageUrl || raw.image_url ||
+    raw.thumbnailURL || raw.thumbnailUrl || raw.thumbnail_url ||
+    raw.largeImageURL || raw.largeImageUrl || raw.large_image_url ||
+    raw.largeThumbnailURL || raw.largeThumbnailUrl || raw.large_thumbnail_url ||
+    images.imageURL || images.imageUrl || images.image_url ||
+    images.thumbnailURL || images.thumbnailUrl || images.thumbnail_url ||
+    images.largeImageURL || images.largeImageUrl || images.large_image_url ||
+    images.largeThumbnailURL || images.largeThumbnailUrl || images.large_thumbnail_url ||
+    imageObj.imageURL || imageObj.imageUrl || imageObj.image_url ||
+    imageObj.thumbnailURL || imageObj.thumbnailUrl || imageObj.thumbnail_url ||
+    imageObj.largeImageURL || imageObj.largeImageUrl || imageObj.large_image_url ||
+    imageObj.largeThumbnailURL || imageObj.largeThumbnailUrl || imageObj.large_thumbnail_url ||
+    "";
+
+  return String(fallback || "").trim();
 }
 
 async function loadPreviewCategories() {
@@ -492,6 +558,65 @@ async function loadPreviewSubcategories(categoryId) {
   sel.innerHTML += rpc.data.map(function (s) {
     return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>';
   }).join("");
+}
+
+async function loadPreviewFranchises(categoryId, selectedFranchiseId) {
+  var sel = document.getElementById("edit-franchise");
+  sel.innerHTML = '<option value="">None</option>';
+  previewFranchiseRows = [];
+  if (!categoryId) {
+    setStatus("preview-status", "Select a category to load franchises.", "warn");
+    return;
+  }
+
+  var rpc = await supabase.rpc("admin_list_franchises", { p_category_id: categoryId });
+  if (rpc.error || !Array.isArray(rpc.data)) {
+    if (rpc.error) {
+      setStatus("preview-status", rpc.error.message || "Unable to load franchises.", "err");
+    }
+    return;
+  }
+
+  previewFranchiseRows = rpc.data;
+  sel.innerHTML += rpc.data.map(function (row) {
+    return '<option value="' + esc(row.id) + '">' + esc(row.name) + '</option>';
+  }).join("");
+
+  if (selectedFranchiseId) {
+    sel.value = selectedFranchiseId;
+  }
+}
+
+async function createPreviewFranchise() {
+  var categoryId = document.getElementById("edit-category").value;
+  var name = document.getElementById("edit-new-franchise").value.trim();
+  if (!categoryId) {
+    setStatus("preview-status", "Select a category before creating a franchise.", "warn");
+    return;
+  }
+  if (!name) {
+    setStatus("preview-status", "Franchise name is required.", "warn");
+    return;
+  }
+
+  setStatus("preview-status", "Saving franchise...", "");
+  try {
+    var res = await supabase.rpc("admin_create_franchise", {
+      p_name: name,
+      p_category_id: categoryId,
+      p_description: null
+    });
+    if (res.error) {
+      throw res.error;
+    }
+
+    var franchiseId = res.data && res.data[0] ? res.data[0].id : "";
+    document.getElementById("edit-new-franchise").value = "";
+    await loadPreviewFranchises(categoryId, franchiseId);
+    setStatus("preview-status", "Franchise saved.", "ok");
+  } catch (error) {
+    setStatus("preview-status", error.message || "Failed to create franchise.", "err");
+  }
 }
 
 async function searchSets() {
@@ -534,7 +659,7 @@ async function previewSet(setNumber) {
     }
 
     renderPreview(data);
-    setPreviewEditor(data);
+    await setPreviewEditor(data);
     setStatus("preview-status", "Preview loaded.", "ok");
     document.getElementById("preview-edit-wrap").scrollIntoView({ behavior: "smooth", block: "nearest" });
     return true;
@@ -567,11 +692,17 @@ async function addPreviewToCatalog() {
     setNumber: document.getElementById("edit-set-number").value.trim(),
     name: document.getElementById("edit-name").value.trim(),
     theme: document.getElementById("edit-theme").value.trim(),
+    brandOrPublisher: document.getElementById("edit-brand").value.trim(),
     year: document.getElementById("edit-year").value ? Number(document.getElementById("edit-year").value) : null,
     pieceCount: document.getElementById("edit-piece-count").value ? Number(document.getElementById("edit-piece-count").value) : null,
+    edition: document.getElementById("edit-edition").value.trim(),
+    upc: document.getElementById("edit-upc").value.trim(),
+    series: document.getElementById("edit-series").value.trim(),
+    description: document.getElementById("edit-description").value.trim(),
     imageUrl: document.getElementById("edit-image-url").value.trim(),
     categoryId: document.getElementById("edit-category").value || null,
-    subcategoryId: document.getElementById("edit-subcategory").value || null
+    subcategoryId: document.getElementById("edit-subcategory").value || null,
+    franchiseId: document.getElementById("edit-franchise").value || null
   };
 
   if (!payload.name || !payload.setNumber || !payload.categoryId) {
@@ -777,8 +908,10 @@ document.getElementById("save-brickset-credentials").addEventListener("click", f
 document.getElementById("theme-preview-btn").addEventListener("click", previewTheme);
 document.getElementById("theme-import-btn").addEventListener("click", importTheme);
 document.getElementById("preview-import-btn").addEventListener("click", addPreviewToCatalog);
+document.getElementById("preview-create-franchise-btn").addEventListener("click", createPreviewFranchise);
 document.getElementById("edit-category").addEventListener("change", function () {
   loadPreviewSubcategories(this.value);
+  loadPreviewFranchises(this.value, "");
 });
 document.getElementById("search-query").addEventListener("keydown", function (event) {
   if (event.key === "Enter") {

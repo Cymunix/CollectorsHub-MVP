@@ -10,48 +10,60 @@ function asNumber(value) {
   return Number.isFinite(num) ? num : null;
 }
 
-function buildCatalogItemDescription(setData) {
-  var parts = ["Imported from Brickset."];
-  if (setData.setNumber) {
-    parts.push("Set Number: " + setData.setNumber + ".");
-  }
-  if (setData.pieceCount != null) {
-    parts.push("Piece Count: " + setData.pieceCount + ".");
-  }
-  if (setData.theme) {
-    parts.push("Theme: " + setData.theme + ".");
-  }
-  return parts.join(" ");
+function normalizeText(value) {
+  var s = String(value == null ? "" : value).trim();
+  return s || null;
 }
 
-async function findDuplicateCatalogItem(setData, categoryId) {
-  var rows = await supabaseRest.supabaseRequest(
-    "catalog_items?select=id,name,series,release_year,description&category_id=eq." +
-      encodeURIComponent(categoryId) +
-      "&name=eq." +
-      encodeURIComponent(setData.name) +
-      "&is_active=eq.true&limit=20"
-  );
-
-  if (!Array.isArray(rows) || !rows.length) {
+async function findDuplicateCatalogItem(setNumber) {
+  if (!setNumber) {
     return null;
   }
 
-  for (var i = 0; i < rows.length; i++) {
-    var row = rows[i];
-    var description = String(row.description || "");
-    if (setData.setNumber && description.indexOf("Set Number: " + setData.setNumber) >= 0) {
-      return row;
-    }
-    if (
-      String(row.series || "") === String(setData.theme || "") &&
-      Number(row.release_year || 0) === Number(setData.year || 0)
-    ) {
-      return row;
-    }
+  var rows = await supabaseRest.supabaseRequest(
+    "catalog_items?select=id,name,set_number&set_number=eq." +
+      encodeURIComponent(setNumber) +
+      "&is_active=eq.true&limit=1"
+  );
+
+  return Array.isArray(rows) && rows.length ? rows[0] : null;
+}
+
+async function resolveFranchiseId(categoryId, franchiseId, fallbackName) {
+  if (franchiseId) {
+    return franchiseId;
   }
 
-  return null;
+  var name = normalizeText(fallbackName);
+  if (!name || !categoryId) {
+    return null;
+  }
+
+  var existing = await supabaseRest.supabaseRequest(
+    "catalog_franchises?select=id,name&category_id=eq." +
+      encodeURIComponent(categoryId) +
+      "&name=eq." +
+      encodeURIComponent(name) +
+      "&is_active=eq.true&limit=1"
+  );
+  if (Array.isArray(existing) && existing.length) {
+    return existing[0].id;
+  }
+
+  var created = await supabaseRest.supabaseRequest("catalog_franchises", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      category_id: categoryId,
+      name: name,
+      is_active: true
+    })
+  });
+
+  return Array.isArray(created) && created.length ? created[0].id : null;
 }
 
 function getBricksetCredentials(req, body) {
@@ -73,15 +85,16 @@ function getBricksetCredentials(req, body) {
 }
 
 async function importOneSet(setData, categoryId) {
-  var duplicateItem = await findDuplicateCatalogItem(setData, categoryId);
+  var duplicateItem = await findDuplicateCatalogItem(setData.setNumber);
 
   if (duplicateItem) {
     return { status: "skipped", reason: "duplicate" };
   }
 
   var itemName = setData.name;
-  var series = setData.theme || null;
+  var series = normalizeText(setData.series) || normalizeText(setData.theme);
   var releaseYear = asNumber(setData.year);
+  var franchiseId = await resolveFranchiseId(categoryId, normalizeText(setData.franchiseId), setData.theme);
   var catalogItemId = null;
   var newCatalogItems = await supabaseRest.supabaseRequest("catalog_items", {
     method: "POST",
@@ -92,10 +105,16 @@ async function importOneSet(setData, categoryId) {
     body: JSON.stringify({
       name: itemName,
       category_id: categoryId,
-      brand_or_publisher: "LEGO",
+      subcategory_id: normalizeText(setData.subcategoryId),
+      franchise_id: franchiseId,
+      brand_or_publisher: normalizeText(setData.brandOrPublisher) || "LEGO",
+      set_number: normalizeText(setData.setNumber),
+      piece_count: asNumber(setData.pieceCount),
+      edition: normalizeText(setData.edition),
+      upc: normalizeText(setData.upc),
       series: series,
       release_year: releaseYear,
-      description: buildCatalogItemDescription(setData),
+      description: normalizeText(setData.description),
       primary_image_url: setData.imageUrl,
       is_active: true
     })

@@ -72,10 +72,10 @@ function pickSetNumber(source) {
 }
 
 function normalizeImageUrl(value) {
-  if (!value) {
+  if (typeof value !== "string") {
     return null;
   }
-  var url = String(value).trim();
+  var url = value.trim();
   if (!url) {
     return null;
   }
@@ -95,10 +95,16 @@ function pickImageUrl(source) {
   var direct = normalizeImageUrl(
     source.imageUrl ||
     source.imageURL ||
+    source.image_url ||
     source.thumbnailURL ||
     source.thumbnailUrl ||
+    source.thumbnail_url ||
     source.largeThumbnailURL ||
+    source.largeThumbnailUrl ||
+    source.large_thumbnail_url ||
     source.largeImageURL ||
+    source.largeImageUrl ||
+    source.large_image_url ||
     source.image
   );
   if (direct) {
@@ -108,16 +114,28 @@ function pickImageUrl(source) {
   return normalizeImageUrl(
     images.imageURL ||
     images.imageUrl ||
+    images.image_url ||
     images.thumbnailURL ||
     images.thumbnailUrl ||
+    images.thumbnail_url ||
     images.largeThumbnailURL ||
+    images.largeThumbnailUrl ||
+    images.large_thumbnail_url ||
     images.largeImageURL ||
+    images.largeImageUrl ||
+    images.large_image_url ||
     imageObj.imageURL ||
     imageObj.imageUrl ||
+    imageObj.image_url ||
     imageObj.thumbnailURL ||
     imageObj.thumbnailUrl ||
+    imageObj.thumbnail_url ||
     imageObj.largeThumbnailURL ||
-    imageObj.largeImageURL
+    imageObj.largeThumbnailUrl ||
+    imageObj.large_thumbnail_url ||
+    imageObj.largeImageURL ||
+    imageObj.largeImageUrl ||
+    imageObj.large_image_url
   );
 }
 

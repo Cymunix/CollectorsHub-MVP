@@ -1259,6 +1259,288 @@ create table if not exists public.marketplace_removed_listings (
   date_removed timestamptz not null default now()
 );
 
+-- ============================================================
+-- Catalog Franchises + Building Blocks item fields
+-- ============================================================
+
+create table if not exists public.catalog_franchises (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid not null references public.catalog_categories(id) on delete cascade,
+  name text not null,
+  description text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique(category_id, name)
+);
+
+alter table public.catalog_franchises enable row level security;
+
+drop policy if exists "Allow read active catalog_franchises" on public.catalog_franchises;
+create policy "Allow read active catalog_franchises" on public.catalog_franchises
+  for select using (is_active = true);
+
+drop policy if exists "Catalog managers can manage catalog_franchises" on public.catalog_franchises;
+create policy "Catalog managers can manage catalog_franchises"
+on public.catalog_franchises
+for all
+to authenticated
+using (public.is_current_user_catalog_manager())
+with check (public.is_current_user_catalog_manager());
+
+create index if not exists catalog_franchises_category_id_idx on public.catalog_franchises(category_id);
+create index if not exists catalog_franchises_name_idx on public.catalog_franchises(lower(name));
+
+alter table public.catalog_items
+  add column if not exists franchise_id uuid references public.catalog_franchises(id),
+  add column if not exists set_number text,
+  add column if not exists piece_count integer,
+  add column if not exists edition text,
+  add column if not exists upc text;
+
+create index if not exists catalog_items_franchise_id_idx on public.catalog_items(franchise_id);
+create unique index if not exists catalog_items_set_number_unique_idx
+  on public.catalog_items(set_number)
+  where set_number is not null;
+
+create or replace function public.admin_list_franchises(p_category_id uuid default null)
+returns table (
+  id uuid,
+  name text,
+  description text,
+  category_id uuid,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select cf.id, cf.name, cf.description, cf.category_id, cf.created_at
+  from public.catalog_franchises cf
+  where cf.is_active = true
+    and (p_category_id is null or cf.category_id = p_category_id)
+  order by cf.name;
+$$;
+
+revoke all on function public.admin_list_franchises(uuid) from public;
+grant execute on function public.admin_list_franchises(uuid) to authenticated;
+
+create or replace function public.admin_create_franchise(
+  p_name text,
+  p_category_id uuid,
+  p_description text default null
+)
+returns table (
+  id uuid,
+  name text,
+  category_id uuid
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_new_id uuid;
+  v_name text;
+begin
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not public.is_current_user_catalog_manager() then
+    raise exception 'Only catalog managers can create franchises';
+  end if;
+
+  v_name := btrim(coalesce(p_name, ''));
+  if v_name = '' or p_category_id is null then
+    raise exception 'Name and category are required';
+  end if;
+
+  if not exists (select 1 from public.catalog_categories where id = p_category_id and is_active = true) then
+    raise exception 'Category not found';
+  end if;
+
+  insert into public.catalog_franchises (category_id, name, description, is_active)
+  values (
+    p_category_id,
+    v_name,
+    case when btrim(coalesce(p_description, '')) = '' then null else btrim(p_description) end,
+    true
+  )
+  on conflict (category_id, name)
+  do update set
+    description = coalesce(excluded.description, public.catalog_franchises.description),
+    is_active = true
+  returning catalog_franchises.id, catalog_franchises.name, catalog_franchises.category_id
+  into v_new_id, v_name, p_category_id;
+
+  return query select v_new_id, v_name, p_category_id;
+end;
+$$;
+
+revoke all on function public.admin_create_franchise(text, uuid, text) from public;
+grant execute on function public.admin_create_franchise(text, uuid, text) to authenticated;
+
+create or replace function public.admin_create_catalog_item(
+  p_name text,
+  p_category_id uuid,
+  p_subcategory_id uuid default null,
+  p_franchise_id uuid default null,
+  p_brand_or_publisher text default null,
+  p_set_number text default null,
+  p_piece_count integer default null,
+  p_edition text default null,
+  p_upc text default null,
+  p_release_year integer default null,
+  p_series text default null,
+  p_description text default null,
+  p_primary_image_url text default null
+)
+returns table (
+  id uuid,
+  name text,
+  category_id uuid
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_is_admin boolean;
+  v_new_id uuid;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_is_admin := exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = v_uid
+      and su.is_active = true
+      and su.role::text in ('server_admin', 'admin', 'catalog_manager')
+  );
+
+  if not v_is_admin then
+    raise exception 'Only catalog managers can create catalog items';
+  end if;
+
+  if btrim(coalesce(p_name, '')) = '' or p_category_id is null then
+    raise exception 'Name and category are required';
+  end if;
+
+  if not exists (select 1 from public.catalog_categories where id = p_category_id and is_active = true) then
+    raise exception 'Category not found';
+  end if;
+
+  if p_subcategory_id is not null and not exists (
+    select 1 from public.catalog_subcategories where id = p_subcategory_id and category_id = p_category_id and is_active = true
+  ) then
+    raise exception 'Subcategory not found or does not belong to this category';
+  end if;
+
+  if p_franchise_id is not null and not exists (
+    select 1 from public.catalog_franchises where id = p_franchise_id and category_id = p_category_id and is_active = true
+  ) then
+    raise exception 'Franchise not found or does not belong to this category';
+  end if;
+
+  insert into public.catalog_items (
+    name,
+    category_id,
+    subcategory_id,
+    franchise_id,
+    brand_or_publisher,
+    set_number,
+    piece_count,
+    edition,
+    upc,
+    release_year,
+    series,
+    description,
+    primary_image_url,
+    created_by,
+    is_active
+  )
+  values (
+    btrim(p_name),
+    p_category_id,
+    p_subcategory_id,
+    p_franchise_id,
+    case when btrim(coalesce(p_brand_or_publisher, '')) = '' then null else btrim(p_brand_or_publisher) end,
+    case when btrim(coalesce(p_set_number, '')) = '' then null else btrim(p_set_number) end,
+    p_piece_count,
+    case when btrim(coalesce(p_edition, '')) = '' then null else btrim(p_edition) end,
+    case when btrim(coalesce(p_upc, '')) = '' then null else btrim(p_upc) end,
+    p_release_year,
+    case when btrim(coalesce(p_series, '')) = '' then null else btrim(p_series) end,
+    case when btrim(coalesce(p_description, '')) = '' then null else btrim(p_description) end,
+    p_primary_image_url,
+    v_uid,
+    true
+  )
+  returning catalog_items.id, catalog_items.name, catalog_items.category_id
+  into v_new_id, p_name, p_category_id;
+
+  return query select v_new_id, p_name, p_category_id;
+end;
+$$;
+
+revoke all on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, text, text, integer, text, text, text) from public;
+grant execute on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, text, text, integer, text, text, text) to authenticated;
+
+create or replace function public.admin_list_catalog_items(
+  p_category_id uuid default null,
+  p_search text default null,
+  p_limit integer default 100
+)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'items', coalesce(jsonb_agg(
+      jsonb_build_object(
+        'id', ci.id,
+        'name', ci.name,
+        'category_id', ci.category_id,
+        'category_name', cat.name,
+        'subcategory_id', ci.subcategory_id,
+        'subcategory_name', subcat.name,
+        'franchise_id', ci.franchise_id,
+        'franchise_name', franchise.name,
+        'brand_or_publisher', ci.brand_or_publisher,
+        'set_number', ci.set_number,
+        'piece_count', ci.piece_count,
+        'edition', ci.edition,
+        'upc', ci.upc,
+        'release_year', ci.release_year,
+        'series', ci.series,
+        'description', ci.description,
+        'primary_image_url', ci.primary_image_url,
+        'variant_count', (select count(*) from public.variants v where v.catalog_item_id = ci.id and v.is_active = true),
+        'created_at', ci.created_at
+      )
+      order by ci.name
+    ), '[]'::jsonb),
+    'total', count(*)
+  )
+  from public.catalog_items ci
+  join public.catalog_categories cat on cat.id = ci.category_id
+  left join public.catalog_subcategories subcat on subcat.id = ci.subcategory_id
+  left join public.catalog_franchises franchise on franchise.id = ci.franchise_id
+  where ci.is_active = true
+    and (p_category_id is null or ci.category_id = p_category_id)
+    and (p_search is null or lower(ci.name) like lower('%' || btrim(p_search) || '%'))
+  limit p_limit;
+$$;
+
+revoke all on function public.admin_list_catalog_items(uuid, text, integer) from public;
+grant execute on function public.admin_list_catalog_items(uuid, text, integer) to authenticated;
+
 create table if not exists public.marketplace_user_reports (
   id uuid primary key default gen_random_uuid(),
   username text not null unique,

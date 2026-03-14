@@ -649,13 +649,38 @@ create policy "Allow read active catalog_subcategories" on public.catalog_subcat
 
 create index if not exists catalog_subcategories_category_id_idx on public.catalog_subcategories(category_id);
 
+-- Catalog Franchises table
+create table if not exists public.catalog_franchises (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid not null references public.catalog_categories(id) on delete cascade,
+  name text not null,
+  description text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique(category_id, name)
+);
+
+alter table public.catalog_franchises enable row level security;
+
+drop policy if exists "Allow read active catalog_franchises" on public.catalog_franchises;
+create policy "Allow read active catalog_franchises" on public.catalog_franchises
+  for select using (is_active = true);
+
+create index if not exists catalog_franchises_category_id_idx on public.catalog_franchises(category_id);
+create index if not exists catalog_franchises_name_idx on public.catalog_franchises(lower(name));
+
 -- Catalog Items table
 create table if not exists public.catalog_items (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   category_id uuid not null references public.catalog_categories(id),
   subcategory_id uuid references public.catalog_subcategories(id),
+  franchise_id uuid references public.catalog_franchises(id),
   brand_or_publisher text,
+  set_number text,
+  piece_count integer,
+  edition text,
+  upc text,
   release_year integer,
   series text,
   description text,
@@ -672,10 +697,19 @@ drop policy if exists "Allow read active catalog_items" on public.catalog_items;
 create policy "Allow read active catalog_items" on public.catalog_items
   for select using (is_active = true);
 
+alter table public.catalog_items
+  add column if not exists franchise_id uuid references public.catalog_franchises(id),
+  add column if not exists set_number text,
+  add column if not exists piece_count integer,
+  add column if not exists edition text,
+  add column if not exists upc text;
+
 create index if not exists catalog_items_category_id_idx on public.catalog_items(category_id);
 create index if not exists catalog_items_subcategory_id_idx on public.catalog_items(subcategory_id);
+create index if not exists catalog_items_franchise_id_idx on public.catalog_items(franchise_id);
 create index if not exists catalog_items_name_idx on public.catalog_items(lower(name));
 create index if not exists catalog_items_created_by_idx on public.catalog_items(created_by);
+create unique index if not exists catalog_items_set_number_unique_idx on public.catalog_items(set_number) where set_number is not null;
 
 -- Variants table
 create table if not exists public.variants (
@@ -713,14 +747,6 @@ create unique index if not exists variants_set_number_unique_idx
   on public.variants(set_number)
   where set_number is not null;
 
--- Trigger for catalog_items updated_at
-drop trigger if exists catalog_items_set_updated_at on public.catalog_items;
-create trigger catalog_items_set_updated_at
-before update on public.catalog_items
-for each row
-execute function public.set_catalog_items_updated_at();
-
--- Recreate trigger function with variations support
 create or replace function public.set_catalog_items_updated_at()
 returns trigger
 language plpgsql
@@ -731,13 +757,6 @@ begin
 end;
 $$;
 
--- Trigger for variants updated_at
-drop trigger if exists variants_set_updated_at on public.variants;
-create trigger variants_set_updated_at
-before update on public.variants
-for each row
-execute function public.set_variants_updated_at();
-
 create or replace function public.set_variants_updated_at()
 returns trigger
 language plpgsql
@@ -747,6 +766,20 @@ begin
   return new;
 end;
 $$;
+
+-- Trigger for catalog_items updated_at
+drop trigger if exists catalog_items_set_updated_at on public.catalog_items;
+create trigger catalog_items_set_updated_at
+before update on public.catalog_items
+for each row
+execute function public.set_catalog_items_updated_at();
+
+-- Trigger for variants updated_at
+drop trigger if exists variants_set_updated_at on public.variants;
+create trigger variants_set_updated_at
+before update on public.variants
+for each row
+execute function public.set_variants_updated_at();
 
 -- Seed default categories with their attributes
 insert into public.catalog_categories (name, description, attributes, is_active)
@@ -839,6 +872,15 @@ union all
 select id, 'Other Brands', 'Other brick and building systems', true from catalog_categories where name = 'Building Blocks'
 on conflict do nothing;
 
+-- Seed starter franchises for Building Blocks
+insert into public.catalog_franchises (category_id, name, description, is_active)
+select id, 'Star Wars', 'Star Wars building sets and tie-in products', true from public.catalog_categories where name = 'Building Blocks'
+union all
+select id, 'Harry Potter', 'Harry Potter building sets and tie-in products', true from public.catalog_categories where name = 'Building Blocks'
+union all
+select id, 'Marvel', 'Marvel building sets and tie-in products', true from public.catalog_categories where name = 'Building Blocks'
+on conflict do nothing;
+
 -- RPC: Check for duplicate catalog items by name and category
 create or replace function public.check_catalog_duplicates(
   p_name text,
@@ -880,7 +922,12 @@ create or replace function public.admin_create_catalog_item(
   p_name text,
   p_category_id uuid,
   p_subcategory_id uuid default null,
+  p_franchise_id uuid default null,
   p_brand_or_publisher text default null,
+  p_set_number text default null,
+  p_piece_count integer default null,
+  p_edition text default null,
+  p_upc text default null,
   p_release_year integer default null,
   p_series text default null,
   p_description text default null,
@@ -905,17 +952,17 @@ begin
     raise exception 'Not authenticated';
   end if;
 
-  -- Check if user is server_admin
+  -- Check if user is a catalog manager
   v_is_admin := exists (
     select 1
     from public.server_users su
     where su.auth_user_id = v_uid
       and su.is_active = true
-      and su.role = 'server_admin'
+      and su.role::text in ('server_admin', 'admin', 'catalog_manager')
   );
 
   if not v_is_admin then
-    raise exception 'Only server admins can create catalog items';
+    raise exception 'Only catalog managers can create catalog items';
   end if;
 
   -- Validate inputs
@@ -935,12 +982,24 @@ begin
     end if;
   end if;
 
+  -- Verify franchise exists if provided
+  if p_franchise_id is not null then
+    if not exists (select 1 from public.catalog_franchises where id = p_franchise_id and category_id = p_category_id and is_active = true) then
+      raise exception 'Franchise not found or does not belong to this category';
+    end if;
+  end if;
+
   -- Create catalog item
   insert into public.catalog_items (
     name,
     category_id,
     subcategory_id,
+    franchise_id,
     brand_or_publisher,
+    set_number,
+    piece_count,
+    edition,
+    upc,
     release_year,
     series,
     description,
@@ -952,7 +1011,12 @@ begin
     btrim(p_name),
     p_category_id,
     p_subcategory_id,
+    p_franchise_id,
     case when btrim(p_brand_or_publisher) = '' then null else btrim(p_brand_or_publisher) end,
+    case when btrim(coalesce(p_set_number, '')) = '' then null else btrim(p_set_number) end,
+    p_piece_count,
+    case when btrim(coalesce(p_edition, '')) = '' then null else btrim(p_edition) end,
+    case when btrim(coalesce(p_upc, '')) = '' then null else btrim(p_upc) end,
     p_release_year,
     case when btrim(p_series) = '' then null else btrim(p_series) end,
     case when btrim(p_description) = '' then null else btrim(p_description) end,
@@ -967,8 +1031,8 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_create_catalog_item(text, uuid, uuid, text, integer, text, text, text) from public;
-grant execute on function public.admin_create_catalog_item(text, uuid, uuid, text, integer, text, text, text) to authenticated;
+revoke all on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, text, text, integer, text, text, text) from public;
+grant execute on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, text, text, integer, text, text, text) to authenticated;
 
 -- RPC: Admin list catalog items
 create or replace function public.admin_list_catalog_items(
@@ -990,7 +1054,13 @@ as $$
         'category_name', cat.name,
         'subcategory_id', ci.subcategory_id,
         'subcategory_name', subcat.name,
+        'franchise_id', ci.franchise_id,
+        'franchise_name', franchise.name,
         'brand_or_publisher', ci.brand_or_publisher,
+        'set_number', ci.set_number,
+        'piece_count', ci.piece_count,
+        'edition', ci.edition,
+        'upc', ci.upc,
         'release_year', ci.release_year,
         'series', ci.series,
         'description', ci.description,
@@ -1005,6 +1075,7 @@ as $$
   from public.catalog_items ci
   join public.catalog_categories cat on cat.id = ci.category_id
   left join public.catalog_subcategories subcat on subcat.id = ci.subcategory_id
+  left join public.catalog_franchises franchise on franchise.id = ci.franchise_id
   where ci.is_active = true
     and (p_category_id is null or ci.category_id = p_category_id)
     and (p_search is null or lower(ci.name) like lower('%' || btrim(p_search) || '%'))
@@ -1041,6 +1112,102 @@ $$;
 
 revoke all on function public.admin_list_subcategories(uuid) from public;
 grant execute on function public.admin_list_subcategories(uuid) to authenticated;
+
+-- RPC: Admin list franchises for a category
+create or replace function public.admin_list_franchises(p_category_id uuid default null)
+returns table (
+  id uuid,
+  name text,
+  description text,
+  category_id uuid,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    cf.id,
+    cf.name,
+    cf.description,
+    cf.category_id,
+    cf.created_at
+  from public.catalog_franchises cf
+  where cf.is_active = true
+    and (p_category_id is null or cf.category_id = p_category_id)
+  order by cf.name;
+$$;
+
+revoke all on function public.admin_list_franchises(uuid) from public;
+grant execute on function public.admin_list_franchises(uuid) to authenticated;
+
+-- RPC: Admin create franchise
+create or replace function public.admin_create_franchise(
+  p_name text,
+  p_category_id uuid,
+  p_description text default null
+)
+returns table (
+  id uuid,
+  name text,
+  category_id uuid
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_new_id uuid;
+  v_name text;
+  v_is_admin boolean;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_is_admin := exists (
+    select 1
+    from public.server_users su
+    where su.auth_user_id = v_uid
+      and su.is_active = true
+      and su.role::text in ('server_admin', 'admin', 'catalog_manager')
+  );
+
+  if not v_is_admin then
+    raise exception 'Only catalog managers can create franchises';
+  end if;
+
+  v_name := btrim(coalesce(p_name, ''));
+  if v_name = '' or p_category_id is null then
+    raise exception 'Name and category are required';
+  end if;
+
+  if not exists (select 1 from public.catalog_categories where id = p_category_id and is_active = true) then
+    raise exception 'Category not found';
+  end if;
+
+  insert into public.catalog_franchises (category_id, name, description, is_active)
+  values (
+    p_category_id,
+    v_name,
+    case when btrim(coalesce(p_description, '')) = '' then null else btrim(p_description) end,
+    true
+  )
+  on conflict (category_id, name)
+  do update set
+    description = coalesce(excluded.description, public.catalog_franchises.description),
+    is_active = true
+  returning catalog_franchises.id, catalog_franchises.name, catalog_franchises.category_id
+  into v_new_id, v_name, p_category_id;
+
+  return query select v_new_id, v_name, p_category_id;
+end;
+$$;
+
+revoke all on function public.admin_create_franchise(text, uuid, text) from public;
+grant execute on function public.admin_create_franchise(text, uuid, text) to authenticated;
 
 -- RPC: Admin create variant
 create or replace function public.admin_create_variant(
@@ -1409,6 +1576,14 @@ $$;
 
 revoke all on function public.is_current_user_catalog_manager() from public;
 grant execute on function public.is_current_user_catalog_manager() to authenticated;
+
+drop policy if exists "Catalog managers can manage catalog_franchises" on public.catalog_franchises;
+create policy "Catalog managers can manage catalog_franchises"
+on public.catalog_franchises
+for all
+to authenticated
+using (public.is_current_user_catalog_manager())
+with check (public.is_current_user_catalog_manager());
 
 -- Catalog image persistence.
 create table if not exists public.variant_images (
