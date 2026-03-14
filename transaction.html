@@ -1782,7 +1782,7 @@
       // Keep store search on catalog_items only so it works even if relation embeds are blocked.
       var response = await supabase
         .from("catalog_items")
-        .select("id,name,brand_or_publisher,release_year,set_number,category_id,franchise_id")
+        .select("id,name,brand_or_publisher,release_year,set_number,category_id,franchise_id,primary_image_url")
         .eq("is_active", true)
         .order("name", { ascending: true })
         .limit(500);
@@ -1842,6 +1842,7 @@
           brand_or_publisher: row.brand_or_publisher || "",
           release_year: row.release_year,
           set_number: row.set_number || "",
+          primary_image_url: row.primary_image_url || "",
           variants: activeVariants
         };
       }).filter(function (item) {
@@ -1985,8 +1986,13 @@
         var variants = item.variants || [];
         var variantSample = variants.length > 0 ? variants[0].display_name : "No variants";
         
+        var imageUrl = item.primary_image_url || "";
+        var imageHtml = imageUrl
+          ? '<img class="catalog-card-image" src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(item.name) + '" loading="lazy" referrerpolicy="no-referrer" />'
+          : '<div class="catalog-card-image">📦</div>';
+
         card.innerHTML = 
-          '<div class="catalog-card-image">📦</div>' +
+          imageHtml +
           '<div class="catalog-card-content">' +
           '<div class="catalog-card-name">' + escapeHtml(item.name) + '</div>' +
           '<div class="catalog-card-meta">' + escapeHtml(item.category) + (item.brand_or_publisher ? ' • ' + escapeHtml(item.brand_or_publisher) : '') + '</div>' +
