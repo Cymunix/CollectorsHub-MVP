@@ -149,43 +149,32 @@ module.exports = async function handler(req, res) {
     var releaseYear = asNumber(mergedSet.year);
     var pieceCount = asNumber(mergedSet.pieceCount);
 
-    var existingItems = await supabaseRest.supabaseRequest(
-      "catalog_items?select=id,name&name=eq." + encodeURIComponent(itemName) +
-      "&category_id=eq." + encodeURIComponent(categoryId) +
-      "&is_active=eq.true&limit=1"
-    );
-
     var catalogItemId = null;
     var createdCatalogItem = false;
+    var newCatalogItems = await supabaseRest.supabaseRequest("catalog_items", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        name: itemName,
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+        brand_or_publisher: "LEGO",
+        series: series,
+        release_year: releaseYear,
+        primary_image_url: mergedSet.imageUrl,
+        is_active: true
+      })
+    });
 
-    if (Array.isArray(existingItems) && existingItems.length > 0) {
-      catalogItemId = existingItems[0].id;
-    } else {
-      var newCatalogItems = await supabaseRest.supabaseRequest("catalog_items", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Prefer: "return=representation"
-        },
-        body: JSON.stringify({
-          name: itemName,
-          category_id: categoryId,
-          subcategory_id: subcategoryId,
-          brand_or_publisher: "LEGO",
-          series: series,
-          release_year: releaseYear,
-          primary_image_url: mergedSet.imageUrl,
-          is_active: true
-        })
-      });
-
-      if (!Array.isArray(newCatalogItems) || newCatalogItems.length === 0) {
-        throw new Error("Failed to create catalog item");
-      }
-
-      catalogItemId = newCatalogItems[0].id;
-      createdCatalogItem = true;
+    if (!Array.isArray(newCatalogItems) || newCatalogItems.length === 0) {
+      throw new Error("Failed to create catalog item");
     }
+
+    catalogItemId = newCatalogItems[0].id;
+    createdCatalogItem = true;
 
     var newVariants = await insertVariantWithFallback({
       catalog_item_id: catalogItemId,

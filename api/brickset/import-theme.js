@@ -95,42 +95,29 @@ async function importOneSet(setData, categoryId) {
   var releaseYear = asNumber(setData.year);
   var pieceCount = asNumber(setData.pieceCount);
 
-  var existingItems = await supabaseRest.supabaseRequest(
-    "catalog_items?select=id,name&name=eq." +
-      encodeURIComponent(itemName) +
-      "&category_id=eq." +
-      encodeURIComponent(categoryId) +
-      "&is_active=eq.true&limit=1"
-  );
-
   var catalogItemId = null;
+  var newCatalogItems = await supabaseRest.supabaseRequest("catalog_items", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({
+      name: itemName,
+      category_id: categoryId,
+      brand_or_publisher: "LEGO",
+      series: series,
+      release_year: releaseYear,
+      primary_image_url: setData.imageUrl,
+      is_active: true
+    })
+  });
 
-  if (Array.isArray(existingItems) && existingItems.length > 0) {
-    catalogItemId = existingItems[0].id;
-  } else {
-    var newCatalogItems = await supabaseRest.supabaseRequest("catalog_items", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify({
-        name: itemName,
-        category_id: categoryId,
-        brand_or_publisher: "LEGO",
-        series: series,
-        release_year: releaseYear,
-        primary_image_url: setData.imageUrl,
-        is_active: true
-      })
-    });
-
-    if (!Array.isArray(newCatalogItems) || newCatalogItems.length === 0) {
-      return { status: "error", reason: "Failed to create catalog item for: " + itemName };
-    }
-
-    catalogItemId = newCatalogItems[0].id;
+  if (!Array.isArray(newCatalogItems) || newCatalogItems.length === 0) {
+    return { status: "error", reason: "Failed to create catalog item for: " + itemName };
   }
+
+  catalogItemId = newCatalogItems[0].id;
 
   var newVariants = await insertVariantWithFallback({
     catalog_item_id: catalogItemId,
