@@ -243,8 +243,8 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 var USER_ROLE_KEY = "collectorshub_retail_user_role";
-var BRICKSET_API_KEY_SESSION_KEY = "collectorshub_brickset_api_key";
-var BRICKSET_USER_HASH_SESSION_KEY = "collectorshub_brickset_user_hash";
+var BRICKSET_API_KEY_STORAGE_KEY = "collectorshub_brickset_api_key";
+var BRICKSET_USER_HASH_STORAGE_KEY = "collectorshub_brickset_user_hash";
 var ALLOWED_CATALOG_ROLES = ["server_admin", "admin", "catalog_manager"];
 var supabase = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 var searchResults = [];
@@ -263,10 +263,37 @@ function esc(value) {
 }
 
 function loadBricksetCredentialsFromSession() {
-  var apiKey = sessionStorage.getItem(BRICKSET_API_KEY_SESSION_KEY) || "";
-  var userHash = sessionStorage.getItem(BRICKSET_USER_HASH_SESSION_KEY) || "";
+  var apiKey = localStorage.getItem(BRICKSET_API_KEY_STORAGE_KEY) || "";
+  var userHash = localStorage.getItem(BRICKSET_USER_HASH_STORAGE_KEY) || "";
   document.getElementById("brickset-api-key").value = apiKey;
   document.getElementById("brickset-user-hash").value = userHash;
+}
+
+async function loadBricksetCredentialsFromFile() {
+  try {
+    var response = await fetch("/local-api-keys.json", { cache: "no-store" });
+    if (!response.ok) {
+      return false;
+    }
+    var data = await response.json();
+    var apiKey = String((data && data.brickset && data.brickset.apiKey) || "").trim();
+    var userHash = String((data && data.brickset && data.brickset.userHash) || "").trim();
+    if (!apiKey) {
+      return false;
+    }
+
+    localStorage.setItem(BRICKSET_API_KEY_STORAGE_KEY, apiKey);
+    if (userHash) {
+      localStorage.setItem(BRICKSET_USER_HASH_STORAGE_KEY, userHash);
+    }
+
+    document.getElementById("brickset-api-key").value = apiKey;
+    document.getElementById("brickset-user-hash").value = userHash;
+    setStatus("brickset-credentials-status", "Brickset credentials loaded from local-api-keys.json.", "ok");
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
 
 function saveBricksetCredentialsToSession() {
@@ -278,20 +305,20 @@ function saveBricksetCredentialsToSession() {
     return false;
   }
 
-  sessionStorage.setItem(BRICKSET_API_KEY_SESSION_KEY, apiKey);
+  localStorage.setItem(BRICKSET_API_KEY_STORAGE_KEY, apiKey);
   if (userHash) {
-    sessionStorage.setItem(BRICKSET_USER_HASH_SESSION_KEY, userHash);
+    localStorage.setItem(BRICKSET_USER_HASH_STORAGE_KEY, userHash);
   } else {
-    sessionStorage.removeItem(BRICKSET_USER_HASH_SESSION_KEY);
+    localStorage.removeItem(BRICKSET_USER_HASH_STORAGE_KEY);
   }
 
-  setStatus("brickset-credentials-status", "Brickset credentials saved for this session.", "ok");
+  setStatus("brickset-credentials-status", "Brickset credentials saved on this browser.", "ok");
   return true;
 }
 
 function getBricksetCredentialHeaders() {
-  var apiKey = (sessionStorage.getItem(BRICKSET_API_KEY_SESSION_KEY) || "").trim();
-  var userHash = (sessionStorage.getItem(BRICKSET_USER_HASH_SESSION_KEY) || "").trim();
+  var apiKey = (localStorage.getItem(BRICKSET_API_KEY_STORAGE_KEY) || "").trim();
+  var userHash = (localStorage.getItem(BRICKSET_USER_HASH_STORAGE_KEY) || "").trim();
   if (!apiKey) {
     setStatus("brickset-credentials-status", "Enter and save Brickset API Key first.", "warn");
     return null;
@@ -618,8 +645,6 @@ document.querySelector("#results-table tbody").addEventListener("click", functio
 });
 
 document.getElementById("sign-out").addEventListener("click", async function () {
-  sessionStorage.removeItem(BRICKSET_API_KEY_SESSION_KEY);
-  sessionStorage.removeItem(BRICKSET_USER_HASH_SESSION_KEY);
   await supabase.auth.signOut();
   window.location.href = "/index.html";
 });
@@ -627,9 +652,17 @@ document.getElementById("sign-out").addEventListener("click", async function () 
 verifyCatalogAccess().then(function (ok) {
   if (ok) {
     loadBricksetCredentialsFromSession();
-    if (sessionStorage.getItem(BRICKSET_API_KEY_SESSION_KEY)) {
+    var hasStoredApiKey = Boolean(localStorage.getItem(BRICKSET_API_KEY_STORAGE_KEY));
+    if (hasStoredApiKey) {
       loadThemes();
+      return;
     }
+
+    loadBricksetCredentialsFromFile().then(function (loadedFromFile) {
+      if (loadedFromFile) {
+        loadThemes();
+      }
+    });
   }
 });
 </script>
