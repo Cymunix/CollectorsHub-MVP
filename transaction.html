@@ -1886,27 +1886,134 @@
       };
     }
 
-    var franchisesByCategory = {
-      "video-game":      [ ["Nintendo", "Nintendo"], ["PlayStation", "PlayStation"], ["Xbox", "Xbox"], ["Sega", "Sega"], ["Atari", "Atari"], ["PC", "PC Games"] ],
-      "movie":           [ ["Disney", "Disney"], ["Marvel Studios", "Marvel Studios"], ["DC Films", "DC Films"], ["Star Wars", "Star Wars"], ["Universal", "Universal"], ["Criterion", "Criterion"] ],
-      "toy":             [ ["Hot Wheels", "Hot Wheels"], ["Funko", "Funko Pop"], ["Barbie", "Barbie"], ["Transformers", "Transformers"], ["G.I. Joe", "G.I. Joe"], ["Star Wars", "Star Wars"] ],
-      "music":           [ ["Rock", "Rock"], ["Pop", "Pop"], ["Hip-Hop", "Hip-Hop"], ["Metal", "Metal"], ["Jazz", "Jazz"], ["Classical", "Classical"] ],
-      "sports-card":     [ ["NBA Basketball", "NBA Basketball"], ["NFL Football", "NFL Football"], ["MLB Baseball", "MLB Baseball"], ["NHL Hockey", "NHL Hockey"], ["Soccer", "Soccer / FIFA"] ],
-      "trading-card":    [ ["Pokémon", "Pokémon"], ["Magic: The Gathering", "Magic: The Gathering"], ["Yu-Gi-Oh!", "Yu-Gi-Oh!"], ["Dragon Ball Z", "Dragon Ball Z"], ["One Piece", "One Piece"], ["Digimon", "Digimon"] ],
-      "comic":           [ ["Marvel", "Marvel"], ["DC Comics", "DC Comics"], ["Image Comics", "Image Comics"], ["Dark Horse", "Dark Horse"], ["IDW Publishing", "IDW Publishing"] ],
-      "building-blocks": [ ["LEGO", "LEGO"], ["Mega Construx", "Mega Construx"], ["K'NEX", "K'NEX"], ["Star Wars LEGO", "Star Wars LEGO"] ]
-    };
+    var franchiseOptionsByCategory = null;
+    var franchiseOptionsLoadedAt = 0;
 
-    function updateFranchiseDropdown(category) {
-      var franchises = category ? (franchisesByCategory[category] || []) : [];
+    function buildCategoryNameToSlugMap() {
+      var map = {};
+      Object.keys(categorySlugToName).forEach(function (slug) {
+        var name = String(categorySlugToName[slug] || "").trim().toLowerCase();
+        if (name) {
+          map[name] = slug;
+        }
+      });
+      return map;
+    }
+
+    async function loadFranchiseOptionsByCategory(forceRefresh) {
+      var cacheAgeMs = Date.now() - franchiseOptionsLoadedAt;
+      if (!forceRefresh && franchiseOptionsByCategory && cacheAgeMs < 30000) {
+        return franchiseOptionsByCategory;
+      }
+
+      var categoryNameToSlug = buildCategoryNameToSlugMap();
+      var categoryIdToSlug = {};
+      var franchiseById = {};
+      var map = { all: [] };
+
+      var categoryRows = await supabase
+        .from("catalog_categories")
+        .select("id,name")
+        .eq("is_active", true)
+        .limit(500);
+
+      if (!categoryRows.error && Array.isArray(categoryRows.data)) {
+        categoryRows.data.forEach(function (row) {
+          if (!row || !row.id) {
+            return;
+          }
+          var name = String(row.name || "").trim().toLowerCase();
+          if (categoryNameToSlug[name]) {
+            categoryIdToSlug[row.id] = categoryNameToSlug[name];
+          }
+        });
+      }
+
+      var franchiseRows = await supabase
+        .from("catalog_franchises")
+        .select("id,name")
+        .eq("is_active", true)
+        .order("name", { ascending: true })
+        .limit(500);
+
+      if (!franchiseRows.error && Array.isArray(franchiseRows.data)) {
+        franchiseRows.data.forEach(function (row) {
+          if (!row || !row.id) {
+            return;
+          }
+          var name = String(row.name || "").trim();
+          if (!name) {
+            return;
+          }
+          franchiseById[row.id] = name;
+          map.all.push(name);
+        });
+      }
+
+      var itemRows = await supabase
+        .from("catalog_items")
+        .select("category_id,franchise_id")
+        .eq("is_active", true)
+        .not("franchise_id", "is", null)
+        .limit(5000);
+
+      if (!itemRows.error && Array.isArray(itemRows.data)) {
+        itemRows.data.forEach(function (row) {
+          if (!row) {
+            return;
+          }
+          var slug = categoryIdToSlug[row.category_id] || "";
+          var franchiseName = franchiseById[row.franchise_id] || "";
+          if (!slug || !franchiseName) {
+            return;
+          }
+          if (!Array.isArray(map[slug])) {
+            map[slug] = [];
+          }
+          if (map[slug].indexOf(franchiseName) === -1) {
+            map[slug].push(franchiseName);
+          }
+        });
+      }
+
+      map.all = Array.from(new Set(map.all)).sort(function (a, b) {
+        return a.localeCompare(b);
+      });
+
+      Object.keys(map).forEach(function (key) {
+        if (!Array.isArray(map[key])) {
+          return;
+        }
+        map[key] = map[key].slice().sort(function (a, b) {
+          return a.localeCompare(b);
+        });
+      });
+
+      franchiseOptionsByCategory = map;
+      franchiseOptionsLoadedAt = Date.now();
+      return map;
+    }
+
+    async function updateFranchiseDropdown(category) {
+      var selectedBefore = filterFranchiseEl.value;
+      var optionsByCategory = await loadFranchiseOptionsByCategory(false);
+      var franchises = category
+        ? (optionsByCategory[category] || [])
+        : (optionsByCategory.all || []);
+
       filterFranchiseEl.innerHTML = '<option value="">All Franchises</option>';
-      franchises.forEach(function(f) {
+      franchises.forEach(function (name) {
         var opt = document.createElement("option");
-        opt.value = f[0];
-        opt.textContent = f[1];
+        opt.value = name;
+        opt.textContent = name;
         filterFranchiseEl.appendChild(opt);
       });
-      filterFranchiseEl.value = "";
+
+      if (selectedBefore && franchises.indexOf(selectedBefore) !== -1) {
+        filterFranchiseEl.value = selectedBefore;
+      } else {
+        filterFranchiseEl.value = "";
+      }
     }
 
     var catalogModalEl = document.getElementById("catalog-modal-overlay");
@@ -1937,11 +2044,11 @@
     var currentCatalogMode = null;
     var selectedCatalogItem = null;
 
-    function openCatalogSearch(mode) {
+    async function openCatalogSearch(mode) {
       currentCatalogMode = mode;
       catalogSearchInput.value = "";
       filterCategoryEl.value = "";
-      updateFranchiseDropdown("");
+      await updateFranchiseDropdown("");
       filterFranchiseEl.value = "";
       filterYearEl.value = "";
       catalogModalEl.classList.add("open");
@@ -2104,8 +2211,8 @@
     }
 
     catalogSearchInput.addEventListener("input", searchCatalog);
-    filterCategoryEl.addEventListener("change", () => {
-      updateFranchiseDropdown(filterCategoryEl.value);
+    filterCategoryEl.addEventListener("change", async () => {
+      await updateFranchiseDropdown(filterCategoryEl.value);
       searchCatalog();
     });
     filterFranchiseEl.addEventListener("change", searchCatalog);
