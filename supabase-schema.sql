@@ -1265,7 +1265,6 @@ create table if not exists public.marketplace_removed_listings (
 
 create table if not exists public.catalog_franchises (
   id uuid primary key default gen_random_uuid(),
-  category_id uuid references public.catalog_categories(id) on delete cascade,
   name text not null,
   description text,
   is_active boolean not null default true,
@@ -1287,7 +1286,7 @@ using (public.is_current_user_catalog_manager())
 with check (public.is_current_user_catalog_manager());
 
 alter table public.catalog_franchises
-  alter column category_id drop not null;
+  drop column if exists category_id;
 
 alter table public.catalog_franchises
   drop constraint if exists catalog_franchises_category_id_name_key;
@@ -1341,6 +1340,7 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare
   v_uid uuid := auth.uid();
   v_new_id uuid;
@@ -1379,26 +1379,7 @@ $$;
 revoke all on function public.admin_create_franchise(text, text) from public;
 grant execute on function public.admin_create_franchise(text, text) to authenticated;
 
-create or replace function public.admin_create_franchise(
-  p_name text,
-  p_category_id uuid,
-  p_description text default null
-)
-returns table (
-  id uuid,
-  name text,
-  category_id uuid
-)
-language sql
-security definer
-set search_path = public
-as $$
-  select f.id, f.name, null::uuid as category_id
-  from public.admin_create_franchise(p_name, p_description) as f;
-$$;
-
-revoke all on function public.admin_create_franchise(text, uuid, text) from public;
-grant execute on function public.admin_create_franchise(text, uuid, text) to authenticated;
+drop function if exists public.admin_create_franchise(text, uuid, text);
 
 create or replace function public.admin_create_catalog_item(
   p_name text,

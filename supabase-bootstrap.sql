@@ -652,7 +652,6 @@ create index if not exists catalog_subcategories_category_id_idx on public.catal
 -- Catalog Franchises table
 create table if not exists public.catalog_franchises (
   id uuid primary key default gen_random_uuid(),
-  category_id uuid references public.catalog_categories(id) on delete cascade,
   name text not null,
   description text,
   is_active boolean not null default true,
@@ -666,7 +665,7 @@ create policy "Allow read active catalog_franchises" on public.catalog_franchise
   for select using (is_active = true);
 
 alter table public.catalog_franchises
-  alter column category_id drop not null;
+  drop column if exists category_id;
 
 alter table public.catalog_franchises
   drop constraint if exists catalog_franchises_category_id_name_key;
@@ -1171,6 +1170,7 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare
   v_uid uuid;
   v_new_id uuid;
@@ -1219,27 +1219,8 @@ $$;
 revoke all on function public.admin_create_franchise(text, text) from public;
 grant execute on function public.admin_create_franchise(text, text) to authenticated;
 
--- Backward-compatible wrapper: ignores p_category_id.
-create or replace function public.admin_create_franchise(
-  p_name text,
-  p_category_id uuid,
-  p_description text default null
-)
-returns table (
-  id uuid,
-  name text,
-  category_id uuid
-)
-language sql
-security definer
-set search_path = public
-as $$
-  select f.id, f.name, null::uuid as category_id
-  from public.admin_create_franchise(p_name, p_description) as f;
-$$;
-
-revoke all on function public.admin_create_franchise(text, uuid, text) from public;
-grant execute on function public.admin_create_franchise(text, uuid, text) to authenticated;
+-- Remove legacy overload that accepted category_id.
+drop function if exists public.admin_create_franchise(text, uuid, text);
 
 -- RPC: Admin create variant
 create or replace function public.admin_create_variant(
