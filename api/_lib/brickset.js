@@ -163,18 +163,69 @@ async function searchSets(query, credentials) {
 }
 
 async function getSetByNumber(setNumber, credentials) {
-  var payload = await callBrickset("getSets", {
-    setNumber: setNumber,
-    pageSize: 1,
-    pageNumber: 1
-  }, credentials);
-
-  var sets = extractSetList(payload);
-  if (!sets.length) {
+  var requested = String(setNumber || "").trim();
+  if (!requested) {
     return null;
   }
 
-  return normalizeSet(sets[0]);
+  function findBestMatch(rawSets, target) {
+    var normalized = (rawSets || []).map(normalizeSet).filter(function (set) {
+      return Boolean(set.setNumber && set.name);
+    });
+    if (!normalized.length) {
+      return null;
+    }
+
+    var exact = normalized.find(function (set) {
+      return String(set.setNumber).toLowerCase() === target.toLowerCase();
+    });
+    if (exact) {
+      return exact;
+    }
+
+    var base = target.split("-")[0];
+    var startsWithBase = normalized.find(function (set) {
+      return String(set.setNumber).toLowerCase().indexOf(base.toLowerCase() + "-") === 0;
+    });
+    if (startsWithBase) {
+      return startsWithBase;
+    }
+
+    return normalized[0];
+  }
+
+  // Attempt 1: strict setNumber match
+  var payload1 = await callBrickset("getSets", {
+    setNumber: requested,
+    pageSize: 25,
+    pageNumber: 1
+  }, credentials);
+  var match1 = findBestMatch(extractSetList(payload1), requested);
+  if (match1) {
+    return match1;
+  }
+
+  // Attempt 2: base number (handles requests like 75257-1)
+  var baseNumber = requested.split("-")[0];
+  if (baseNumber && baseNumber !== requested) {
+    var payload2 = await callBrickset("getSets", {
+      setNumber: baseNumber,
+      pageSize: 50,
+      pageNumber: 1
+    }, credentials);
+    var match2 = findBestMatch(extractSetList(payload2), requested);
+    if (match2) {
+      return match2;
+    }
+  }
+
+  // Attempt 3: query search fallback
+  var payload3 = await callBrickset("getSets", {
+    query: requested,
+    pageSize: 50,
+    pageNumber: 1
+  }, credentials);
+  return findBestMatch(extractSetList(payload3), requested);
 }
 
 async function getThemes(credentials) {
