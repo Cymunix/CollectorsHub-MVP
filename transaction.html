@@ -1029,6 +1029,25 @@
       display: block;
     }
 
+    .detail-item-image-wrap {
+      width: 100%;
+      max-height: 220px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .detail-item-image-wrap img {
+      max-height: 220px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+
     .detail-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1413,6 +1432,7 @@
       </div>
       <div class="detail-body">
         <div class="detail-panel active" id="detail-panel-attributes">
+          <div id="detail-item-image-container"></div>
           <div class="detail-grid" id="detail-attributes-grid"></div>
           <div class="pricing-panel" id="detail-pricing-panel" style="margin-top: 20px;">
             <h5>Pricing Guidance</h5>
@@ -1514,6 +1534,7 @@
     var detailModalOverlay = document.getElementById("detail-modal-overlay");
     var detailCloseBtn = document.getElementById("detail-close-btn");
     var detailItemTitle = document.getElementById("detail-item-title");
+    var detailItemImageContainer = document.getElementById("detail-item-image-container");
     var detailAttributesGrid = document.getElementById("detail-attributes-grid");
     var detailHistoryList = document.getElementById("detail-history-list");
     var detailTabAttributes = document.getElementById("detail-tab-attributes");
@@ -1536,6 +1557,8 @@
     var buyingItems = [];
     var currentMode = null; // "selling" or "buying"
     var selectedDetailItem = null;
+    var catalogItemsCache = {};
+    var currentDetailContext = null; // "catalog" when opened from search info, null when from transaction row
 
     function renderItems() {
       renderSellingItems();
@@ -1782,7 +1805,7 @@
       // Keep store search on catalog_items only so it works even if relation embeds are blocked.
       var response = await supabase
         .from("catalog_items")
-        .select("id,name,brand_or_publisher,release_year,set_number,category_id,franchise_id,primary_image_url")
+        .select("id,name,brand_or_publisher,release_year,set_number,piece_count,fig_count,edition,upc,series,description,category_id,subcategory_id,franchise_id,primary_image_url")
         .eq("is_active", true)
         .order("name", { ascending: true })
         .limit(500);
@@ -1798,6 +1821,7 @@
       var selectedYear = String(yearFilter || "").trim();
 
       var categoryById = {};
+      var subcategoryById = {};
       var franchiseById = {};
 
       var categoryRows = await supabase
@@ -1810,6 +1834,19 @@
         categoryRows.data.forEach(function (c) {
           if (c && c.id) {
             categoryById[c.id] = c.name || "Uncategorized";
+          }
+        });
+      }
+
+      var subcategoryRows = await supabase
+        .from("catalog_subcategories")
+        .select("id,name")
+        .limit(500);
+
+      if (!subcategoryRows.error && Array.isArray(subcategoryRows.data)) {
+        subcategoryRows.data.forEach(function (sc) {
+          if (sc && sc.id) {
+            subcategoryById[sc.id] = sc.name || "";
           }
         });
       }
@@ -1830,6 +1867,7 @@
 
       var mapped = response.data.map(function (row) {
         var categoryName = categoryById[row.category_id] || "Uncategorized";
+        var subcategoryName = subcategoryById[row.subcategory_id] || "";
         var franchise = franchiseById[row.franchise_id] || "";
 
         var activeVariants = [];
@@ -1838,10 +1876,17 @@
           id: row.id,
           name: row.name || "",
           category: categoryName,
+          subcategory: subcategoryName,
           franchise: franchise,
           brand_or_publisher: row.brand_or_publisher || "",
           release_year: row.release_year,
+          series: row.series || "",
           set_number: row.set_number || "",
+          piece_count: row.piece_count != null ? row.piece_count : null,
+          fig_count: row.fig_count != null ? row.fig_count : null,
+          edition: row.edition || "",
+          upc: row.upc || "",
+          description: row.description || "",
           primary_image_url: row.primary_image_url || "",
           variants: activeVariants
         };
@@ -2079,6 +2124,7 @@
     }
 
     function renderCatalogResults(results) {
+      catalogItemsCache = {};
       if (results.length === 0) {
         catalogResults.innerHTML = '<div class="catalog-empty"><div class="catalog-empty-icon">📭</div><p>No items found. Try adjusting your search.</p></div>';
         return;
@@ -2086,6 +2132,7 @@
       catalogResults.innerHTML = '<div class="catalog-grid"></div>';
       var grid = catalogResults.querySelector(".catalog-grid");
       results.forEach(function(item) {
+        catalogItemsCache[item.id] = item;
         var card = document.createElement("div");
         card.className = "catalog-card";
         
@@ -2106,11 +2153,82 @@
           '<div class="catalog-card-meta" style="color: var(--accent); font-size: 11px;">' + escapeHtml(variantSample) + '</div>' +
           '<div class="catalog-card-pricing">' + variants.length + ' variant' + (variants.length !== 1 ? 's' : '') + '</div>' +
           '<div class="catalog-card-actions">' +
-          '<button class="catalog-card-btn" data-action="add" data-id="' + escapeHtml(item.id) + '" data-item-name="' + escapeHtml(item.name) + '">Add Item</button>' +
+          '<button class="catalog-card-btn" data-action="info" data-id="' + escapeHtml(item.id) + '">ℹ Info</button>' +
+          '<button class="catalog-card-btn" data-action="add" data-id="' + escapeHtml(item.id) + '" data-item-name="' + escapeHtml(item.name) + '">Add</button>' +
           '</div>' +
           '</div>';
         grid.appendChild(card);
       });
+    }
+
+    function openCatalogItemInfo(item) {
+      currentDetailContext = "catalog";
+      selectedCatalogItem = {
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        subcategory: item.subcategory,
+        franchise: item.franchise,
+        brand: item.brand_or_publisher,
+        year: item.release_year,
+        series: item.series,
+        set_number: item.set_number,
+        piece_count: item.piece_count,
+        fig_count: item.fig_count,
+        edition: item.edition,
+        barcode: item.upc,
+        description: item.description,
+        primary_image_url: item.primary_image_url,
+        catalogItemId: item.id,
+        source: "catalog"
+      };
+
+      detailItemTitle.textContent = item.name || "Item Details";
+
+      // Image
+      if (item.primary_image_url) {
+        detailItemImageContainer.innerHTML = '<div class="detail-item-image-wrap"><img src="' + escapeHtml(item.primary_image_url) + '" alt="' + escapeHtml(item.name) + '" loading="lazy" referrerpolicy="no-referrer" /></div>';
+      } else {
+        detailItemImageContainer.innerHTML = '';
+      }
+
+      // Attributes grid
+      var fields = [
+        ["Category", item.category],
+        ["Subcategory", item.subcategory],
+        ["Franchise", item.franchise],
+        ["Brand / Publisher", item.brand_or_publisher],
+        ["Release Year", item.release_year != null ? String(item.release_year) : ""],
+        ["Series", item.series],
+        ["Set Number", item.set_number],
+        ["Piece Count", item.piece_count != null ? String(item.piece_count) : ""],
+        ["Fig Count", item.fig_count != null ? String(item.fig_count) : ""],
+        ["Edition", item.edition],
+        ["UPC / Barcode", item.upc]
+      ];
+
+      detailAttributesGrid.innerHTML = fields.map(function(pair) {
+        var val = pair[1] || "-";
+        return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(val) + '</div></div>';
+      }).join("");
+
+      if (item.description) {
+        detailAttributesGrid.innerHTML += '<div class="detail-block" style="grid-column: 1 / -1;"><div class="detail-block-label">Description</div><div style="white-space: pre-wrap;">' + escapeHtml(item.description) + '</div></div>';
+      }
+
+      // Reset pricing (not available at catalog browse stage)
+      detailPricingMarket.textContent = "N/A";
+      detailPricingAvg.textContent = "N/A";
+      detailPricingLast.textContent = "N/A";
+      detailOfferPrice.value = "";
+
+      detailConditionType.value = "loose";
+      detailConditionIsGraded.checked = false;
+      detailGradedFields.style.display = "none";
+
+      renderSalesHistory({ catalogItemId: item.id, condition: "loose", grade: "" });
+      selectDetailTab("attributes");
+      detailModalOverlay.classList.add("open");
     }
 
     function openConditionPanel(item) {
@@ -2134,6 +2252,8 @@
 
     function openItemDetail(item, catalogItem) {
       selectedDetailItem = item;
+      currentDetailContext = null;
+      detailItemImageContainer.innerHTML = '';
       detailItemTitle.textContent = item.name || "Item Details";
 
       var attributes = [
@@ -2177,6 +2297,8 @@
     function closeItemDetail() {
       detailModalOverlay.classList.remove("open");
       selectedDetailItem = null;
+      currentDetailContext = null;
+      if (detailItemImageContainer) detailItemImageContainer.innerHTML = '';
     }
 
     function selectDetailTab(tab) {
@@ -2235,6 +2357,12 @@
       var action = btn.getAttribute("data-action");
       var itemId = btn.getAttribute("data-id");
       var itemName = btn.getAttribute("data-item-name");
+
+      if (action === "info") {
+        var infoItem = catalogItemsCache[itemId];
+        if (infoItem) openCatalogItemInfo(infoItem);
+        return;
+      }
       
       if (action === "add") {
         // Simple item add - store the catalog item reference
@@ -2332,6 +2460,28 @@
     detailCancelBtn.addEventListener("click", closeItemDetail);
 
     detailAddBtn.addEventListener("click", () => {
+      if (currentDetailContext === "catalog") {
+        // Opened from catalog info — close info modal and show condition panel
+        if (!selectedCatalogItem) return;
+        closeItemDetail();
+        conditionItemName.textContent = escapeHtml(selectedCatalogItem.name);
+        conditionType.value = "loose";
+        conditionIsGraded.checked = false;
+        conditionPrice.value = "";
+        pricingMarket.textContent = "$0.00";
+        pricingAvg.textContent = "$0.00";
+        pricingLast.textContent = "$0.00";
+        pricingSuggest.textContent = "$0.00";
+        gradeGroup.style.display = "none";
+        gradedFields.style.display = "none";
+        conditionPlatform.textContent = selectedCatalogItem.edition || "-";
+        conditionEdition.textContent = selectedCatalogItem.edition || "-";
+        conditionBarcode.textContent = selectedCatalogItem.barcode || "-";
+        conditionCatalogueId.textContent = escapeHtml(selectedCatalogItem.id);
+        conditionPanel.classList.add("open");
+        return;
+      }
+
       if (!selectedDetailItem) return;
       var price = parseFloat(detailOfferPrice.value);
       if (isNaN(price) || price < 0) {
