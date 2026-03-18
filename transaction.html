@@ -1419,7 +1419,7 @@
     </div>
   </div>
 
-  <!-- Item Detail + Sales History Modal -->
+  <!-- Item Detail Modal -->
   <div class="detail-modal-overlay" id="detail-modal-overlay">
     <div class="detail-modal">
       <div class="detail-header">
@@ -1427,27 +1427,26 @@
         <button class="condition-close-btn" id="detail-close-btn">✕</button>
       </div>
       <div class="detail-tabs">
-        <button class="detail-tab active" data-tab="attributes" id="detail-tab-attributes">Attributes</button>
-        <button class="detail-tab" data-tab="history" id="detail-tab-history">Sales History</button>
+        <button class="detail-tab active" data-tab="add" id="detail-tab-add">Add to Transaction</button>
+        <button class="detail-tab" data-tab="info" id="detail-tab-info">Item Info</button>
       </div>
       <div class="detail-body">
-        <div class="detail-panel active" id="detail-panel-attributes">
-          <div id="detail-item-image-container"></div>
-          <div class="detail-grid" id="detail-attributes-grid"></div>
-          <div class="pricing-panel" id="detail-pricing-panel" style="margin-top: 20px;">
+        <!-- Tab 1: Add to Transaction (condition + pricing + add button) -->
+        <div class="detail-panel active" id="detail-panel-add">
+          <div class="pricing-panel" id="detail-pricing-panel">
             <h5>Pricing Guidance</h5>
             <div class="pricing-grid">
               <div class="pricing-item">
                 <div class="pricing-item-label">Market Value</div>
-                <div class="pricing-item-value" id="detail-pricing-market">$0.00</div>
+                <div class="pricing-item-value" id="detail-pricing-market">N/A</div>
               </div>
               <div class="pricing-item">
                 <div class="pricing-item-label">30 Day Avg</div>
-                <div class="pricing-item-value" id="detail-pricing-avg">$0.00</div>
+                <div class="pricing-item-value" id="detail-pricing-avg">N/A</div>
               </div>
               <div class="pricing-item">
                 <div class="pricing-item-label">Last Sale</div>
-                <div class="pricing-item-value" id="detail-pricing-last">$0.00</div>
+                <div class="pricing-item-value" id="detail-pricing-last">N/A</div>
               </div>
             </div>
           </div>
@@ -1480,15 +1479,17 @@
           </div>
           <div class="condition-group" style="margin-top: 20px;">
             <label class="condition-label">Offer Price ($)</label>
-            <input type="number" id="detail-offer-price" class="condition-input" placeholder="Suggested price" step="0.01" min="0" />
+            <input type="number" id="detail-offer-price" class="condition-input" placeholder="0.00" step="0.01" min="0" />
           </div>
           <div style="display: flex; gap: 10px; margin-top: 20px;">
             <button class="btn primary" id="detail-add-to-transaction" style="flex: 1;">Add to Transaction</button>
             <button class="btn secondary" id="detail-detail-cancel" style="flex: 1;">Cancel</button>
           </div>
         </div>
-        <div class="detail-panel" id="detail-panel-history">
-          <div class="detail-history-list" id="detail-history-list"></div>
+        <!-- Tab 2: Item Info (image + all catalog fields) -->
+        <div class="detail-panel" id="detail-panel-info">
+          <div id="detail-item-image-container"></div>
+          <div class="detail-grid" id="detail-attributes-grid"></div>
         </div>
       </div>
     </div>
@@ -1536,11 +1537,10 @@
     var detailItemTitle = document.getElementById("detail-item-title");
     var detailItemImageContainer = document.getElementById("detail-item-image-container");
     var detailAttributesGrid = document.getElementById("detail-attributes-grid");
-    var detailHistoryList = document.getElementById("detail-history-list");
-    var detailTabAttributes = document.getElementById("detail-tab-attributes");
-    var detailTabHistory = document.getElementById("detail-tab-history");
-    var detailPanelAttributes = document.getElementById("detail-panel-attributes");
-    var detailPanelHistory = document.getElementById("detail-panel-history");
+    var detailTabAdd = document.getElementById("detail-tab-add");
+    var detailTabInfo = document.getElementById("detail-tab-info");
+    var detailPanelAdd = document.getElementById("detail-panel-add");
+    var detailPanelInfo = document.getElementById("detail-panel-info");
     var detailPricingMarket = document.getElementById("detail-pricing-market");
     var detailPricingAvg = document.getElementById("detail-pricing-avg");
     var detailPricingLast = document.getElementById("detail-pricing-last");
@@ -2135,27 +2135,21 @@
         catalogItemsCache[item.id] = item;
         var card = document.createElement("div");
         card.className = "catalog-card";
-        
-        // Flatten variants into readable format
-        var variants = item.variants || [];
-        var variantSample = variants.length > 0 ? variants[0].display_name : "No variants";
-        
+        card.style.cursor = "pointer";
+        card.setAttribute("data-catalog-id", escapeHtml(item.id));
+
         var imageUrl = item.primary_image_url || "";
         var imageHtml = imageUrl
           ? '<img class="catalog-card-image" src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(item.name) + '" loading="lazy" referrerpolicy="no-referrer" />'
           : '<div class="catalog-card-image">📦</div>';
 
-        card.innerHTML = 
+        card.innerHTML =
           imageHtml +
           '<div class="catalog-card-content">' +
           '<div class="catalog-card-name">' + escapeHtml(item.name) + '</div>' +
           '<div class="catalog-card-meta">' + escapeHtml(item.category) + (item.brand_or_publisher ? ' • ' + escapeHtml(item.brand_or_publisher) : '') + '</div>' +
-          '<div class="catalog-card-meta" style="color: var(--accent); font-size: 11px;">' + escapeHtml(variantSample) + '</div>' +
-          '<div class="catalog-card-pricing">' + variants.length + ' variant' + (variants.length !== 1 ? 's' : '') + '</div>' +
-          '<div class="catalog-card-actions">' +
-          '<button class="catalog-card-btn" data-action="info" data-id="' + escapeHtml(item.id) + '">ℹ Info</button>' +
-          '<button class="catalog-card-btn" data-action="add" data-id="' + escapeHtml(item.id) + '" data-item-name="' + escapeHtml(item.name) + '">Add</button>' +
-          '</div>' +
+          (item.franchise ? '<div class="catalog-card-meta" style="color:var(--accent);font-size:11px;">' + escapeHtml(item.franchise) + '</div>' : '') +
+          (item.release_year ? '<div class="catalog-card-meta">' + escapeHtml(String(item.release_year)) + '</div>' : '') +
           '</div>';
         grid.appendChild(card);
       });
@@ -2185,14 +2179,23 @@
 
       detailItemTitle.textContent = item.name || "Item Details";
 
-      // Image
+      // Pricing — N/A until pricing data is available
+      detailPricingMarket.textContent = "N/A";
+      detailPricingAvg.textContent = "N/A";
+      detailPricingLast.textContent = "N/A";
+      detailOfferPrice.value = "";
+      detailConditionType.value = "loose";
+      detailConditionIsGraded.checked = false;
+      detailGradedFields.style.display = "none";
+
+      // Item Info tab — image
       if (item.primary_image_url) {
         detailItemImageContainer.innerHTML = '<div class="detail-item-image-wrap"><img src="' + escapeHtml(item.primary_image_url) + '" alt="' + escapeHtml(item.name) + '" loading="lazy" referrerpolicy="no-referrer" /></div>';
       } else {
-        detailItemImageContainer.innerHTML = '';
+        detailItemImageContainer.innerHTML = '<div class="detail-item-image-wrap" style="height:80px;"><span style="color:var(--text-secondary);font-size:13px;">No image</span></div>';
       }
 
-      // Attributes grid
+      // Item Info tab — catalog fields grid
       var fields = [
         ["Category", item.category],
         ["Subcategory", item.subcategory],
@@ -2216,18 +2219,7 @@
         detailAttributesGrid.innerHTML += '<div class="detail-block" style="grid-column: 1 / -1;"><div class="detail-block-label">Description</div><div style="white-space: pre-wrap;">' + escapeHtml(item.description) + '</div></div>';
       }
 
-      // Reset pricing (not available at catalog browse stage)
-      detailPricingMarket.textContent = "N/A";
-      detailPricingAvg.textContent = "N/A";
-      detailPricingLast.textContent = "N/A";
-      detailOfferPrice.value = "";
-
-      detailConditionType.value = "loose";
-      detailConditionIsGraded.checked = false;
-      detailGradedFields.style.display = "none";
-
-      renderSalesHistory({ catalogItemId: item.id, condition: "loose", grade: "" });
-      selectDetailTab("attributes");
+      selectDetailTab("add");
       detailModalOverlay.classList.add("open");
     }
 
@@ -2253,44 +2245,34 @@
     function openItemDetail(item, catalogItem) {
       selectedDetailItem = item;
       currentDetailContext = null;
-      detailItemImageContainer.innerHTML = '';
       detailItemTitle.textContent = item.name || "Item Details";
 
-      var attributes = [
-        ["Category", item.category || "-"],
-        ["Item Name", item.name || "-"],
-        ["Brand / Publisher / Studio", item.brand || "-"],
-        ["Release Year", item.year || "-"],
-        ["Platform / Format", item.platform || "-"],
-        ["Edition / Version", item.edition || "-"],
-        ["Barcode / UPC", item.barcode || "-"],
-        ["Catalogue ID", item.catalogueId || "-"]
-      ];
-
-      detailAttributesGrid.innerHTML = attributes.map(function(pair) {
-        return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(pair[1]) + '</div></div>';
-      }).join("");
-
-      if (catalogItem) {
-        detailPricingMarket.textContent = "$" + catalogItem.marketVal.toFixed(2);
-        detailPricingAvg.textContent = "$" + catalogItem.avg30.toFixed(2);
-        detailPricingLast.textContent = "$" + catalogItem.lastSale.toFixed(2);
-        detailOfferPrice.value = Math.round(catalogItem.marketVal * 0.7);
-      } else {
-        detailPricingMarket.textContent = "$0.00";
-        detailPricingAvg.textContent = "$0.00";
-        detailPricingLast.textContent = "$0.00";
-        detailOfferPrice.value = "";
-      }
-
+      // Condition/pricing tab
+      detailPricingMarket.textContent = "N/A";
+      detailPricingAvg.textContent = "N/A";
+      detailPricingLast.textContent = "N/A";
+      detailOfferPrice.value = item.price ? item.price.toFixed(2) : "";
       detailConditionType.value = item.condition || "loose";
       detailConditionIsGraded.checked = !!item.grade;
       detailConditionGrader.value = item.grader || "";
       detailConditionGrade.value = item.grade ? item.grade.split(" ")[1] : "";
       detailGradedFields.style.display = detailConditionIsGraded.checked ? "grid" : "none";
 
-      renderSalesHistory(item);
-      selectDetailTab("attributes");
+      // Item Info tab — show what we stored on the transaction item
+      detailItemImageContainer.innerHTML = '';
+      var attributes = [
+        ["Category", item.category],
+        ["Brand / Publisher", item.brand],
+        ["Year", item.year],
+        ["Edition", item.edition],
+        ["Barcode / UPC", item.barcode],
+        ["Catalogue ID", item.catalogueId]
+      ];
+      detailAttributesGrid.innerHTML = attributes.map(function(pair) {
+        return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(pair[1] || "-") + '</div></div>';
+      }).join("");
+
+      selectDetailTab("add");
       detailModalOverlay.classList.add("open");
     }
 
@@ -2302,35 +2284,14 @@
     }
 
     function selectDetailTab(tab) {
-      var isAttributes = tab === "attributes";
-      detailTabAttributes.classList.toggle("active", isAttributes);
-      detailTabHistory.classList.toggle("active", !isAttributes);
-      detailPanelAttributes.classList.toggle("active", isAttributes);
-      detailPanelHistory.classList.toggle("active", !isAttributes);
+      var isAdd = tab === "add";
+      detailTabAdd.classList.toggle("active", isAdd);
+      detailTabInfo.classList.toggle("active", !isAdd);
+      detailPanelAdd.classList.toggle("active", isAdd);
+      detailPanelInfo.classList.toggle("active", !isAdd);
     }
 
-    function renderSalesHistory(item) {
-      var source = item.catalogItemId ? mockSalesHistory[item.catalogItemId] || [] : [];
-      var selectedCondition = (item.condition || "").toLowerCase();
-      var selectedGrade = item.grade ? String(item.grade).trim().toLowerCase() : "";
-      var rows = source.filter(function(row) {
-        var rowCondition = (row.condition || "").toLowerCase();
-        var rowGrade = (row.grade || "").toLowerCase();
-        if (selectedCondition === "graded") {
-          return rowCondition === "graded" && (!selectedGrade || rowGrade === selectedGrade);
-        }
-        return rowCondition === selectedCondition;
-      });
 
-      if (rows.length === 0) {
-        detailHistoryList.innerHTML = '<div class="catalog-empty"><div class="catalog-empty-icon">📉</div><p>No matching sales found for this condition/grade yet.</p></div>';
-        return;
-      }
-
-      detailHistoryList.innerHTML = rows.map(function(row) {
-        return '<div class="detail-history-row"><div><div>' + escapeHtml((row.condition || "").toUpperCase() + (row.grade ? ' • ' + row.grade : '')) + '</div><div class="detail-history-date">' + escapeHtml(row.soldAt) + '</div></div><div>$' + Number(row.price).toFixed(2) + '</div><div>Sale</div></div>';
-      }).join("");
-    }
 
     catalogSearchInput.addEventListener("input", searchCatalog);
     filterCategoryEl.addEventListener("change", async () => {
@@ -2352,50 +2313,11 @@
     });
 
     catalogResults.addEventListener("click", function(e) {
-      var btn = e.target.closest(".catalog-card-btn");
-      if (!btn) return;
-      var action = btn.getAttribute("data-action");
-      var itemId = btn.getAttribute("data-id");
-      var itemName = btn.getAttribute("data-item-name");
-
-      if (action === "info") {
-        var infoItem = catalogItemsCache[itemId];
-        if (infoItem) openCatalogItemInfo(infoItem);
-        return;
-      }
-      
-      if (action === "add") {
-        // Simple item add - store the catalog item reference
-        selectedCatalogItem = {
-          id: itemId,
-          name: itemName,
-          category: "Catalog Item",
-          brand: "",
-          year: new Date().getFullYear().toString(),
-          platform: "Standard",
-          edition: "Standard",
-          barcode: "",
-          catalogItemId: itemId,
-          source: "catalog"
-        };
-        
-        // Show condition panel with pre-filled data
-        conditionItemName.textContent = escapeHtml(itemName);
-        conditionType.value = "loose";
-        conditionIsGraded.checked = false;
-        conditionPrice.value = "0.00";
-        pricingMarket.textContent = "$0.00";
-        pricingAvg.textContent = "$0.00";
-        pricingLast.textContent = "$0.00";
-        pricingSuggest.textContent = "$0.00";
-        gradeGroup.style.display = "none";
-        gradedFields.style.display = "none";
-        conditionPlatform.textContent = "-";
-        conditionEdition.textContent = "-";
-        conditionBarcode.textContent = "-";
-        conditionCatalogueId.textContent = escapeHtml(itemId);
-        conditionPanel.classList.add("open");
-      }
+      var card = e.target.closest(".catalog-card");
+      if (!card) return;
+      var catalogId = card.getAttribute("data-catalog-id");
+      var catalogItem = catalogItemsCache[catalogId];
+      if (catalogItem) openCatalogItemInfo(catalogItem);
     });
 
     conditionAddBtn.addEventListener("click", () => {
@@ -2440,8 +2362,8 @@
     });
 
     detailCloseBtn.addEventListener("click", closeItemDetail);
-    detailTabAttributes.addEventListener("click", () => selectDetailTab("attributes"));
-    detailTabHistory.addEventListener("click", () => selectDetailTab("history"));
+    detailTabAdd.addEventListener("click", () => selectDetailTab("add"));
+    detailTabInfo.addEventListener("click", () => selectDetailTab("info"));
 
     document.addEventListener("click", (e) => {
       var row = e.target.closest(".item-row");
@@ -2460,61 +2382,63 @@
     detailCancelBtn.addEventListener("click", closeItemDetail);
 
     detailAddBtn.addEventListener("click", () => {
-      if (currentDetailContext === "catalog") {
-        // Opened from catalog info — close info modal and show condition panel
-        if (!selectedCatalogItem) return;
-        closeItemDetail();
-        conditionItemName.textContent = escapeHtml(selectedCatalogItem.name);
-        conditionType.value = "loose";
-        conditionIsGraded.checked = false;
-        conditionPrice.value = "";
-        pricingMarket.textContent = "$0.00";
-        pricingAvg.textContent = "$0.00";
-        pricingLast.textContent = "$0.00";
-        pricingSuggest.textContent = "$0.00";
-        gradeGroup.style.display = "none";
-        gradedFields.style.display = "none";
-        conditionPlatform.textContent = selectedCatalogItem.edition || "-";
-        conditionEdition.textContent = selectedCatalogItem.edition || "-";
-        conditionBarcode.textContent = selectedCatalogItem.barcode || "-";
-        conditionCatalogueId.textContent = escapeHtml(selectedCatalogItem.id);
-        conditionPanel.classList.add("open");
-        return;
-      }
-
-      if (!selectedDetailItem) return;
       var price = parseFloat(detailOfferPrice.value);
       if (isNaN(price) || price < 0) {
         alert("Please enter a valid price.");
         return;
       }
+
+      var source, name, category, brand, year, edition, barcode, catalogueId, catalogItemId;
+
+      if (currentDetailContext === "catalog") {
+        if (!selectedCatalogItem) return;
+        source = "catalog";
+        name = selectedCatalogItem.name;
+        category = selectedCatalogItem.category;
+        brand = selectedCatalogItem.brand || "";
+        year = selectedCatalogItem.year ? String(selectedCatalogItem.year) : "";
+        edition = selectedCatalogItem.edition || "";
+        barcode = selectedCatalogItem.barcode || "";
+        catalogueId = selectedCatalogItem.id;
+        catalogItemId = selectedCatalogItem.id;
+      } else {
+        if (!selectedDetailItem) return;
+        source = selectedDetailItem.source;
+        name = selectedDetailItem.name;
+        category = selectedDetailItem.category;
+        brand = selectedDetailItem.brand || "";
+        year = selectedDetailItem.year || "";
+        edition = selectedDetailItem.edition || "";
+        barcode = selectedDetailItem.barcode || "";
+        catalogueId = selectedDetailItem.catalogueId || "";
+        catalogItemId = selectedDetailItem.catalogItemId;
+      }
+
       var newItem = {
-        category: selectedDetailItem.category,
-        name: selectedDetailItem.name,
-        brand: selectedDetailItem.brand,
-        year: selectedDetailItem.year,
-        platform: selectedDetailItem.platform,
-        edition: selectedDetailItem.edition,
-        barcode: selectedDetailItem.barcode,
-        catalogueId: selectedDetailItem.catalogueId,
+        name: name,
+        category: category,
+        brand: brand,
+        year: year,
+        edition: edition,
+        barcode: barcode,
+        catalogueId: catalogueId,
         condition: detailConditionType.value,
         grade: detailConditionIsGraded.checked ? (detailConditionGrader.value.toUpperCase() + " " + detailConditionGrade.value) : "",
         grader: detailConditionIsGraded.checked ? detailConditionGrader.value : "",
         price: price,
-        catalogItemId: selectedDetailItem.catalogItemId,
-        source: selectedDetailItem.source
+        catalogItemId: catalogItemId,
+        source: source
       };
-      var targetMode = currentMode || selectedDetailItem.source === "quick-add" ? "selling" : "selling";
-      if (currentMode === "buying") targetMode = "buying";
-      if (currentMode === "selling") targetMode = "selling";
-      if (!currentMode && selectedDetailItem.source === "catalog") targetMode = "selling";
-      if (targetMode === "selling") {
-        sellingItems.push(newItem);
-      } else {
+
+      if (currentCatalogMode === "buying") {
         buyingItems.push(newItem);
+      } else {
+        sellingItems.push(newItem);
       }
+
       renderItems();
       closeItemDetail();
+      closeCatalogSearch();
     });
 
     renderItems();
