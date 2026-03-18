@@ -112,6 +112,17 @@
         <div class="field"><label>Subcategory</label><select id="subcategory"><option value="">None</option></select></div>
       </div>
       <div class="grid">
+        <div></div>
+        <div class="field">
+          <label>Create Subcategory</label>
+          <div style="display:flex; gap:8px;">
+            <input id="new-subcategory" type="text" placeholder="New subcategory name" />
+            <button class="btn" id="create-subcategory" type="button">Add</button>
+          </div>
+          <p class="hint">Select a category first, then type a name to add a subcategory.</p>
+        </div>
+      </div>
+      <div class="grid">
         <div class="field"><label>Brand / Publisher *</label><input id="publisher" type="text" /></div>
         <div class="field"><label>Release Year *</label><input id="year" type="number" min="1900" max="2100" /></div>
       </div>
@@ -337,9 +348,35 @@
       document.getElementById("subcategory").value = item ? (item.subcategory_id || "") : "";
       document.getElementById("franchise").value = item ? (item.franchise_id || "") : "";
       document.getElementById("new-franchise").value = "";
+      document.getElementById("new-subcategory").value = "";
       document.getElementById("modal-status").textContent = "";
       updatePrimaryImagePreview(item ? (item.primary_image_url || "") : "");
       document.getElementById("item-modal").classList.add("open");
+    }
+
+    async function createSubcategory() {
+      var name = document.getElementById("new-subcategory").value.trim();
+      var categoryId = document.getElementById("category").value;
+      var status = document.getElementById("modal-status");
+      if (!categoryId) {
+        status.textContent = "Select a category before creating a subcategory.";
+        return;
+      }
+      if (!name) {
+        status.textContent = "Subcategory name is required.";
+        return;
+      }
+      var res = await supabase.rpc("admin_create_subcategory", {
+        p_category_id: categoryId,
+        p_name: name,
+        p_description: null
+      });
+      if (res.error) { status.textContent = "Error: " + res.error.message; return; }
+      document.getElementById("new-subcategory").value = "";
+      await loadSubcategories(categoryId);
+      var newId = res.data && res.data[0] ? res.data[0].id : "";
+      if (newId) document.getElementById("subcategory").value = newId;
+      status.textContent = "Subcategory saved.";
     }
 
     async function createFranchise() {
@@ -452,6 +489,7 @@
       var name = document.getElementById("name").value.trim() || "item";
       await uploadPrimaryImageFile(name);
     });
+    document.getElementById("create-subcategory").addEventListener("click", createSubcategory);
     document.getElementById("create-franchise").addEventListener("click", createFranchise);
     document.getElementById("open-create").addEventListener("click", function(){ openModal(null); });
     document.getElementById("cancel").addEventListener("click", function(){ document.getElementById("item-modal").classList.remove("open"); });

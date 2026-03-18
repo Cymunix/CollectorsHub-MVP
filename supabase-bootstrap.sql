@@ -1203,6 +1203,84 @@ $$;
 revoke all on function public.admin_list_subcategories(uuid) from public;
 grant execute on function public.admin_list_subcategories(uuid) to authenticated;
 
+-- Catalog managers write access for subcategories.
+drop policy if exists "Catalog managers can manage catalog_subcategories" on public.catalog_subcategories;
+create policy "Catalog managers can manage catalog_subcategories"
+on public.catalog_subcategories
+for all
+to authenticated
+using (public.is_current_user_catalog_manager())
+with check (public.is_current_user_catalog_manager());
+
+-- RPC: Admin create or upsert a subcategory.
+create or replace function public.admin_create_subcategory(
+  p_category_id uuid,
+  p_name text,
+  p_description text default null
+)
+returns table (
+  id uuid,
+  name text,
+  category_id uuid
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+declare
+  v_uid uuid := auth.uid();
+  v_new_id uuid;
+  v_name text;
+  v_cat_id uuid;
+begin
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not public.is_current_user_catalog_manager() then
+    raise exception 'Only catalog managers can create subcategories';
+  end if;
+
+  if p_category_id is null then
+    raise exception 'Category is required';
+  end if;
+
+  v_name := btrim(coalesce(p_name, ''));
+  if v_name = '' then
+    raise exception 'Name is required';
+  end if;
+
+  if not exists (
+    select 1
+    from public.catalog_categories cc
+    where cc.id = p_category_id
+      and cc.is_active = true
+  ) then
+    raise exception 'Category not found';
+  end if;
+
+  insert into public.catalog_subcategories (category_id, name, description, is_active)
+  values (
+    p_category_id,
+    v_name,
+    case when btrim(coalesce(p_description, '')) = '' then null else btrim(p_description) end,
+    true
+  )
+  on conflict (category_id, name)
+  do update set
+    description = coalesce(excluded.description, public.catalog_subcategories.description),
+    is_active = true
+  returning catalog_subcategories.id, catalog_subcategories.name, catalog_subcategories.category_id
+  into v_new_id, v_name, v_cat_id;
+
+  return query select v_new_id, v_name, v_cat_id;
+end;
+$$;
+
+revoke all on function public.admin_create_subcategory(uuid, text, text) from public;
+grant execute on function public.admin_create_subcategory(uuid, text, text) to authenticated;
+
 -- RPC: Admin list franchises for a category
 drop function if exists public.admin_list_franchises(uuid);
 create or replace function public.admin_list_franchises(p_category_id uuid default null)
