@@ -1366,6 +1366,7 @@ alter table public.catalog_items
   add column if not exists franchise_id uuid references public.catalog_franchises(id),
   add column if not exists set_number text,
   add column if not exists piece_count integer,
+  add column if not exists fig_count integer,
   add column if not exists edition text,
   add column if not exists upc text;
 
@@ -1457,6 +1458,7 @@ create or replace function public.admin_create_catalog_item(
   p_brand_or_publisher text default null,
   p_set_number text default null,
   p_piece_count integer default null,
+  p_fig_count integer default null,
   p_edition text default null,
   p_upc text default null,
   p_release_year integer default null,
@@ -1535,6 +1537,7 @@ begin
     brand_or_publisher,
     set_number,
     piece_count,
+    fig_count,
     edition,
     upc,
     release_year,
@@ -1552,6 +1555,7 @@ begin
     case when btrim(coalesce(p_brand_or_publisher, '')) = '' then null else btrim(p_brand_or_publisher) end,
     case when btrim(coalesce(p_set_number, '')) = '' then null else btrim(p_set_number) end,
     p_piece_count,
+    p_fig_count,
     case when btrim(coalesce(p_edition, '')) = '' then null else btrim(p_edition) end,
     case when btrim(coalesce(p_upc, '')) = '' then null else btrim(p_upc) end,
     p_release_year,
@@ -1568,8 +1572,8 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, text, text, integer, text, text, text) from public;
-grant execute on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, text, text, integer, text, text, text) to authenticated;
+revoke all on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, integer, text, text, integer, text, text, text) from public;
+grant execute on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, integer, text, text, integer, text, text, text) to authenticated;
 
 create or replace function public.admin_list_catalog_items(
   p_category_id uuid default null,
@@ -1595,6 +1599,7 @@ as $$
         'brand_or_publisher', ci.brand_or_publisher,
         'set_number', ci.set_number,
         'piece_count', ci.piece_count,
+        'fig_count', ci.fig_count,
         'edition', ci.edition,
         'upc', ci.upc,
         'release_year', ci.release_year,

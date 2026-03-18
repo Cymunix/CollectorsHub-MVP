@@ -154,6 +154,7 @@
         <div class="field"><label>Piece Count</label><input id="piece-count" type="number" min="0" /></div>
       </div>
       <div class="grid">
+        <div class="field"><label>Fig Count</label><input id="fig-count" type="number" min="0" /></div>
         <div class="field"><label>Edition</label><input id="edition" type="text" /></div>
         <div class="field"><label>UPC</label><input id="upc" type="text" /></div>
       </div>
@@ -340,6 +341,7 @@
       document.getElementById("series").value = item ? (item.series || "") : "";
       document.getElementById("set-number").value = item ? (item.set_number || "") : "";
       document.getElementById("piece-count").value = item ? (item.piece_count || "") : "";
+      document.getElementById("fig-count").value = item ? (item.fig_count || "") : "";
       document.getElementById("edition").value = item ? (item.edition || "") : "";
       document.getElementById("upc").value = item ? (item.upc || "") : "";
       document.getElementById("description").value = item ? (item.description || "") : "";
@@ -413,6 +415,7 @@
       var franchiseId = document.getElementById("franchise").value;
       var setNumber = document.getElementById("set-number").value.trim();
       var pieceCount = document.getElementById("piece-count").value;
+      var figCount = document.getElementById("fig-count").value;
       var edition = document.getElementById("edition").value.trim();
       var upc = document.getElementById("upc").value.trim();
       var description = document.getElementById("description").value.trim();
@@ -440,6 +443,7 @@
           p_brand_or_publisher: publisher,
           p_set_number: setNumber || null,
           p_piece_count: pieceCount ? Number(pieceCount) : null,
+          p_fig_count: figCount ? Number(figCount) : null,
           p_edition: edition || null,
           p_upc: upc || null,
           p_release_year: Number(year),
@@ -458,6 +462,7 @@
           brand_or_publisher: publisher,
           set_number: setNumber || null,
           piece_count: pieceCount ? Number(pieceCount) : null,
+          fig_count: figCount ? Number(figCount) : null,
           edition: edition || null,
           upc: upc || null,
           release_year: Number(year),
