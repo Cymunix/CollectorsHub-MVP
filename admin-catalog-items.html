@@ -43,6 +43,14 @@
     .upload-row .btn { white-space:nowrap; }
     .image-preview { width:100%; max-height:160px; object-fit:contain; border:1px solid rgba(56,89,136,.7); border-radius:10px; background:#0e1a2e; display:none; }
     .status { min-height:18px; font-size:.82rem; color:var(--soft); margin-top:8px; }
+    .mini-tabs { display:flex; gap:8px; margin:10px 0 14px; }
+    .mini-tab { border:1px solid rgba(56,89,136,.55); background:rgba(18,31,53,.95); color:var(--soft); padding:8px 12px; border-radius:999px; cursor:pointer; font-size:.8rem; }
+    .mini-tab.active { color:var(--text); border-color:rgba(51,195,255,.6); background:rgba(51,195,255,.14); }
+    .mini-panel { display:none; }
+    .mini-panel.active { display:block; }
+    .kv { margin:0; display:grid; grid-template-columns:170px 1fr; gap:8px 12px; }
+    .kv dt { color:var(--soft); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+    .kv dd { margin:0; }
     @media (max-width:980px){ .app{grid-template-columns:1fr;} .main{padding:14px;} .grid{grid-template-columns:1fr;} }
   </style>
 </head>
@@ -167,6 +175,49 @@
     </div>
   </div>
 
+  <div class="modal" id="item-view-modal">
+    <div class="modal-card">
+      <h3 id="item-view-title" style="margin-top:0;">Item Details</h3>
+      <div class="mini-tabs">
+        <button class="mini-tab active" id="item-tab-details" type="button">Details</button>
+        <button class="mini-tab" id="item-tab-variants" type="button">Variants</button>
+      </div>
+
+      <section class="mini-panel active" id="item-panel-details">
+        <dl class="kv">
+          <dt>Name</dt><dd id="view-name">-</dd>
+          <dt>Category</dt><dd id="view-category">-</dd>
+          <dt>Brand / Publisher</dt><dd id="view-publisher">-</dd>
+          <dt>Release Year</dt><dd id="view-year">-</dd>
+          <dt>Variant Count</dt><dd id="view-variant-count">0</dd>
+        </dl>
+      </section>
+
+      <section class="mini-panel" id="item-panel-variants">
+        <div style="overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Display Name</th>
+                <th>Platform / Format</th>
+                <th>Edition</th>
+                <th>Region</th>
+                <th>Packaging</th>
+                <th>UPC</th>
+              </tr>
+            </thead>
+            <tbody id="item-variants-tbody"><tr><td colspan="6">No variants found.</td></tr></tbody>
+          </table>
+        </div>
+        <p class="status" id="item-variants-status"></p>
+      </section>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+        <button class="btn" id="item-view-close" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="./supabase-config.js"></script>
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -180,6 +231,7 @@
     var items = [];
     var categories = [];
     var franchises = [];
+    var activeViewItem = null;
     var editId = null;
 
     function fmtDate(v) { var d = new Date(v); return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString(); }
@@ -327,6 +379,83 @@
           '</div></td>'+
         '</tr>';
       }).join("");
+    }
+
+    function switchItemViewTab(tabName) {
+      var detailsTab = document.getElementById("item-tab-details");
+      var variantsTab = document.getElementById("item-tab-variants");
+      var detailsPanel = document.getElementById("item-panel-details");
+      var variantsPanel = document.getElementById("item-panel-variants");
+      var showVariants = tabName === "variants";
+      detailsTab.classList.toggle("active", !showVariants);
+      variantsTab.classList.toggle("active", showVariants);
+      detailsPanel.classList.toggle("active", !showVariants);
+      variantsPanel.classList.toggle("active", showVariants);
+    }
+
+    async function loadItemVariants(itemId) {
+      var tbody = document.getElementById("item-variants-tbody");
+      var status = document.getElementById("item-variants-status");
+      tbody.innerHTML = '<tr><td colspan="6">Loading variants...</td></tr>';
+      status.textContent = "";
+
+      var res = await supabase
+        .from("variants")
+        .select("id,platform_or_format,edition,region,packaging,upc,attributes")
+        .eq("catalog_item_id", itemId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (res.error) {
+        tbody.innerHTML = '<tr><td colspan="6">Failed to load variants.</td></tr>';
+        status.textContent = res.error.message;
+        return;
+      }
+
+      var list = res.data || [];
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="6">No variants found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(function(v){
+        var variantName = v.attributes && v.attributes.variant_name ? String(v.attributes.variant_name) : "";
+        var base = activeViewItem && activeViewItem.name ? activeViewItem.name : "Variant";
+        var displayName = variantName ? (base + " - " + variantName) : base;
+        return '<tr>' +
+          '<td>' + esc(displayName) + '</td>' +
+          '<td>' + esc(v.platform_or_format || "-") + '</td>' +
+          '<td>' + esc(v.edition || "-") + '</td>' +
+          '<td>' + esc(v.region || "-") + '</td>' +
+          '<td>' + esc(v.packaging || "-") + '</td>' +
+          '<td>' + esc(v.upc || "-") + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    async function openItemViewModal(item) {
+      activeViewItem = item || null;
+      var count = Number(item && item.variant_count ? item.variant_count : 0);
+
+      document.getElementById("item-view-title").textContent = (item && item.name ? item.name : "Item") + " Details";
+      document.getElementById("view-name").textContent = item && item.name ? item.name : "-";
+      document.getElementById("view-category").textContent = item && item.category_name ? item.category_name : "-";
+      document.getElementById("view-publisher").textContent = item && item.brand_or_publisher ? item.brand_or_publisher : "-";
+      document.getElementById("view-year").textContent = item && item.release_year ? String(item.release_year) : "-";
+      document.getElementById("view-variant-count").textContent = String(count);
+
+      var variantsTab = document.getElementById("item-tab-variants");
+      variantsTab.style.display = count > 0 ? "inline-block" : "none";
+
+      switchItemViewTab("details");
+      document.getElementById("item-view-modal").classList.add("open");
+
+      if (count > 0 && item && item.id) {
+        await loadItemVariants(item.id);
+      } else {
+        document.getElementById("item-variants-tbody").innerHTML = '<tr><td colspan="6">No variants found.</td></tr>';
+        document.getElementById("item-variants-status").textContent = "";
+      }
     }
 
     function openModal(item) {
@@ -498,6 +627,9 @@
     document.getElementById("create-franchise").addEventListener("click", createFranchise);
     document.getElementById("open-create").addEventListener("click", function(){ openModal(null); });
     document.getElementById("cancel").addEventListener("click", function(){ document.getElementById("item-modal").classList.remove("open"); });
+    document.getElementById("item-view-close").addEventListener("click", function(){ document.getElementById("item-view-modal").classList.remove("open"); });
+    document.getElementById("item-tab-details").addEventListener("click", function(){ switchItemViewTab("details"); });
+    document.getElementById("item-tab-variants").addEventListener("click", function(){ switchItemViewTab("variants"); });
     document.getElementById("save").addEventListener("click", saveItem);
     document.querySelector("#items-table tbody").addEventListener("click", function(e){
       var btn = e.target.closest("button");
@@ -506,7 +638,7 @@
       var act = btn.getAttribute("data-act");
       var item = items.find(function(i){ return i.id === id; });
       if (act === "view" && item) {
-        alert((item.name || "") + "\n" + (item.category_name || "") + "\n" + (item.brand_or_publisher || ""));
+        openItemViewModal(item);
       } else if (act === "edit" && item) {
         openModal(item);
       } else if (act === "delete") {
