@@ -87,7 +87,16 @@
       <div class="field" id="field-piece-count"><label>Piece Count</label><input id="piece-count" type="number" min="0" /></div>
       <div class="field" id="field-fig-count"><label>Fig Count</label><input id="fig-count" type="number" min="0" /></div>
     </div>
-    <div class="field"><label>Primary Image URL</label><input id="primary-image" type="url" placeholder="https://..." /><p class="hint">URL for this variant's primary image.</p></div>
+    <div class="field">
+      <label>Primary Image</label>
+      <input id="primary-image" type="url" placeholder="Paste image URL, or upload below" />
+      <div class="upload-row">
+        <input id="primary-image-file" type="file" accept="image/*" />
+        <button class="btn" id="upload-primary-image" type="button">Upload</button>
+      </div>
+      <p class="hint">Paste an image URL or upload a file from your device.</p>
+      <img id="primary-image-preview" class="image-preview" alt="Image preview" />
+    </div>
     <div class="field"><label>Description</label><textarea id="description" rows="3" placeholder="Variant-specific description..."></textarea></div>
     <div class="field"><label>Attributes (JSON)</label><textarea id="attributes-json" rows="3" placeholder='{"color":"red","language":"EN"}'></textarea><p class="hint">Extra custom fields not covered by the fields above.</p></div>
     <p class="status" id="modal-status"></p>
@@ -101,7 +110,11 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 var USER_ROLE_KEY="collectorshub_retail_user_role";
 var ALLOWED=["server_admin","admin","catalog_manager"];
 var supabase=createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
-var variants=[]; var items=[]; var editId=null;
+var variants=[]; var items=[]; var editId=null; var IMAGE_BUCKET="catalog-images";
+function buildVariantStoragePath(variantLabel,fileName){var safe=String(variantLabel||"variant").toLowerCase().replace(/[^a-z0-9._-]+/g,"-").replace(/^-+|-+$/g,"")||"variant"; var f=String(fileName||"image").toLowerCase().replace(/[^a-z0-9._-]+/g,"-").replace(/^-+|-+$/g,"")||"image"; return "variants/"+safe+"/"+Date.now()+"-"+f;}
+function updateImagePreview(url){var img=document.getElementById("primary-image-preview"); if(!img) return; var u=String(url||"").trim(); if(!u){img.removeAttribute("src"); img.style.display="none"; return;} img.src=u; img.style.display="block";}
+function previewSelectedFile(){var fi=document.getElementById("primary-image-file"); var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null; if(!file){updateImagePreview(document.getElementById("primary-image").value); return;} var r=new FileReader(); r.onload=function(e){updateImagePreview(e&&e.target?e.target.result:"");}; r.readAsDataURL(file);}
+async function uploadVariantImageFile(label){var status=document.getElementById("modal-status"); var fi=document.getElementById("primary-image-file"); var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null; if(!file){return document.getElementById("primary-image").value.trim();} status.textContent="Uploading image..."; var path=buildVariantStoragePath(label,file.name); var up=await supabase.storage.from(IMAGE_BUCKET).upload(path,file,{contentType:file.type||"application/octet-stream",upsert:false}); if(up.error){status.textContent="Upload failed: "+up.error.message; return null;} var pub=supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path); var finalUrl=pub&&pub.data?pub.data.publicUrl:""; if(!finalUrl){status.textContent="Could not get image URL after upload."; return null;} document.getElementById("primary-image").value=finalUrl; updateImagePreview(finalUrl); status.textContent="Image uploaded."; return finalUrl;}
 function esc(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 async function verify(){var s=(await supabase.auth.getSession()).data.session; if(!s){window.location.href="/index.html"; return false;} var r=await supabase.from("server_users").select("role").eq("auth_user_id",s.user.id).eq("is_active",true).maybeSingle(); var role=!r.error&&r.data?r.data.role:null; if(!role){var lr=localStorage.getItem(USER_ROLE_KEY); if(lr&&ALLOWED.indexOf(lr)>=0) role=lr;} if(!role||ALLOWED.indexOf(role)<0){await supabase.auth.signOut(); window.location.href="/index.html"; return false;} return true;}
 async function loadItems(){
@@ -227,7 +240,7 @@ function openModal(v){
   document.getElementById("set-number").value=v?(v.set_number||(v.attributes&&v.attributes.set_number)||""):"";
   document.getElementById("piece-count").value=v?(v.piece_count||(v.attributes&&v.attributes.piece_count)||""):"";
   document.getElementById("fig-count").value=v&&v.attributes&&v.attributes.fig_count?v.attributes.fig_count:"";
-  document.getElementById("primary-image").value=v&&v.attributes&&v.attributes.primary_image_url?String(v.attributes.primary_image_url):"";
+  var piUrl=v&&v.attributes&&v.attributes.primary_image_url?String(v.attributes.primary_image_url):""; document.getElementById("primary-image").value=piUrl; updateImagePreview(piUrl); var pif=document.getElementById("primary-image-file"); if(pif) pif.value="";
   document.getElementById("description").value=v&&v.attributes&&v.attributes.description?String(v.attributes.description):"";
   var knownAttrKeys=["variant_name","brand_or_publisher","series","release_year","set_number","piece_count","fig_count","primary_image_url","description"];
   var extraAttrs={};
@@ -269,7 +282,8 @@ async function saveVariant(){
   var setNum=document.getElementById("set-number").value.trim();
   var pieceCount=document.getElementById("piece-count").value.trim();
   var figCount=document.getElementById("fig-count").value.trim();
-  var primaryImage=document.getElementById("primary-image").value.trim();
+  var variantLabel=document.getElementById("variant-name").value.trim()||document.getElementById("catalog-item").options[document.getElementById("catalog-item").selectedIndex]&&document.getElementById("catalog-item").options[document.getElementById("catalog-item").selectedIndex].text||"variant";
+  var primaryImage=await uploadVariantImageFile(variantLabel); if(primaryImage===null) return;
   var description=document.getElementById("description").value.trim();
   var attrsRaw=document.getElementById("attributes-json").value;
   var status=document.getElementById("modal-status");
@@ -307,7 +321,10 @@ async function saveVariant(){
 async function deleteVariant(id){ if(!confirm("Delete this variant?")) return; var res=await supabase.from("variants").update({is_active:false}).eq("id",id); if(res.error){document.getElementById("table-status").textContent="Delete failed: "+res.error.message; return;} loadVariants(); }
 
 document.getElementById("open-create").addEventListener("click",function(){openModal(null);});
-document.getElementById("cancel").addEventListener("click",function(){document.getElementById("variant-modal").classList.remove("open");});
+document.getElementById("cancel").addEventListener("click",function(){document.getElementById("variant-modal").classList.remove("open"); var pif=document.getElementById("primary-image-file"); if(pif) pif.value=""; updateImagePreview("");});
+document.getElementById("primary-image-file").addEventListener("change",previewSelectedFile);
+document.getElementById("primary-image").addEventListener("input",function(){if(!document.getElementById("primary-image-file").value) updateImagePreview(this.value);});
+document.getElementById("upload-primary-image").addEventListener("click",function(){document.getElementById("primary-image-file").click();});
 document.getElementById("save").addEventListener("click",saveVariant);
 document.getElementById("catalog-item").addEventListener("change",function(){applyFormByCategory(this.value);});
 document.querySelector("#variants-table tbody").addEventListener("click",function(e){var b=e.target.closest("button"); if(!b) return; var id=b.getAttribute("data-id"); var act=b.getAttribute("data-act"); var v=variants.find(function(x){return x.id===id;}); if(act==="view"&&v){var vn=v.attributes&&v.attributes.variant_name?String(v.attributes.variant_name):""; alert((v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"Variant")+(vn?" - "+vn:"")+"\n"+(v.platform_or_format||"")+"\n"+(v.edition||""));} else if(act==="edit"&&v){openModal(v);} else if(act==="delete"){deleteVariant(id);} });
