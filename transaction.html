@@ -1092,6 +1092,35 @@
       font-size: 12px;
     }
 
+    .detail-variants-section {
+      margin-top: 12px;
+    }
+
+    .detail-variants-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .detail-variant-row {
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      font-size: 13px;
+    }
+
+    .detail-variant-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .detail-variant-meta {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
     @media (max-width: 768px) {
       .catalog-grid {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -1491,6 +1520,10 @@
         <div class="detail-panel" id="detail-panel-info">
           <div id="detail-info-description" class="detail-block" style="margin-bottom: 12px;"></div>
           <div class="detail-grid" id="detail-attributes-grid"></div>
+          <div class="detail-variants-section" id="detail-variants-section" style="display:none;">
+            <div class="detail-block-label">Variants</div>
+            <div class="detail-variants-list" id="detail-variants-list"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1539,6 +1572,8 @@
     var detailAddImageContainer = document.getElementById("detail-add-image-container");
     var detailInfoDescription = document.getElementById("detail-info-description");
     var detailAttributesGrid = document.getElementById("detail-attributes-grid");
+    var detailVariantsSection = document.getElementById("detail-variants-section");
+    var detailVariantsList = document.getElementById("detail-variants-list");
     var detailTabAdd = document.getElementById("detail-tab-add");
     var detailTabInfo = document.getElementById("detail-tab-info");
     var detailPanelAdd = document.getElementById("detail-panel-add");
@@ -1734,6 +1769,25 @@
         .replace(/'/g, "&#39;");
     }
 
+    function renderDetailVariants(variants) {
+      var list = Array.isArray(variants) ? variants : [];
+      if (!list.length) {
+        detailVariantsSection.style.display = "none";
+        detailVariantsList.innerHTML = "";
+        return;
+      }
+
+      detailVariantsSection.style.display = "block";
+      detailVariantsList.innerHTML = list.map(function(v) {
+        var variantName = v.variant_name || "Variant";
+        var meta = [v.platform_or_format, v.edition, v.region, v.packaging, v.upc ? ("UPC: " + v.upc) : ""].filter(Boolean).join(" · ");
+        return '<div class="detail-variant-row">' +
+          '<div class="detail-variant-name">' + escapeHtml(variantName) + '</div>' +
+          '<div class="detail-variant-meta">' + escapeHtml(meta || "No additional details") + '</div>' +
+        '</div>';
+      }).join("");
+    }
+
     addSellingBtn.addEventListener("click", () => openAddItemModal("selling"));
     addBuyingBtn.addEventListener("click", () => openAddItemModal("buying"));
 
@@ -1817,6 +1871,35 @@
         return { items: [], total: 0 };
       }
 
+      var variantsByItemId = {};
+      var catalogItemIds = response.data.map(function(row) { return row.id; }).filter(Boolean);
+      if (catalogItemIds.length) {
+        var variantsRes = await supabase
+          .from("variants")
+          .select("catalog_item_id,platform_or_format,edition,region,packaging,upc,attributes")
+          .eq("is_active", true)
+          .in("catalog_item_id", catalogItemIds)
+          .order("created_at", { ascending: false });
+
+        if (!variantsRes.error && Array.isArray(variantsRes.data)) {
+          variantsRes.data.forEach(function(v) {
+            if (!v || !v.catalog_item_id) return;
+            if (!Array.isArray(variantsByItemId[v.catalog_item_id])) {
+              variantsByItemId[v.catalog_item_id] = [];
+            }
+            var attrs = v.attributes && typeof v.attributes === "object" ? v.attributes : {};
+            variantsByItemId[v.catalog_item_id].push({
+              variant_name: attrs.variant_name || "",
+              platform_or_format: v.platform_or_format || "",
+              edition: v.edition || "",
+              region: v.region || "",
+              packaging: v.packaging || "",
+              upc: v.upc || ""
+            });
+          });
+        }
+      }
+
       var normalizedSearch = String(searchTerm || "").trim().toLowerCase();
       var selectedCategoryName = categorySlugToName[categorySlug] || "";
       var selectedFranchise = String(franchiseName || "").trim().toLowerCase();
@@ -1872,7 +1955,7 @@
         var subcategoryName = subcategoryById[row.subcategory_id] || "";
         var franchise = franchiseById[row.franchise_id] || "";
 
-        var activeVariants = [];
+        var activeVariants = variantsByItemId[row.id] || [];
 
         return {
           id: row.id,
@@ -2175,6 +2258,7 @@
         barcode: item.upc,
         description: item.description,
         primary_image_url: item.primary_image_url,
+        variants: item.variants || [],
         catalogItemId: item.id,
         source: "catalog"
       };
@@ -2219,6 +2303,7 @@
         var val = pair[1] || "-";
         return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(val) + '</div></div>';
       }).join("");
+      renderDetailVariants(item.variants || []);
 
       selectDetailTab("add");
       detailModalOverlay.classList.add("open");
@@ -2275,6 +2360,7 @@
       detailAttributesGrid.innerHTML = attributes.map(function(pair) {
         return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(pair[1] || "-") + '</div></div>';
       }).join("");
+      renderDetailVariants(item.variants || []);
 
       selectDetailTab("add");
       detailModalOverlay.classList.add("open");
@@ -2286,6 +2372,8 @@
       currentDetailContext = null;
       if (detailAddImageContainer) detailAddImageContainer.innerHTML = '';
       if (detailInfoDescription) detailInfoDescription.innerHTML = '';
+      if (detailVariantsSection) detailVariantsSection.style.display = "none";
+      if (detailVariantsList) detailVariantsList.innerHTML = "";
     }
 
     function selectDetailTab(tab) {
