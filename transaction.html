@@ -1895,7 +1895,7 @@
           catalog_item_id: catalogItemId,
           variant_id: variantId,
           quantity_on_hand: deltaQty,
-          unit_price: null,
+          unit_price: Number(item.price || 0),
           unit_cost: Number(item.price || 0),
           is_active: true
         };
@@ -1925,8 +1925,10 @@
         is_active: true
       };
 
-      if (deltaQty > 0 && (row.unit_cost == null || Number(row.unit_cost) === 0)) {
+      if (deltaQty > 0) {
+        // When the store buys inventory, refresh cost and default sell price to latest intake price.
         updatePayload.unit_cost = Number(item.price || 0);
+        updatePayload.unit_price = Number(item.price || 0);
       }
 
       var updateRes = await supabase
