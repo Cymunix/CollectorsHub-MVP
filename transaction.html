@@ -2379,11 +2379,8 @@
         var filteredHistory = filterByCondition(history, conditionValue);
         var filteredStoreEntries = filterByCondition(storeEntries, conditionValue);
         var filteredMarketEntries = filterByCondition(marketEntries, conditionValue);
-        var filteredStoreBuys = filterByCondition(storeBuys, conditionValue);
         var filteredStoreSales = filterByCondition(storeSales, conditionValue);
         var filteredCurrentStoreEntries = filterByCondition(currentStoreEntries, conditionValue);
-        var filteredCurrentStoreBuys = filterByCondition(currentStoreBuys, conditionValue);
-        var filteredCurrentStoreSales = filterByCondition(currentStoreSales, conditionValue);
 
         return {
           history: filteredHistory,
@@ -2394,34 +2391,14 @@
               meta: filteredMarketEntries.length + " market sales"
             },
             {
-              label: "Store Purchases",
-              value: averageNumbers(filteredStoreBuys.map(function(entry) { return entry.price; })),
-              meta: filteredStoreBuys.length + " store_buy rows"
-            },
-            {
               label: "Store Sales",
               value: averageNumbers(filteredStoreSales.map(function(entry) { return entry.price; })),
               meta: filteredStoreSales.length + " store_sell rows"
             },
             {
-              label: currentStoreCode ? (currentStoreCode + " Purchases") : "Current Store Purchases",
-              value: averageNumbers(filteredCurrentStoreBuys.map(function(entry) { return entry.price; })),
-              meta: filteredCurrentStoreBuys.length + " current-store buys"
-            },
-            {
-              label: currentStoreCode ? (currentStoreCode + " Sales") : "Current Store Sales",
-              value: averageNumbers(filteredCurrentStoreSales.map(function(entry) { return entry.price; })),
-              meta: filteredCurrentStoreSales.length + " current-store sales"
-            },
-            {
-              label: currentStoreCode ? (currentStoreCode + " All Transactions") : "Current Store All Transactions",
+              label: currentStoreCode ? (currentStoreCode + " Sales/Purchases") : "Current Store Sales/Purchases",
               value: averageNumbers(filteredCurrentStoreEntries.map(function(entry) { return entry.price; })),
               meta: filteredCurrentStoreEntries.length + " current-store rows"
-            },
-            {
-              label: "All Store Transactions",
-              value: averageNumbers(filteredStoreEntries.map(function(entry) { return entry.price; })),
-              meta: filteredStoreEntries.length + " store buys/sales"
             }
           ],
           summary: filteredHistory.length
