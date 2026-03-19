@@ -1969,6 +1969,75 @@ to authenticated
 using (true)
 with check (true);
 
+-- Store transaction history for completed buy/sell operations.
+create table if not exists public.store_transactions (
+  id uuid primary key default gen_random_uuid(),
+  store_code text not null references public.retail_stores(store_code) on update cascade on delete cascade,
+  created_by uuid,
+  bought_total numeric(12,2) not null default 0 check (bought_total >= 0),
+  sold_total numeric(12,2) not null default 0 check (sold_total >= 0),
+  net_total numeric(12,2) not null default 0,
+  status text not null default 'completed' check (status in ('pending', 'completed', 'failed')),
+  note text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists store_transactions_store_code_idx on public.store_transactions(store_code);
+create index if not exists store_transactions_created_at_idx on public.store_transactions(created_at desc);
+
+create table if not exists public.store_transaction_items (
+  id uuid primary key default gen_random_uuid(),
+  transaction_id uuid not null references public.store_transactions(id) on delete cascade,
+  line_type text not null check (line_type in ('store_buy', 'store_sell')),
+  catalog_item_id uuid references public.catalog_items(id) on delete set null,
+  variant_id uuid references public.variants(id) on delete set null,
+  item_name text not null,
+  item_condition text,
+  grade text,
+  quantity integer not null default 1 check (quantity > 0),
+  unit_price numeric(12,2) not null check (unit_price >= 0),
+  line_total numeric(12,2) not null check (line_total >= 0),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists store_transaction_items_transaction_id_idx on public.store_transaction_items(transaction_id);
+create index if not exists store_transaction_items_catalog_item_idx on public.store_transaction_items(catalog_item_id);
+create index if not exists store_transaction_items_variant_idx on public.store_transaction_items(variant_id);
+
+alter table public.store_transactions enable row level security;
+alter table public.store_transaction_items enable row level security;
+
+drop policy if exists "Allow read store_transactions" on public.store_transactions;
+create policy "Allow read store_transactions"
+on public.store_transactions
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Allow manage store_transactions" on public.store_transactions;
+create policy "Allow manage store_transactions"
+on public.store_transactions
+for all
+to authenticated
+using (true)
+with check (true);
+
+drop policy if exists "Allow read store_transaction_items" on public.store_transaction_items;
+create policy "Allow read store_transaction_items"
+on public.store_transaction_items
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Allow manage store_transaction_items" on public.store_transaction_items;
+create policy "Allow manage store_transaction_items"
+on public.store_transaction_items
+for all
+to authenticated
+using (true)
+with check (true);
+
 -- Catalog requests workflow.
 create table if not exists public.catalog_requests (
   id uuid primary key default gen_random_uuid(),

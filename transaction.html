@@ -1844,6 +1844,232 @@
       renderItems();
     }
 
+    function toUuidOrNull(value) {
+      var normalized = String(value == null ? "" : value).trim();
+      return normalized ? normalized : null;
+    }
+
+    async function findStoreInventoryRow(storeCode, catalogItemId, variantId) {
+      if (!storeCode || !catalogItemId) {
+        return null;
+      }
+
+      var query = supabase
+        .from("store_inventory")
+        .select("id,quantity_on_hand,unit_price,unit_cost")
+        .eq("store_code", storeCode)
+        .eq("catalog_item_id", catalogItemId)
+        .eq("is_active", true)
+        .limit(1);
+
+      if (variantId) {
+        query = query.eq("variant_id", variantId);
+      } else {
+        query = query.is("variant_id", null);
+      }
+
+      var res = await query.maybeSingle();
+      if (res.error) {
+        throw new Error(res.error.message || "Unable to read store inventory.");
+      }
+
+      return res.data || null;
+    }
+
+    async function upsertStoreInventoryDelta(storeCode, item, deltaQty) {
+      var catalogItemId = toUuidOrNull(item.catalogItemId);
+      var variantId = toUuidOrNull(item.variantId);
+      if (!catalogItemId || !deltaQty) {
+        return;
+      }
+
+      var row = await findStoreInventoryRow(storeCode, catalogItemId, variantId);
+
+      if (!row) {
+        if (deltaQty < 0) {
+          throw new Error("Not enough inventory for " + (item.name || "item") + ".");
+        }
+
+        var insertPayload = {
+          store_code: storeCode,
+          catalog_item_id: catalogItemId,
+          variant_id: variantId,
+          quantity_on_hand: deltaQty,
+          unit_price: null,
+          unit_cost: Number(item.price || 0),
+          is_active: true
+        };
+
+        if (!variantId) {
+          delete insertPayload.variant_id;
+        }
+
+        var insertRes = await supabase
+          .from("store_inventory")
+          .insert([insertPayload]);
+
+        if (insertRes.error) {
+          throw new Error(insertRes.error.message || "Failed to add inventory row.");
+        }
+
+        return;
+      }
+
+      var nextQty = Number(row.quantity_on_hand || 0) + deltaQty;
+      if (nextQty < 0) {
+        throw new Error("Not enough inventory for " + (item.name || "item") + ".");
+      }
+
+      var updatePayload = {
+        quantity_on_hand: nextQty,
+        is_active: true
+      };
+
+      if (deltaQty > 0 && (row.unit_cost == null || Number(row.unit_cost) === 0)) {
+        updatePayload.unit_cost = Number(item.price || 0);
+      }
+
+      var updateRes = await supabase
+        .from("store_inventory")
+        .update(updatePayload)
+        .eq("id", row.id);
+
+      if (updateRes.error) {
+        throw new Error(updateRes.error.message || "Failed to update inventory row.");
+      }
+    }
+
+    async function completeTransaction() {
+      if (sellingItems.length === 0 && buyingItems.length === 0) {
+        alert("Add at least one item to complete transaction.");
+        return;
+      }
+
+      var storeCode = String(localStorage.getItem(STORE_CODE_KEY) || "").trim();
+      if (!storeCode) {
+        alert("Store code is missing. Please sign in again.");
+        return;
+      }
+
+      completeBtn.disabled = true;
+      completeBtn.textContent = "Completing...";
+
+      var txId = null;
+      try {
+        var sessionRes = await supabase.auth.getSession();
+        var userId = sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user
+          ? sessionRes.data.session.user.id
+          : null;
+
+        var boughtTotal = sellingItems.reduce(function(sum, item) { return sum + Number(item.price || 0); }, 0);
+        var soldTotal = buyingItems.reduce(function(sum, item) { return sum + Number(item.price || 0); }, 0);
+        var netTotal = soldTotal - boughtTotal;
+
+        var txInsert = await supabase
+          .from("store_transactions")
+          .insert([{
+            store_code: storeCode,
+            created_by: userId,
+            bought_total: boughtTotal,
+            sold_total: soldTotal,
+            net_total: netTotal,
+            status: "pending"
+          }])
+          .select("id")
+          .single();
+
+        if (txInsert.error || !txInsert.data || !txInsert.data.id) {
+          throw new Error((txInsert.error && txInsert.error.message) || "Failed to create transaction.");
+        }
+
+        txId = txInsert.data.id;
+
+        var lineRows = [];
+        sellingItems.forEach(function(item) {
+          lineRows.push({
+            transaction_id: txId,
+            line_type: "store_buy",
+            catalog_item_id: toUuidOrNull(item.catalogItemId),
+            variant_id: toUuidOrNull(item.variantId),
+            item_name: item.name || "Item",
+            item_condition: item.condition || null,
+            grade: item.grade || null,
+            quantity: 1,
+            unit_price: Number(item.price || 0),
+            line_total: Number(item.price || 0),
+            metadata: {
+              source: item.source || null,
+              category: item.category || null,
+              brand: item.brand || null,
+              edition: item.edition || null,
+              barcode: item.barcode || null
+            }
+          });
+        });
+
+        buyingItems.forEach(function(item) {
+          lineRows.push({
+            transaction_id: txId,
+            line_type: "store_sell",
+            catalog_item_id: toUuidOrNull(item.catalogItemId),
+            variant_id: toUuidOrNull(item.variantId),
+            item_name: item.name || "Item",
+            item_condition: item.condition || null,
+            grade: item.grade || null,
+            quantity: 1,
+            unit_price: Number(item.price || 0),
+            line_total: Number(item.price || 0),
+            metadata: {
+              source: item.source || null,
+              category: item.category || null,
+              brand: item.brand || null,
+              edition: item.edition || null,
+              barcode: item.barcode || null
+            }
+          });
+        });
+
+        if (lineRows.length) {
+          var linesInsert = await supabase.from("store_transaction_items").insert(lineRows);
+          if (linesInsert.error) {
+            throw new Error(linesInsert.error.message || "Failed to save transaction lines.");
+          }
+        }
+
+        for (var s = 0; s < sellingItems.length; s++) {
+          await upsertStoreInventoryDelta(storeCode, sellingItems[s], 1);
+        }
+        for (var b = 0; b < buyingItems.length; b++) {
+          await upsertStoreInventoryDelta(storeCode, buyingItems[b], -1);
+        }
+
+        await supabase
+          .from("store_transactions")
+          .update({ status: "completed" })
+          .eq("id", txId);
+
+        sellingItems = [];
+        buyingItems = [];
+        renderItems();
+        closeCatalogSearch();
+        closeConditionPanel();
+        closeItemDetail();
+
+        alert("Transaction completed successfully.");
+      } catch (error) {
+        if (txId) {
+          await supabase
+            .from("store_transactions")
+            .update({ status: "failed", note: String(error.message || "Transaction failed") })
+            .eq("id", txId);
+        }
+        alert(error && error.message ? error.message : "Unable to complete transaction.");
+      } finally {
+        completeBtn.disabled = false;
+        completeBtn.textContent = "Complete Transaction";
+      }
+    }
+
     function escapeHtml(text) {
       return String(text)
         .replace(/&/g, "&amp;")
@@ -1951,13 +2177,7 @@
       alert("Draft saving is currently unavailable.");
     });
 
-    completeBtn.addEventListener("click", () => {
-      if (sellingItems.length === 0 && buyingItems.length === 0) {
-        alert("Add at least one item to complete transaction.");
-        return;
-      }
-      alert("Transaction completion is currently unavailable.");
-    });
+    completeBtn.addEventListener("click", completeTransaction);
 
     searchSellingBtn.addEventListener("click", () => {
       openCatalogSearch("selling");
