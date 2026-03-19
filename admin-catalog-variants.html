@@ -12,7 +12,7 @@
     .topbar{min-height:76px;border-bottom:1px solid var(--border);background:rgba(8,16,30,.78);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;} .topbar h2{margin:0;font-size:1.05rem;}
     .main{padding:20px 24px;display:flex;flex-direction:column;gap:16px;} .subnav{display:flex;flex-wrap:wrap;gap:8px;} .subnav a{color:var(--soft);text-decoration:none;border:1px solid rgba(56,89,136,.55);border-radius:999px;padding:7px 10px;font-size:.8rem;} .subnav a.active{color:var(--text);border-color:rgba(51,195,255,.6);background:rgba(51,195,255,.14);} .section{border:1px solid var(--border);border-radius:14px;padding:16px;background:rgba(13,22,40,.76);} .section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;} .btn{border:1px solid rgba(56,89,136,.55);background:rgba(18,31,53,.95);color:var(--text);padding:9px 12px;border-radius:10px;cursor:pointer;}
     table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.85rem;} th,td{padding:10px;border-bottom:1px solid rgba(35,52,81,.5);text-align:left;} th{color:var(--soft);font-size:.76rem;text-transform:uppercase;} .actions{display:flex;gap:6px;} .actions button{border:1px solid rgba(51,195,255,.4);background:none;color:var(--text);padding:4px 8px;border-radius:8px;cursor:pointer;font-size:.75rem;}
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px;} .modal.open{display:flex;} .modal-card{width:100%;max-width:620px;max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;} .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;} .field input,.field select,.field textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(56,89,136,.7);background:#0e1a2e;color:var(--text);} .hint{color:var(--soft);font-size:.78rem;margin:2px 0 0;} .status{min-height:18px;color:var(--soft);font-size:.82rem;margin-top:8px;}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px;} .modal.open{display:flex;} .modal-card{width:100%;max-width:620px;max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;} .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;} .field input,.field select,.field textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(56,89,136,.7);background:#0e1a2e;color:var(--text);} .hint{color:var(--soft);font-size:.78rem;margin:2px 0 0;} .status{min-height:18px;color:var(--soft);font-size:.82rem;margin-top:8px;} .context-chip{display:inline-block;padding:4px 10px;border:1px solid rgba(51,195,255,.4);border-radius:999px;font-size:.74rem;color:var(--soft);background:rgba(51,195,255,.09);margin-bottom:10px;}
     @media(max-width:980px){.app{grid-template-columns:1fr}.main{padding:14px}.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -60,17 +60,21 @@
     <p class="hint" style="margin-top:-4px; margin-bottom:12px;">Use this form to create or edit variant-specific details, similar to the catalog item workflow.</p>
     <div class="grid">
       <div class="field"><label>Catalog Item *</label><select id="catalog-item"></select></div>
-      <div class="field"><label>Platform / Format *</label><input id="platform" type="text" placeholder="PlayStation 5, Blu-ray, etc." /></div>
+      <div class="field"><label>Variant Name Override</label><input id="variant-name" type="text" placeholder="Optional, e.g. Collector Tin Blue" /><p class="hint">If provided, this can differ from the catalog item name.</p></div>
+    </div>
+    <div id="category-context" class="context-chip">Category: Not selected</div>
+    <div class="grid">
+      <div class="field" id="field-platform"><label id="label-platform">Platform / Format *</label><input id="platform" type="text" placeholder="PlayStation 5, Blu-ray, etc." /></div>
+      <div class="field" id="field-edition"><label id="label-edition">Edition</label><input id="edition" type="text" placeholder="Deluxe, Collector's, Standard" /></div>
     </div>
     <div class="grid">
-      <div class="field"><label>Edition</label><input id="edition" type="text" placeholder="Deluxe, Collector's, Standard" /></div>
-      <div class="field"><label>Region</label><input id="region" type="text" placeholder="NA, EU, JP" /></div>
+      <div class="field" id="field-region"><label id="label-region">Region</label><input id="region" type="text" placeholder="NA, EU, JP" /></div>
+      <div class="field" id="field-packaging"><label id="label-packaging">Packaging</label><input id="packaging" type="text" placeholder="Sealed, Boxed, Loose" /></div>
     </div>
     <div class="grid">
-      <div class="field"><label>Packaging</label><input id="packaging" type="text" placeholder="Sealed, Boxed, Loose" /></div>
-      <div class="field"><label>UPC</label><input id="upc" type="text" /></div>
+      <div class="field" id="field-upc"><label id="label-upc">UPC</label><input id="upc" type="text" /></div>
+      <div class="field" id="field-release-date"><label id="label-release-date">Release Date</label><input id="release-date" type="date" /></div>
     </div>
-    <div class="field"><label>Release Date</label><input id="release-date" type="date" /></div>
     <div class="field"><label>Attributes (JSON)</label><textarea id="attributes-json" rows="4" placeholder='{"color":"red","language":"EN"}'></textarea><p class="hint">Optional structured fields for this variant.</p></div>
     <p class="status" id="modal-status"></p>
     <div style="display:flex;justify-content:flex-end;gap:8px;"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn" id="save" type="button">Save Variant</button></div>
@@ -101,12 +105,93 @@ async function loadVariants(){
   if(res.error){tbody.innerHTML='<tr><td colspan="8">Error loading variants: '+esc(res.error.message)+'</td></tr>';return;}
   variants=res.data||[];
   if(!variants.length){tbody.innerHTML='<tr><td colspan="8">No variants found.</td></tr>';return;}
-  tbody.innerHTML=variants.map(function(v){return '<tr>'+ '<td>'+esc(v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"-")+'</td>'+'<td>'+esc(v.platform_or_format||"-")+'</td>'+'<td>'+esc(v.edition||"-")+'</td>'+'<td>'+esc(v.region||"-")+'</td>'+'<td>'+esc(v.packaging||"-")+'</td>'+'<td>'+esc(v.upc||"-")+'</td>'+'<td>'+esc(v.release_date||"-")+'</td>'+'<td><div class="actions"><button data-act="view" data-id="'+v.id+'">View</button><button data-act="edit" data-id="'+v.id+'">Edit</button><button data-act="delete" data-id="'+v.id+'">Delete</button></div></td>'+'</tr>';}).join("");
+  tbody.innerHTML=variants.map(function(v){
+    var itemName=v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"-";
+    var variantName=v.attributes&&v.attributes.variant_name?String(v.attributes.variant_name):"";
+    var displayName=variantName?itemName+" - "+variantName:itemName;
+    return '<tr>'+ '<td>'+esc(displayName)+'</td>'+'<td>'+esc(v.platform_or_format||"-")+'</td>'+'<td>'+esc(v.edition||"-")+'</td>'+'<td>'+esc(v.region||"-")+'</td>'+'<td>'+esc(v.packaging||"-")+'</td>'+'<td>'+esc(v.upc||"-")+'</td>'+'<td>'+esc(v.release_date||"-")+'</td>'+'<td><div class="actions"><button data-act="view" data-id="'+v.id+'">View</button><button data-act="edit" data-id="'+v.id+'">Edit</button><button data-act="delete" data-id="'+v.id+'">Delete</button></div></td>'+'</tr>';
+  }).join("");
 }
+
+function findItemById(id){ return items.find(function(i){ return i.id===id; }) || null; }
+
+function categoryKey(name){
+  var n=String(name||"").toLowerCase();
+  if(n.indexOf("building")!==-1) return "building-blocks";
+  if(n.indexOf("video")!==-1 && n.indexOf("game")!==-1) return "video-game";
+  if(n.indexOf("movie")!==-1) return "movie";
+  if(n.indexOf("music")!==-1) return "music";
+  if(n.indexOf("sports")!==-1 && n.indexOf("card")!==-1) return "sports-card";
+  if(n.indexOf("trading")!==-1 && n.indexOf("card")!==-1) return "trading-card";
+  if(n.indexOf("comic")!==-1) return "comic";
+  return "generic";
+}
+
+function setFieldVisible(id, visible){
+  var el=document.getElementById(id);
+  if(!el) return;
+  el.style.display=visible?"flex":"none";
+}
+
+function applyFormByCategory(itemId){
+  var selected=findItemById(itemId);
+  var key=categoryKey(selected?selected.category_name:"");
+  var ctx=document.getElementById("category-context");
+  var cfg={
+    platformRequired:true,
+    platformLabel:"Platform / Format *",
+    editionLabel:"Edition",
+    regionLabel:"Region",
+    packagingLabel:"Packaging",
+    showPlatform:true,
+    showEdition:true,
+    showRegion:true,
+    showPackaging:true,
+    showUpc:true,
+    showRelease:true
+  };
+
+  if(key==="building-blocks"){
+    cfg.platformRequired=false;
+    cfg.platformLabel="Platform / Format";
+    cfg.editionLabel="Set Variant";
+    cfg.showPlatform=false;
+    cfg.showRegion=false;
+  } else if(key==="trading-card" || key==="sports-card" || key==="comic"){
+    cfg.platformRequired=false;
+    cfg.platformLabel="Platform / Format";
+    cfg.editionLabel="Card / Issue Variant";
+    cfg.showPlatform=false;
+    cfg.showRegion=false;
+    cfg.showUpc=false;
+  } else if(key==="movie" || key==="music"){
+    cfg.platformRequired=true;
+    cfg.platformLabel="Media Format *";
+  }
+
+  document.getElementById("label-platform").textContent=cfg.platformLabel;
+  document.getElementById("label-edition").textContent=cfg.editionLabel;
+  document.getElementById("label-region").textContent=cfg.regionLabel;
+  document.getElementById("label-packaging").textContent=cfg.packagingLabel;
+  setFieldVisible("field-platform", cfg.showPlatform);
+  setFieldVisible("field-edition", cfg.showEdition);
+  setFieldVisible("field-region", cfg.showRegion);
+  setFieldVisible("field-packaging", cfg.showPackaging);
+  setFieldVisible("field-upc", cfg.showUpc);
+  setFieldVisible("field-release-date", cfg.showRelease);
+
+  if(ctx){
+    ctx.textContent="Category: " + (selected&&selected.category_name?selected.category_name:"Not selected");
+  }
+
+  return cfg;
+}
+
 function openModal(v){
   editId=v?v.id:null;
   document.getElementById("modal-title").textContent=v?"Edit Variant":"Create Variant";
   document.getElementById("catalog-item").value=v?(v.catalog_item_id||""):"";
+  document.getElementById("variant-name").value=v&&v.attributes&&v.attributes.variant_name?String(v.attributes.variant_name):"";
   document.getElementById("platform").value=v?(v.platform_or_format||""):"";
   document.getElementById("edition").value=v?(v.edition||""):"";
   document.getElementById("region").value=v?(v.region||""):"";
@@ -115,6 +200,7 @@ function openModal(v){
   document.getElementById("release-date").value=v?(v.release_date||""):"";
   document.getElementById("attributes-json").value=v&&v.attributes?JSON.stringify(v.attributes,null,2):"";
   document.getElementById("modal-status").textContent="";
+  applyFormByCategory(document.getElementById("catalog-item").value);
   document.getElementById("variant-modal").classList.add("open");
 }
 
@@ -137,6 +223,7 @@ function parseAttributesInput(raw){
 async function saveVariant(){
   var id=document.getElementById("catalog-item").value;
   var platform=document.getElementById("platform").value.trim();
+  var variantName=document.getElementById("variant-name").value.trim();
   var edition=document.getElementById("edition").value.trim();
   var region=document.getElementById("region").value.trim();
   var packaging=document.getElementById("packaging").value.trim();
@@ -144,9 +231,15 @@ async function saveVariant(){
   var release=document.getElementById("release-date").value;
   var attrsRaw=document.getElementById("attributes-json").value;
   var status=document.getElementById("modal-status");
+  var formCfg=applyFormByCategory(id);
   var parsedAttrs=parseAttributesInput(attrsRaw);
-  if(!id||!platform){status.textContent="Catalog item and platform/format are required."; return;}
+  if(!id){status.textContent="Catalog item is required."; return;}
+  if(formCfg.platformRequired && !platform){status.textContent="Platform / format is required for this category."; return;}
   if(parsedAttrs.error){status.textContent=parsedAttrs.error; return;}
+  if(variantName){ parsedAttrs.value.variant_name=variantName; } else { delete parsedAttrs.value.variant_name; }
+  if(!formCfg.showPlatform){ platform=""; }
+  if(!formCfg.showRegion){ region=""; }
+  if(!formCfg.showUpc){ upc=""; }
   if(!editId){
     var createRes=await supabase.rpc("admin_create_variant",{p_catalog_item_id:id,p_platform_or_format:platform,p_edition:edition||null,p_region:region||null,p_packaging:packaging||null,p_upc:upc||null,p_release_date:release||null,p_attributes:parsedAttrs.value});
     if(createRes.error){status.textContent="Error: "+createRes.error.message; return;}
@@ -162,7 +255,8 @@ async function deleteVariant(id){ if(!confirm("Delete this variant?")) return; v
 document.getElementById("open-create").addEventListener("click",function(){openModal(null);});
 document.getElementById("cancel").addEventListener("click",function(){document.getElementById("variant-modal").classList.remove("open");});
 document.getElementById("save").addEventListener("click",saveVariant);
-document.querySelector("#variants-table tbody").addEventListener("click",function(e){var b=e.target.closest("button"); if(!b) return; var id=b.getAttribute("data-id"); var act=b.getAttribute("data-act"); var v=variants.find(function(x){return x.id===id;}); if(act==="view"&&v){alert((v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"Variant")+"\n"+(v.platform_or_format||"")+"\n"+(v.edition||""));} else if(act==="edit"&&v){openModal(v);} else if(act==="delete"){deleteVariant(id);} });
+document.getElementById("catalog-item").addEventListener("change",function(){applyFormByCategory(this.value);});
+document.querySelector("#variants-table tbody").addEventListener("click",function(e){var b=e.target.closest("button"); if(!b) return; var id=b.getAttribute("data-id"); var act=b.getAttribute("data-act"); var v=variants.find(function(x){return x.id===id;}); if(act==="view"&&v){var vn=v.attributes&&v.attributes.variant_name?String(v.attributes.variant_name):""; alert((v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"Variant")+(vn?" - "+vn:"")+"\n"+(v.platform_or_format||"")+"\n"+(v.edition||""));} else if(act==="edit"&&v){openModal(v);} else if(act==="delete"){deleteVariant(id);} });
 document.getElementById("sign-out").addEventListener("click", async function(){await supabase.auth.signOut(); window.location.href="/index.html";});
 (async function init(){var ok=await verify(); if(!ok) return; await loadItems(); await loadVariants();})();
 </script>
