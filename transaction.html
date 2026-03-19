@@ -992,6 +992,7 @@
 
     .detail-tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       padding: 12px 20px;
       border-bottom: 1px solid var(--border-color);
@@ -1090,6 +1091,60 @@
     .detail-history-date {
       color: var(--text-secondary);
       font-size: 12px;
+    }
+
+    .detail-history-source {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(51, 195, 255, 0.12);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .detail-history-price {
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .detail-history-empty {
+      padding: 16px;
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-align: center;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .detail-average-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .detail-average-card {
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+    }
+
+    .detail-average-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-top: 6px;
+    }
+
+    .detail-average-meta {
+      color: var(--text-secondary);
+      font-size: 12px;
+      margin-top: 4px;
+      line-height: 1.4;
     }
 
     .detail-variants-section {
@@ -1465,6 +1520,8 @@
       <div class="detail-tabs">
         <button class="detail-tab active" data-tab="add" id="detail-tab-add">Add to Transaction</button>
         <button class="detail-tab" data-tab="info" id="detail-tab-info">Item Info</button>
+        <button class="detail-tab" data-tab="history" id="detail-tab-history">Sales List</button>
+        <button class="detail-tab" data-tab="averages" id="detail-tab-averages">Average Breakdown</button>
       </div>
       <div class="detail-body">
         <!-- Tab 1: Add to Transaction (condition + pricing + add button) -->
@@ -1532,6 +1589,20 @@
             <div class="detail-variants-list" id="detail-variants-list"></div>
           </div>
         </div>
+        <div class="detail-panel" id="detail-panel-history">
+          <div class="detail-block" style="margin-bottom: 12px;">
+            <div class="detail-block-label">Sales and Purchase Timeline</div>
+            <div id="detail-history-summary" class="detail-average-meta">Loading history...</div>
+          </div>
+          <div class="detail-history-list" id="detail-history-list"></div>
+        </div>
+        <div class="detail-panel" id="detail-panel-averages">
+          <div class="detail-block" style="margin-bottom: 12px;">
+            <div class="detail-block-label">Average Breakdown</div>
+            <div id="detail-average-summary" class="detail-average-meta">Loading averages...</div>
+          </div>
+          <div class="detail-average-grid" id="detail-average-grid"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1583,8 +1654,16 @@
     var detailVariantsList = document.getElementById("detail-variants-list");
     var detailTabAdd = document.getElementById("detail-tab-add");
     var detailTabInfo = document.getElementById("detail-tab-info");
+    var detailTabHistory = document.getElementById("detail-tab-history");
+    var detailTabAverages = document.getElementById("detail-tab-averages");
     var detailPanelAdd = document.getElementById("detail-panel-add");
     var detailPanelInfo = document.getElementById("detail-panel-info");
+    var detailPanelHistory = document.getElementById("detail-panel-history");
+    var detailPanelAverages = document.getElementById("detail-panel-averages");
+    var detailHistorySummary = document.getElementById("detail-history-summary");
+    var detailHistoryList = document.getElementById("detail-history-list");
+    var detailAverageSummary = document.getElementById("detail-average-summary");
+    var detailAverageGrid = document.getElementById("detail-average-grid");
     var detailPricingMarket = document.getElementById("detail-pricing-market");
     var detailPricingAvg = document.getElementById("detail-pricing-avg");
     var detailPricingLast = document.getElementById("detail-pricing-last");
@@ -1604,6 +1683,7 @@
     var selectedVariantIndex = -1;
     var catalogItemsCache = {};
     var currentDetailContext = null; // "catalog" when opened from search info, null when from transaction row
+    var detailAnalyticsState = null;
 
     var DEFAULT_CONDITION_OPTIONS = [
       { value: "loose", label: "Loose" },
@@ -2056,89 +2136,345 @@
       return Number.isFinite(Number(value)) ? ("$" + Number(value).toFixed(2)) : "N/A";
     }
 
+    function averageNumbers(values) {
+      var numeric = (Array.isArray(values) ? values : []).map(function(value) {
+        return Number(value);
+      }).filter(function(value) {
+        return Number.isFinite(value);
+      });
+      if (!numeric.length) {
+        return null;
+      }
+      return numeric.reduce(function(sum, value) { return sum + value; }, 0) / numeric.length;
+    }
+
+    function parseTimestamp(value) {
+      var ts = Date.parse(value || "");
+      return Number.isFinite(ts) ? ts : null;
+    }
+
+    function formatDetailTimestamp(value) {
+      var ts = parseTimestamp(value);
+      if (!Number.isFinite(ts)) {
+        return "Unknown date";
+      }
+      return new Date(ts).toLocaleString();
+    }
+
+    function pickPreferredVariantRows(rows, variantId) {
+      var list = Array.isArray(rows) ? rows : [];
+      var normalizedVariantId = toUuidOrNull(variantId);
+      if (!normalizedVariantId || !list.length) {
+        return list;
+      }
+
+      var exact = list.filter(function(row) {
+        return toUuidOrNull(row && row.variant_id) === normalizedVariantId;
+      });
+      return exact.length ? exact : list;
+    }
+
+    async function fetchStoreTransactionHistory(catalogItemId, variantId, itemName) {
+      var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
+      var normalizedItemName = String(itemName || "").trim();
+      if (!normalizedCatalogItemId && !normalizedItemName) {
+        return [];
+      }
+
+      var txRes = normalizedCatalogItemId
+        ? await supabase
+            .from("store_transaction_items")
+            .select("transaction_id,store_code,line_type,item_name,item_condition,grade,quantity,unit_price,line_total,created_at,variant_id,catalog_item_id")
+            .eq("catalog_item_id", normalizedCatalogItemId)
+            .order("created_at", { ascending: false })
+            .limit(250)
+        : { data: [], error: null };
+
+      if ((!Array.isArray(txRes.data) || !txRes.data.length) && normalizedItemName) {
+        txRes = await supabase
+          .from("store_transaction_items")
+          .select("transaction_id,store_code,line_type,item_name,item_condition,grade,quantity,unit_price,line_total,created_at,variant_id,catalog_item_id")
+          .eq("item_name", normalizedItemName)
+          .order("created_at", { ascending: false })
+          .limit(250);
+      }
+
+      if (txRes.error || !Array.isArray(txRes.data)) {
+        return [];
+      }
+
+      return pickPreferredVariantRows(txRes.data, variantId);
+    }
+
+    async function fetchMarketplaceSalesHistory(catalogItemId, variantId, itemName) {
+      var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
+      var normalizedItemName = String(itemName || "").trim();
+      if (!normalizedCatalogItemId && !normalizedItemName) {
+        return [];
+      }
+
+      var salesRes = normalizedCatalogItemId
+        ? await supabase
+            .from("pricing_recent_sales")
+            .select("catalog_item_id,variant_id,catalog_item_name,variant_label,condition_label,condition_score,sale_price,sale_date,source_name")
+            .eq("is_valid", true)
+            .eq("catalog_item_id", normalizedCatalogItemId)
+            .order("sale_date", { ascending: false })
+            .limit(250)
+        : { data: [], error: null };
+
+      if ((!Array.isArray(salesRes.data) || !salesRes.data.length) && normalizedItemName) {
+        salesRes = await supabase
+          .from("pricing_recent_sales")
+          .select("catalog_item_id,variant_id,catalog_item_name,variant_label,condition_label,condition_score,sale_price,sale_date,source_name")
+          .eq("is_valid", true)
+          .eq("catalog_item_name", normalizedItemName)
+          .order("sale_date", { ascending: false })
+          .limit(250);
+      }
+
+      if (salesRes.error || !Array.isArray(salesRes.data)) {
+        return [];
+      }
+
+      return pickPreferredVariantRows(salesRes.data, variantId);
+    }
+
+    function buildPricingAnalytics(storeRows, marketRows) {
+      var nowMs = Date.now();
+      var days30Ms = 30 * 24 * 60 * 60 * 1000;
+      var currentStoreCode = String(localStorage.getItem(STORE_CODE_KEY) || "").trim();
+
+      var storeEntries = (Array.isArray(storeRows) ? storeRows : []).map(function(row) {
+        return {
+          source: "store",
+          sourceLabel: row.line_type === "store_sell" ? "Store Sale" : "Store Buy",
+          storeCode: row.store_code || "",
+          price: Number(row.unit_price),
+          date: row.created_at,
+          condition: row.item_condition || "",
+          grade: row.grade || "",
+          lineType: row.line_type || "",
+          quantity: Number(row.quantity || 1),
+          itemName: row.item_name || ""
+        };
+      }).filter(function(entry) {
+        return Number.isFinite(entry.price);
+      });
+
+      var marketEntries = (Array.isArray(marketRows) ? marketRows : []).map(function(row) {
+        return {
+          source: "marketplace",
+          sourceLabel: row.source_name || "Marketplace",
+          storeCode: "",
+          price: Number(row.sale_price),
+          date: row.sale_date,
+          condition: row.condition_label || "",
+          grade: row.condition_score != null ? String(row.condition_score) : "",
+          lineType: "market_sale",
+          quantity: 1,
+          itemName: row.catalog_item_name || ""
+        };
+      }).filter(function(entry) {
+        return Number.isFinite(entry.price);
+      });
+
+      var storeBuys = storeEntries.filter(function(entry) { return entry.lineType === "store_buy"; });
+      var storeSales = storeEntries.filter(function(entry) { return entry.lineType === "store_sell"; });
+      var currentStoreEntries = currentStoreCode
+        ? storeEntries.filter(function(entry) { return String(entry.storeCode || "").trim() === currentStoreCode; })
+        : [];
+      var currentStoreBuys = currentStoreEntries.filter(function(entry) { return entry.lineType === "store_buy"; });
+      var currentStoreSales = currentStoreEntries.filter(function(entry) { return entry.lineType === "store_sell"; });
+
+      var blendedMarketEntries = storeBuys.concat(marketEntries);
+      var blended30Entries = blendedMarketEntries.filter(function(entry) {
+        var ts = parseTimestamp(entry.date);
+        return Number.isFinite(ts) && (nowMs - ts) <= days30Ms;
+      });
+
+      var saleCandidates = storeSales.concat(marketEntries).slice().sort(function(a, b) {
+        return (parseTimestamp(b.date) || 0) - (parseTimestamp(a.date) || 0);
+      });
+
+      var history = storeEntries.concat(marketEntries).slice().sort(function(a, b) {
+        return (parseTimestamp(b.date) || 0) - (parseTimestamp(a.date) || 0);
+      });
+
+      return {
+        market: averageNumbers(blendedMarketEntries.map(function(entry) { return entry.price; })),
+        avg30: averageNumbers(blended30Entries.map(function(entry) { return entry.price; })),
+        lastSale: saleCandidates.length ? saleCandidates[0].price : null,
+        lastPaid: storeBuys.length ? storeBuys.slice().sort(function(a, b) {
+          return (parseTimestamp(b.date) || 0) - (parseTimestamp(a.date) || 0);
+        })[0].price : null,
+        history: history,
+        counts: {
+          store: storeEntries.length,
+          market: marketEntries.length,
+          currentStore: currentStoreEntries.length
+        },
+        averages: [
+          {
+            label: "Blended Buy + Market",
+            value: averageNumbers(blendedMarketEntries.map(function(entry) { return entry.price; })),
+            meta: blendedMarketEntries.length + " records"
+          },
+          {
+            label: "Marketplace Sales",
+            value: averageNumbers(marketEntries.map(function(entry) { return entry.price; })),
+            meta: marketEntries.length + " market sales"
+          },
+          {
+            label: "All Store Transactions",
+            value: averageNumbers(storeEntries.map(function(entry) { return entry.price; })),
+            meta: storeEntries.length + " store buys/sales"
+          },
+          {
+            label: "Store Purchases",
+            value: averageNumbers(storeBuys.map(function(entry) { return entry.price; })),
+            meta: storeBuys.length + " store_buy rows"
+          },
+          {
+            label: "Store Sales",
+            value: averageNumbers(storeSales.map(function(entry) { return entry.price; })),
+            meta: storeSales.length + " store_sell rows"
+          },
+          {
+            label: currentStoreCode ? (currentStoreCode + " Transactions") : "Current Store Transactions",
+            value: averageNumbers(currentStoreEntries.map(function(entry) { return entry.price; })),
+            meta: currentStoreEntries.length + " current-store rows"
+          },
+          {
+            label: currentStoreCode ? (currentStoreCode + " Purchases") : "Current Store Purchases",
+            value: averageNumbers(currentStoreBuys.map(function(entry) { return entry.price; })),
+            meta: currentStoreBuys.length + " current-store buys"
+          },
+          {
+            label: currentStoreCode ? (currentStoreCode + " Sales") : "Current Store Sales",
+            value: averageNumbers(currentStoreSales.map(function(entry) { return entry.price; })),
+            meta: currentStoreSales.length + " current-store sales"
+          }
+        ]
+      };
+    }
+
+    function renderDetailHistoryPanel(analytics) {
+      if (!detailHistorySummary || !detailHistoryList) {
+        return;
+      }
+
+      var history = analytics && Array.isArray(analytics.history) ? analytics.history : [];
+      detailHistorySummary.textContent = history.length
+        ? (history.length + " total records across store transactions and marketplace sales")
+        : "No transaction or marketplace history found for this item.";
+
+      if (!history.length) {
+        detailHistoryList.innerHTML = '<div class="detail-history-empty">No sales or purchase history is available yet.</div>';
+        return;
+      }
+
+      detailHistoryList.innerHTML = history.map(function(entry) {
+        var metaParts = [formatDetailTimestamp(entry.date)];
+        if (entry.storeCode) {
+          metaParts.push(entry.storeCode);
+        }
+        if (entry.condition) {
+          metaParts.push(entry.condition);
+        }
+        return '<div class="detail-history-row">' +
+          '<div><div>' + escapeHtml(entry.itemName || detailItemTitle.textContent || 'Item') + '</div><div class="detail-history-date">' + escapeHtml(metaParts.join(' · ')) + '</div></div>' +
+          '<div class="detail-history-source">' + escapeHtml(entry.sourceLabel) + '</div>' +
+          '<div class="detail-history-price">' + escapeHtml(formatPriceOrNa(entry.price)) + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderDetailAveragePanel(analytics) {
+      if (!detailAverageSummary || !detailAverageGrid) {
+        return;
+      }
+
+      var cards = analytics && Array.isArray(analytics.averages) ? analytics.averages : [];
+      detailAverageSummary.textContent = cards.length
+        ? 'Blended pricing uses store buys plus marketplace sales; breakdown cards show each source separately.'
+        : 'No average data is available yet for this item.';
+
+      if (!cards.length) {
+        detailAverageGrid.innerHTML = '<div class="detail-history-empty">No averages can be calculated yet.</div>';
+        return;
+      }
+
+      detailAverageGrid.innerHTML = cards.map(function(card) {
+        return '<div class="detail-average-card">' +
+          '<div class="detail-block-label">' + escapeHtml(card.label) + '</div>' +
+          '<div class="detail-average-value">' + escapeHtml(formatPriceOrNa(card.value)) + '</div>' +
+          '<div class="detail-average-meta">' + escapeHtml(card.meta || '') + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    async function refreshDetailAnalytics() {
+      var activeItem = currentDetailContext === 'catalog' ? selectedCatalogItem : selectedDetailItem;
+      if (!activeItem) {
+        detailAnalyticsState = null;
+        renderDetailHistoryPanel(null);
+        renderDetailAveragePanel(null);
+        return;
+      }
+
+      if (detailHistorySummary) {
+        detailHistorySummary.textContent = 'Loading history...';
+      }
+      if (detailAverageSummary) {
+        detailAverageSummary.textContent = 'Loading averages...';
+      }
+
+      var storeRows = await fetchStoreTransactionHistory(
+        activeItem.catalogItemId || activeItem.id,
+        activeItem.variantId || null,
+        activeItem.name || ''
+      );
+      var marketRows = await fetchMarketplaceSalesHistory(
+        activeItem.catalogItemId || activeItem.id,
+        activeItem.variantId || null,
+        activeItem.name || ''
+      );
+
+      detailAnalyticsState = buildPricingAnalytics(storeRows, marketRows);
+      renderDetailHistoryPanel(detailAnalyticsState);
+      renderDetailAveragePanel(detailAnalyticsState);
+    }
+
     async function fetchStorePricingSnapshot(catalogItemId, variantId, itemCondition, itemName) {
       var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
-      var normalizedVariantId = toUuidOrNull(variantId);
-      var normalizedCondition = normalizeConditionValue(itemCondition);
       var normalizedItemName = String(itemName || "").trim();
       if (!normalizedCatalogItemId && !normalizedItemName) {
         return null;
       }
 
-      var linesRes = normalizedCatalogItemId
-        ? await supabase
-            .from("store_transaction_items")
-            .select("line_type,unit_price,created_at,item_condition,variant_id")
-            .eq("catalog_item_id", normalizedCatalogItemId)
-            .order("created_at", { ascending: false })
-            .limit(1000)
-        : { data: [], error: null };
-
-      if ((!Array.isArray(linesRes.data) || !linesRes.data.length) && normalizedItemName) {
-        linesRes = await supabase
-          .from("store_transaction_items")
-          .select("line_type,unit_price,created_at,item_condition,variant_id")
-          .eq("item_name", normalizedItemName)
-          .order("created_at", { ascending: false })
-          .limit(1000);
-      }
-
-      if (linesRes.error || !Array.isArray(linesRes.data) || !linesRes.data.length) {
-        return null;
-      }
-
-      var matchedLines = pickBestMatchingTransactionLines(
-        linesRes.data,
-        normalizedVariantId,
-        normalizedCondition
+      var storeRows = await fetchStoreTransactionHistory(
+        normalizedCatalogItemId,
+        variantId,
+        normalizedItemName
       );
-      if (!matchedLines.length) {
+      var marketRows = await fetchMarketplaceSalesHistory(
+        normalizedCatalogItemId,
+        variantId,
+        normalizedItemName
+      );
+      var analytics = buildPricingAnalytics(storeRows, marketRows);
+      if (!analytics || (!analytics.counts.store && !analytics.counts.market)) {
         return null;
       }
-
-      var nowMs = Date.now();
-      var days30Ms = 30 * 24 * 60 * 60 * 1000;
-      var sold = [];
-      var sold30 = [];
-      var buys = [];
-
-      matchedLines.forEach(function(row) {
-        var price = Number(row.unit_price);
-        if (!Number.isFinite(price)) {
-          return;
-        }
-
-        if (row.line_type === "store_sell") {
-          sold.push({ price: price, created_at: row.created_at });
-          var ts = Date.parse(row.created_at || "");
-          if (Number.isFinite(ts) && (nowMs - ts) <= days30Ms) {
-            sold30.push(price);
-          }
-        } else if (row.line_type === "store_buy") {
-          buys.push(price);
-        }
-      });
-
-      if (!sold.length && !buys.length) {
-        return null;
-      }
-
-      var soldAvg = sold.length
-        ? sold.reduce(function(sum, row) { return sum + row.price; }, 0) / sold.length
-        : null;
-      var sold30Avg = sold30.length
-        ? sold30.reduce(function(sum, value) { return sum + value; }, 0) / sold30.length
-        : null;
-      var lastSale = sold.length ? sold[0].price : null;
-      var lastPaid = buys.length ? buys[0] : null;
 
       return {
-        market: soldAvg,
-        avg30: sold30Avg,
-        lastSale: lastSale,
-        lastPaid: lastPaid,
-        saleCount: sold.length,
-        saleCount30: sold30.length
+        market: analytics.market,
+        avg30: analytics.avg30,
+        lastSale: analytics.lastSale,
+        lastPaid: analytics.lastPaid,
+        saleCount: analytics.counts.store + analytics.counts.market,
+        saleCount30: null
       };
     }
 
@@ -2386,6 +2722,7 @@
         platform_or_format: v.platform_or_format || "",
         variantId: v.id || null,
         catalogItemId: baseItem.catalogItemId || baseItem.id,
+        inventory_unit_price: v.inventory_unit_price != null ? v.inventory_unit_price : baseItem.inventory_unit_price,
         variants: baseItem.variants || [],
         parentItem: baseItem
       };
@@ -2965,6 +3302,7 @@
         variantId: item.variantId || null,
         variants: item.variants || [],
         catalogItemId: item.catalogItemId || item.id,
+        inventory_unit_price: item.inventory_unit_price != null ? item.inventory_unit_price : null,
         parentItem: item.parentItem || item,
         source: "catalog"
       };
@@ -2980,6 +3318,7 @@
       detailConditionIsGraded.checked = false;
       detailGradedFields.style.display = "none";
       await updateDetailSuggestedPrice();
+      await refreshDetailAnalytics();
 
       // Add tab — image
       if (item.primary_image_url) {
@@ -3036,7 +3375,7 @@
       conditionPanel.classList.add("open");
     }
 
-    function openItemDetail(item, catalogItem) {
+    async function openItemDetail(item, catalogItem) {
       selectedDetailItem = item;
       currentDetailContext = null;
       detailItemTitle.textContent = item.name || "Item Details";
@@ -3069,6 +3408,7 @@
         return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(pair[1] || "-") + '</div></div>';
       }).join("");
       renderDetailVariants(item.variants || []);
+      await refreshDetailAnalytics();
 
       selectDetailTab("add");
       detailModalOverlay.classList.add("open");
@@ -3082,14 +3422,22 @@
       if (detailInfoDescription) detailInfoDescription.innerHTML = '';
       if (detailVariantsSection) detailVariantsSection.style.display = "none";
       if (detailVariantsList) detailVariantsList.innerHTML = "";
+      if (detailHistoryList) detailHistoryList.innerHTML = "";
+      if (detailAverageGrid) detailAverageGrid.innerHTML = "";
+      if (detailHistorySummary) detailHistorySummary.textContent = "";
+      if (detailAverageSummary) detailAverageSummary.textContent = "";
+      detailAnalyticsState = null;
     }
 
     function selectDetailTab(tab) {
-      var isAdd = tab === "add";
-      detailTabAdd.classList.toggle("active", isAdd);
-      detailTabInfo.classList.toggle("active", !isAdd);
-      detailPanelAdd.classList.toggle("active", isAdd);
-      detailPanelInfo.classList.toggle("active", !isAdd);
+      detailTabAdd.classList.toggle("active", tab === "add");
+      detailTabInfo.classList.toggle("active", tab === "info");
+      detailTabHistory.classList.toggle("active", tab === "history");
+      detailTabAverages.classList.toggle("active", tab === "averages");
+      detailPanelAdd.classList.toggle("active", tab === "add");
+      detailPanelInfo.classList.toggle("active", tab === "info");
+      detailPanelHistory.classList.toggle("active", tab === "history");
+      detailPanelAverages.classList.toggle("active", tab === "averages");
     }
 
 
@@ -3174,6 +3522,8 @@
     detailCloseBtn.addEventListener("click", closeItemDetail);
     detailTabAdd.addEventListener("click", () => selectDetailTab("add"));
     detailTabInfo.addEventListener("click", () => selectDetailTab("info"));
+    detailTabHistory.addEventListener("click", () => selectDetailTab("history"));
+    detailTabAverages.addEventListener("click", () => selectDetailTab("averages"));
 
     document.addEventListener("click", (e) => {
       var row = e.target.closest(".item-row");

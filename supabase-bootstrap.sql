@@ -2529,6 +2529,13 @@ to authenticated
 using (public.is_current_user_operations_admin())
 with check (public.is_current_user_operations_admin());
 
+drop policy if exists "Authenticated users read pricing_recent_sales" on public.pricing_recent_sales;
+create policy "Authenticated users read pricing_recent_sales"
+on public.pricing_recent_sales
+for select
+to authenticated
+using (is_valid = true);
+
 drop policy if exists "Operations admins manage pricing_overrides" on public.pricing_overrides;
 create policy "Operations admins manage pricing_overrides"
 on public.pricing_overrides
