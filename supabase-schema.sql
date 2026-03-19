@@ -1575,6 +1575,113 @@ $$;
 revoke all on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, integer, text, text, integer, text, text, text) from public;
 grant execute on function public.admin_create_catalog_item(text, uuid, uuid, uuid, text, text, integer, integer, text, text, integer, text, text, text) to authenticated;
 
+drop function if exists public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb);
+create or replace function public.admin_create_variant(
+  p_catalog_item_id uuid,
+  p_platform_or_format text default null,
+  p_edition text default null,
+  p_region text default null,
+  p_packaging text default null,
+  p_upc text default null,
+  p_release_date date default null,
+  p_attributes jsonb default '{}'::jsonb,
+  p_brand_or_publisher text default null,
+  p_series text default null,
+  p_release_year integer default null,
+  p_set_number text default null,
+  p_piece_count integer default null,
+  p_fig_count integer default null,
+  p_primary_image_url text default null,
+  p_description text default null
+)
+returns table (
+  id uuid,
+  display_name text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_item_name text;
+  v_new_id uuid;
+  v_created_at timestamptz;
+begin
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not public.is_current_user_catalog_manager() then
+    raise exception 'Only catalog managers can create variants';
+  end if;
+
+  select ci.name
+  into v_item_name
+  from public.catalog_items ci
+  where ci.id = p_catalog_item_id
+    and ci.is_active = true
+  limit 1;
+
+  if v_item_name is null then
+    raise exception 'Catalog item not found';
+  end if;
+
+  insert into public.variants (
+    catalog_item_id,
+    platform_or_format,
+    edition,
+    region,
+    packaging,
+    upc,
+    release_date,
+    attributes,
+    brand_or_publisher,
+    series,
+    release_year,
+    set_number,
+    piece_count,
+    fig_count,
+    primary_image_url,
+    description,
+    is_active
+  )
+  values (
+    p_catalog_item_id,
+    nullif(btrim(coalesce(p_platform_or_format, '')), ''),
+    nullif(btrim(coalesce(p_edition, '')), ''),
+    nullif(btrim(coalesce(p_region, '')), ''),
+    nullif(btrim(coalesce(p_packaging, '')), ''),
+    nullif(btrim(coalesce(p_upc, '')), ''),
+    p_release_date,
+    coalesce(p_attributes, '{}'::jsonb),
+    nullif(btrim(coalesce(p_brand_or_publisher, '')), ''),
+    nullif(btrim(coalesce(p_series, '')), ''),
+    p_release_year,
+    nullif(btrim(coalesce(p_set_number, '')), ''),
+    p_piece_count,
+    p_fig_count,
+    nullif(btrim(coalesce(p_primary_image_url, '')), ''),
+    nullif(btrim(coalesce(p_description, '')), ''),
+    true
+  )
+  returning variants.id, variants.created_at
+  into v_new_id, v_created_at;
+
+  return query
+  select
+    v_new_id,
+    v_item_name
+      || coalesce(' - ' || nullif(btrim(coalesce(p_platform_or_format, '')), ''), '')
+      || coalesce(' ' || nullif(btrim(coalesce(p_edition, '')), ''), ''),
+    v_created_at;
+end;
+$$;
+
+revoke all on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb, text, text, integer, text, integer, integer, text, text) from public;
+grant execute on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb, text, text, integer, text, integer, integer, text, text) to authenticated;
+
 create or replace function public.admin_list_catalog_items(
   p_category_id uuid default null,
   p_search text default null,
