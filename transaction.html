@@ -1605,6 +1605,82 @@
     var catalogItemsCache = {};
     var currentDetailContext = null; // "catalog" when opened from search info, null when from transaction row
 
+    var DEFAULT_CONDITION_OPTIONS = [
+      { value: "loose", label: "Loose" },
+      { value: "complete", label: "Complete" },
+      { value: "new", label: "New" },
+      { value: "damaged", label: "Damaged" }
+    ];
+
+    var SEALED_CONDITION_OPTIONS = [
+      { value: "sealed", label: "Sealed" },
+      { value: "used-complete", label: "Used Complete" },
+      { value: "used-uncomplete", label: "Used Uncomplete" },
+      { value: "damaged", label: "Damaged" }
+    ];
+
+    var SEALED_CONDITION_CATEGORY_SET = {
+      "building blocks": true,
+      "video games": true,
+      "video game": true,
+      "movies": true,
+      "movie": true,
+      "toys": true,
+      "toy": true,
+      "music": true
+    };
+
+    function normalizeConditionCategoryName(categoryName) {
+      return String(categoryName || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function usesSealedConditionOptions(categoryName) {
+      var normalized = normalizeConditionCategoryName(categoryName);
+      return !!SEALED_CONDITION_CATEGORY_SET[normalized];
+    }
+
+    function getConditionOptionsForCategory(categoryName) {
+      return usesSealedConditionOptions(categoryName)
+        ? SEALED_CONDITION_OPTIONS
+        : DEFAULT_CONDITION_OPTIONS;
+    }
+
+    function applyConditionOptions(selectEl, categoryName, preferredValue) {
+      if (!selectEl) {
+        return;
+      }
+
+      var options = getConditionOptionsForCategory(categoryName);
+      var normalizedPreferred = String(preferredValue || "").trim().toLowerCase();
+      var hasPreferred = options.some(function(opt) {
+        return opt.value === normalizedPreferred;
+      });
+
+      selectEl.innerHTML = options.map(function(opt) {
+        return '<option value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.label) + '</option>';
+      }).join("");
+
+      if (normalizedPreferred && !hasPreferred) {
+        var fallbackLabel = normalizedPreferred
+          .split(/[-_\s]+/)
+          .filter(Boolean)
+          .map(function(part) {
+            return part.charAt(0).toUpperCase() + part.slice(1);
+          })
+          .join(" ");
+        selectEl.innerHTML += '<option value="' + escapeHtml(normalizedPreferred) + '">' + escapeHtml(fallbackLabel || normalizedPreferred) + '</option>';
+      }
+
+      if (normalizedPreferred) {
+        selectEl.value = normalizedPreferred;
+      } else {
+        selectEl.value = options[0] ? options[0].value : "";
+      }
+    }
+
     function renderItems() {
       renderSellingItems();
       renderBuyingItems();
@@ -2331,7 +2407,7 @@
       detailPricingAvg.textContent = "N/A";
       detailPricingLast.textContent = "N/A";
       detailOfferPrice.value = "";
-      detailConditionType.value = "loose";
+      applyConditionOptions(detailConditionType, item.category, "");
       detailConditionIsGraded.checked = false;
       detailGradedFields.style.display = "none";
 
@@ -2374,7 +2450,7 @@
     function openConditionPanel(item) {
       selectedCatalogItem = item;
       conditionItemName.textContent = escapeHtml(item.name);
-      conditionType.value = "loose";
+      applyConditionOptions(conditionType, item.category, item.condition || "");
       conditionIsGraded.checked = false;
       conditionPrice.value = Math.round(item.marketVal * 0.7);
       pricingMarket.textContent = "$" + item.marketVal.toFixed(2);
@@ -2400,7 +2476,7 @@
       detailPricingAvg.textContent = "N/A";
       detailPricingLast.textContent = "N/A";
       detailOfferPrice.value = item.price ? item.price.toFixed(2) : "";
-      detailConditionType.value = item.condition || "loose";
+      applyConditionOptions(detailConditionType, item.category, item.condition || "");
       detailConditionIsGraded.checked = !!item.grade;
       detailConditionGrader.value = item.grader || "";
       detailConditionGrade.value = item.grade ? item.grade.split(" ")[1] : "";

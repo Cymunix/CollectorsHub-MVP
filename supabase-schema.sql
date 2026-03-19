@@ -2051,7 +2051,8 @@ values
   ('minimum_listing_price', to_jsonb(1.00::numeric)),
   ('commission_percent', to_jsonb(10.00::numeric)),
   ('listing_expiration_days', to_jsonb(30)),
-  ('allowed_condition_types', '["10 Gem Mint", "9 Mint", "8 Near Mint", "7 Very Fine", "6 Fine", "5 Very Good", "4 Good", "3 Fair", "2 Poor", "1 Very Poor"]'::jsonb)
+  ('allowed_condition_types', '["10 Gem Mint", "9 Mint", "8 Near Mint", "7 Very Fine", "6 Fine", "5 Very Good", "4 Good", "3 Fair", "2 Poor", "1 Very Poor"]'::jsonb),
+  ('allowed_condition_types_by_category', '{"Building Blocks": ["Sealed", "Used Complete", "Used Uncomplete", "Damaged"], "Toys": ["Sealed", "Used Complete", "Used Uncomplete", "Damaged"], "Movies": ["Sealed", "Used Complete", "Used Uncomplete", "Damaged"], "Video Games": ["Sealed", "Used Complete", "Used Uncomplete", "Damaged"], "Music": ["Sealed", "Used Complete", "Used Uncomplete", "Damaged"]}'::jsonb)
 on conflict (setting_key)
 do update set
   setting_value = excluded.setting_value,
