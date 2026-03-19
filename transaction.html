@@ -2015,19 +2015,10 @@
         return null;
       }
 
-      var txRows = await supabase
-        .from("store_transactions")
-        .select("id")
-        .eq("store_code", normalizedStoreCode)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false })
-        .limit(300);
-
-      if (txRows.error || !Array.isArray(txRows.data) || !txRows.data.length) {
-        return null;
+      var txIds = await fetchStoreTransactionIds(normalizedStoreCode, true);
+      if (!txIds.length) {
+        txIds = await fetchStoreTransactionIds(normalizedStoreCode, false);
       }
-
-      var txIds = txRows.data.map(function(r) { return r.id; }).filter(Boolean);
       if (!txIds.length) {
         return null;
       }
@@ -2042,6 +2033,22 @@
         .limit(1000);
 
       var lineRows = await lineQuery;
+      if (lineRows.error || !Array.isArray(lineRows.data) || !lineRows.data.length) {
+        txIds = await fetchStoreTransactionIds(normalizedStoreCode, false);
+        if (!txIds.length) {
+          return null;
+        }
+
+        lineRows = await supabase
+          .from("store_transaction_items")
+          .select("unit_price,item_condition,created_at,variant_id")
+          .eq("line_type", "store_buy")
+          .eq("catalog_item_id", normalizedCatalogItemId)
+          .in("transaction_id", txIds)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+      }
+
       if (lineRows.error || !Array.isArray(lineRows.data) || !lineRows.data.length) {
         return null;
       }
@@ -2063,6 +2070,26 @@
       return Number.isFinite(Number(value)) ? ("$" + Number(value).toFixed(2)) : "N/A";
     }
 
+    async function fetchStoreTransactionIds(storeCode, completedOnly) {
+      var query = supabase
+        .from("store_transactions")
+        .select("id")
+        .eq("store_code", storeCode)
+        .order("created_at", { ascending: false })
+        .limit(5000);
+
+      if (completedOnly) {
+        query = query.eq("status", "completed");
+      }
+
+      var txRows = await query;
+      if (txRows.error || !Array.isArray(txRows.data) || !txRows.data.length) {
+        return [];
+      }
+
+      return txRows.data.map(function(row) { return row.id; }).filter(Boolean);
+    }
+
     async function fetchStorePricingSnapshot(storeCode, catalogItemId, variantId, itemCondition) {
       var normalizedStoreCode = String(storeCode || "").trim();
       var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
@@ -2072,19 +2099,10 @@
         return null;
       }
 
-      var txRows = await supabase
-        .from("store_transactions")
-        .select("id")
-        .eq("store_code", normalizedStoreCode)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false })
-        .limit(500);
-
-      if (txRows.error || !Array.isArray(txRows.data) || !txRows.data.length) {
-        return null;
+      var txIds = await fetchStoreTransactionIds(normalizedStoreCode, true);
+      if (!txIds.length) {
+        txIds = await fetchStoreTransactionIds(normalizedStoreCode, false);
       }
-
-      var txIds = txRows.data.map(function(row) { return row.id; }).filter(Boolean);
       if (!txIds.length) {
         return null;
       }
@@ -2098,6 +2116,21 @@
         .limit(1000);
 
       var linesRes = await linesQuery;
+      if (linesRes.error || !Array.isArray(linesRes.data) || !linesRes.data.length) {
+        txIds = await fetchStoreTransactionIds(normalizedStoreCode, false);
+        if (!txIds.length) {
+          return null;
+        }
+
+        linesRes = await supabase
+          .from("store_transaction_items")
+          .select("line_type,unit_price,created_at,item_condition,variant_id")
+          .eq("catalog_item_id", normalizedCatalogItemId)
+          .in("transaction_id", txIds)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+      }
+
       if (linesRes.error || !Array.isArray(linesRes.data) || !linesRes.data.length) {
         return null;
       }
