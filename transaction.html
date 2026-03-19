@@ -1120,13 +1120,40 @@
       background: rgba(255,255,255,0.02);
     }
 
-    .detail-average-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+    .detail-filter-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
     }
 
-    .detail-average-card {
+    .detail-filter-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .detail-filter-select {
+      min-width: 180px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .detail-average-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .detail-average-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
       padding: 14px;
       border: 1px solid var(--border-color);
       border-radius: 8px;
@@ -1134,10 +1161,10 @@
     }
 
     .detail-average-value {
-      font-size: 24px;
+      font-size: 18px;
       font-weight: 800;
       color: var(--text-primary);
-      margin-top: 6px;
+      text-align: right;
     }
 
     .detail-average-meta {
@@ -1593,6 +1620,12 @@
           <div class="detail-block" style="margin-bottom: 12px;">
             <div class="detail-block-label">Sales and Purchase Timeline</div>
             <div id="detail-history-summary" class="detail-average-meta">Loading history...</div>
+            <div class="detail-filter-row">
+              <label class="detail-filter-label" for="detail-history-condition-filter">Condition</label>
+              <select id="detail-history-condition-filter" class="detail-filter-select">
+                <option value="">All Conditions</option>
+              </select>
+            </div>
           </div>
           <div class="detail-history-list" id="detail-history-list"></div>
         </div>
@@ -1600,8 +1633,14 @@
           <div class="detail-block" style="margin-bottom: 12px;">
             <div class="detail-block-label">Average Breakdown</div>
             <div id="detail-average-summary" class="detail-average-meta">Loading averages...</div>
+            <div class="detail-filter-row">
+              <label class="detail-filter-label" for="detail-average-condition-filter">Condition</label>
+              <select id="detail-average-condition-filter" class="detail-filter-select">
+                <option value="">All Conditions</option>
+              </select>
+            </div>
           </div>
-          <div class="detail-average-grid" id="detail-average-grid"></div>
+          <div class="detail-average-list" id="detail-average-grid"></div>
         </div>
       </div>
     </div>
@@ -1662,8 +1701,10 @@
     var detailPanelAverages = document.getElementById("detail-panel-averages");
     var detailHistorySummary = document.getElementById("detail-history-summary");
     var detailHistoryList = document.getElementById("detail-history-list");
+    var detailHistoryConditionFilter = document.getElementById("detail-history-condition-filter");
     var detailAverageSummary = document.getElementById("detail-average-summary");
     var detailAverageGrid = document.getElementById("detail-average-grid");
+    var detailAverageConditionFilter = document.getElementById("detail-average-condition-filter");
     var detailPricingMarket = document.getElementById("detail-pricing-market");
     var detailPricingAvg = document.getElementById("detail-pricing-avg");
     var detailPricingLast = document.getElementById("detail-pricing-last");
@@ -2161,6 +2202,20 @@
       return new Date(ts).toLocaleString();
     }
 
+    function normalizeHistoryCondition(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function formatConditionLabel(value) {
+      var normalized = normalizeHistoryCondition(value);
+      if (!normalized) {
+        return "Unspecified";
+      }
+      return normalized.split(/[-_\s]+/).filter(Boolean).map(function(part) {
+        return part.charAt(0).toUpperCase() + part.slice(1);
+      }).join(" ");
+    }
+
     function pickPreferredVariantRows(rows, variantId) {
       var list = Array.isArray(rows) ? rows : [];
       var normalizedVariantId = toUuidOrNull(variantId);
@@ -2253,6 +2308,7 @@
           price: Number(row.unit_price),
           date: row.created_at,
           condition: row.item_condition || "",
+          normalizedCondition: normalizeHistoryCondition(row.item_condition),
           grade: row.grade || "",
           lineType: row.line_type || "",
           quantity: Number(row.quantity || 1),
@@ -2270,6 +2326,7 @@
           price: Number(row.sale_price),
           date: row.sale_date,
           condition: row.condition_label || "",
+          normalizedCondition: normalizeHistoryCondition(row.condition_label),
           grade: row.condition_score != null ? String(row.condition_score) : "",
           lineType: "market_sale",
           quantity: 1,
@@ -2301,6 +2358,78 @@
         return (parseTimestamp(b.date) || 0) - (parseTimestamp(a.date) || 0);
       });
 
+      var conditionMap = {};
+      history.forEach(function(entry) {
+        if (entry.normalizedCondition) {
+          conditionMap[entry.normalizedCondition] = formatConditionLabel(entry.condition);
+        }
+      });
+
+      function filterByCondition(entries, conditionValue) {
+        var normalized = normalizeHistoryCondition(conditionValue);
+        if (!normalized) {
+          return entries.slice();
+        }
+        return entries.filter(function(entry) {
+          return entry.normalizedCondition === normalized;
+        });
+      }
+
+      function buildAverageRows(conditionValue) {
+        var filteredHistory = filterByCondition(history, conditionValue);
+        var filteredStoreEntries = filterByCondition(storeEntries, conditionValue);
+        var filteredMarketEntries = filterByCondition(marketEntries, conditionValue);
+        var filteredStoreBuys = filterByCondition(storeBuys, conditionValue);
+        var filteredStoreSales = filterByCondition(storeSales, conditionValue);
+        var filteredCurrentStoreEntries = filterByCondition(currentStoreEntries, conditionValue);
+        var filteredCurrentStoreBuys = filterByCondition(currentStoreBuys, conditionValue);
+        var filteredCurrentStoreSales = filterByCondition(currentStoreSales, conditionValue);
+
+        return {
+          history: filteredHistory,
+          rows: [
+            {
+              label: "Marketplace Sales",
+              value: averageNumbers(filteredMarketEntries.map(function(entry) { return entry.price; })),
+              meta: filteredMarketEntries.length + " market sales"
+            },
+            {
+              label: "Store Purchases",
+              value: averageNumbers(filteredStoreBuys.map(function(entry) { return entry.price; })),
+              meta: filteredStoreBuys.length + " store_buy rows"
+            },
+            {
+              label: "Store Sales",
+              value: averageNumbers(filteredStoreSales.map(function(entry) { return entry.price; })),
+              meta: filteredStoreSales.length + " store_sell rows"
+            },
+            {
+              label: currentStoreCode ? (currentStoreCode + " Purchases") : "Current Store Purchases",
+              value: averageNumbers(filteredCurrentStoreBuys.map(function(entry) { return entry.price; })),
+              meta: filteredCurrentStoreBuys.length + " current-store buys"
+            },
+            {
+              label: currentStoreCode ? (currentStoreCode + " Sales") : "Current Store Sales",
+              value: averageNumbers(filteredCurrentStoreSales.map(function(entry) { return entry.price; })),
+              meta: filteredCurrentStoreSales.length + " current-store sales"
+            },
+            {
+              label: currentStoreCode ? (currentStoreCode + " All Transactions") : "Current Store All Transactions",
+              value: averageNumbers(filteredCurrentStoreEntries.map(function(entry) { return entry.price; })),
+              meta: filteredCurrentStoreEntries.length + " current-store rows"
+            },
+            {
+              label: "All Store Transactions",
+              value: averageNumbers(filteredStoreEntries.map(function(entry) { return entry.price; })),
+              meta: filteredStoreEntries.length + " store buys/sales"
+            }
+          ],
+          summary: filteredHistory.length
+            ? (filteredHistory.length + " records matched for " + formatConditionLabel(conditionValue))
+            : "No records matched for the selected condition."
+        };
+      }
+
       return {
         market: averageNumbers(blendedMarketEntries.map(function(entry) { return entry.price; })),
         avg30: averageNumbers(blended30Entries.map(function(entry) { return entry.price; })),
@@ -2314,49 +2443,29 @@
           market: marketEntries.length,
           currentStore: currentStoreEntries.length
         },
-        averages: [
-          {
-            label: "Blended Buy + Market",
-            value: averageNumbers(blendedMarketEntries.map(function(entry) { return entry.price; })),
-            meta: blendedMarketEntries.length + " records"
-          },
-          {
-            label: "Marketplace Sales",
-            value: averageNumbers(marketEntries.map(function(entry) { return entry.price; })),
-            meta: marketEntries.length + " market sales"
-          },
-          {
-            label: "All Store Transactions",
-            value: averageNumbers(storeEntries.map(function(entry) { return entry.price; })),
-            meta: storeEntries.length + " store buys/sales"
-          },
-          {
-            label: "Store Purchases",
-            value: averageNumbers(storeBuys.map(function(entry) { return entry.price; })),
-            meta: storeBuys.length + " store_buy rows"
-          },
-          {
-            label: "Store Sales",
-            value: averageNumbers(storeSales.map(function(entry) { return entry.price; })),
-            meta: storeSales.length + " store_sell rows"
-          },
-          {
-            label: currentStoreCode ? (currentStoreCode + " Transactions") : "Current Store Transactions",
-            value: averageNumbers(currentStoreEntries.map(function(entry) { return entry.price; })),
-            meta: currentStoreEntries.length + " current-store rows"
-          },
-          {
-            label: currentStoreCode ? (currentStoreCode + " Purchases") : "Current Store Purchases",
-            value: averageNumbers(currentStoreBuys.map(function(entry) { return entry.price; })),
-            meta: currentStoreBuys.length + " current-store buys"
-          },
-          {
-            label: currentStoreCode ? (currentStoreCode + " Sales") : "Current Store Sales",
-            value: averageNumbers(currentStoreSales.map(function(entry) { return entry.price; })),
-            meta: currentStoreSales.length + " current-store sales"
-          }
-        ]
+        conditionOptions: Object.keys(conditionMap).sort().map(function(key) {
+          return { value: key, label: conditionMap[key] };
+        }),
+        getConditionBreakdown: buildAverageRows
       };
+    }
+
+    function populateDetailConditionFilter(selectEl, analytics, preferredValue) {
+      if (!selectEl) {
+        return;
+      }
+
+      var options = analytics && Array.isArray(analytics.conditionOptions) ? analytics.conditionOptions : [];
+      selectEl.innerHTML = '<option value="">All Conditions</option>' + options.map(function(option) {
+        return '<option value="' + escapeHtml(option.value) + '">' + escapeHtml(option.label) + '</option>';
+      }).join('');
+
+      var normalizedPreferred = normalizeHistoryCondition(preferredValue);
+      if (normalizedPreferred && options.some(function(option) { return option.value === normalizedPreferred; })) {
+        selectEl.value = normalizedPreferred;
+      } else {
+        selectEl.value = '';
+      }
     }
 
     function renderDetailHistoryPanel(analytics) {
@@ -2364,7 +2473,10 @@
         return;
       }
 
-      var history = analytics && Array.isArray(analytics.history) ? analytics.history : [];
+      var selectedCondition = detailHistoryConditionFilter ? detailHistoryConditionFilter.value : '';
+      var history = analytics && typeof analytics.getConditionBreakdown === 'function'
+        ? analytics.getConditionBreakdown(selectedCondition).history
+        : [];
       detailHistorySummary.textContent = history.length
         ? (history.length + " total records across store transactions and marketplace sales")
         : "No transaction or marketplace history found for this item.";
@@ -2395,21 +2507,24 @@
         return;
       }
 
-      var cards = analytics && Array.isArray(analytics.averages) ? analytics.averages : [];
-      detailAverageSummary.textContent = cards.length
-        ? 'Blended pricing uses store buys plus marketplace sales; breakdown cards show each source separately.'
+      var selectedCondition = detailAverageConditionFilter ? detailAverageConditionFilter.value : '';
+      var breakdown = analytics && typeof analytics.getConditionBreakdown === 'function'
+        ? analytics.getConditionBreakdown(selectedCondition)
+        : { rows: [], summary: 'No average data is available yet for this item.' };
+      var rows = Array.isArray(breakdown.rows) ? breakdown.rows : [];
+      detailAverageSummary.textContent = rows.length
+        ? breakdown.summary
         : 'No average data is available yet for this item.';
 
-      if (!cards.length) {
+      if (!rows.length) {
         detailAverageGrid.innerHTML = '<div class="detail-history-empty">No averages can be calculated yet.</div>';
         return;
       }
 
-      detailAverageGrid.innerHTML = cards.map(function(card) {
-        return '<div class="detail-average-card">' +
-          '<div class="detail-block-label">' + escapeHtml(card.label) + '</div>' +
-          '<div class="detail-average-value">' + escapeHtml(formatPriceOrNa(card.value)) + '</div>' +
-          '<div class="detail-average-meta">' + escapeHtml(card.meta || '') + '</div>' +
+      detailAverageGrid.innerHTML = rows.map(function(row) {
+        return '<div class="detail-average-row">' +
+          '<div><div class="detail-block-label">' + escapeHtml(row.label) + '</div><div class="detail-average-meta">' + escapeHtml(row.meta || '') + '</div></div>' +
+          '<div class="detail-average-value">' + escapeHtml(formatPriceOrNa(row.value)) + '</div>' +
         '</div>';
       }).join('');
     }
@@ -2418,10 +2533,15 @@
       var activeItem = currentDetailContext === 'catalog' ? selectedCatalogItem : selectedDetailItem;
       if (!activeItem) {
         detailAnalyticsState = null;
+        populateDetailConditionFilter(detailHistoryConditionFilter, null, '');
+        populateDetailConditionFilter(detailAverageConditionFilter, null, '');
         renderDetailHistoryPanel(null);
         renderDetailAveragePanel(null);
         return;
       }
+
+      var previousHistoryCondition = detailHistoryConditionFilter ? detailHistoryConditionFilter.value : '';
+      var previousAverageCondition = detailAverageConditionFilter ? detailAverageConditionFilter.value : '';
 
       if (detailHistorySummary) {
         detailHistorySummary.textContent = 'Loading history...';
@@ -2442,6 +2562,8 @@
       );
 
       detailAnalyticsState = buildPricingAnalytics(storeRows, marketRows);
+      populateDetailConditionFilter(detailHistoryConditionFilter, detailAnalyticsState, previousHistoryCondition);
+      populateDetailConditionFilter(detailAverageConditionFilter, detailAnalyticsState, previousAverageCondition);
       renderDetailHistoryPanel(detailAnalyticsState);
       renderDetailAveragePanel(detailAnalyticsState);
     }
@@ -3426,6 +3548,8 @@
       if (detailAverageGrid) detailAverageGrid.innerHTML = "";
       if (detailHistorySummary) detailHistorySummary.textContent = "";
       if (detailAverageSummary) detailAverageSummary.textContent = "";
+      populateDetailConditionFilter(detailHistoryConditionFilter, null, '');
+      populateDetailConditionFilter(detailAverageConditionFilter, null, '');
       detailAnalyticsState = null;
     }
 
@@ -3524,6 +3648,12 @@
     detailTabInfo.addEventListener("click", () => selectDetailTab("info"));
     detailTabHistory.addEventListener("click", () => selectDetailTab("history"));
     detailTabAverages.addEventListener("click", () => selectDetailTab("averages"));
+    detailHistoryConditionFilter.addEventListener("change", () => {
+      renderDetailHistoryPanel(detailAnalyticsState);
+    });
+    detailAverageConditionFilter.addEventListener("change", () => {
+      renderDetailAveragePanel(detailAnalyticsState);
+    });
 
     document.addEventListener("click", (e) => {
       var row = e.target.closest(".item-row");
