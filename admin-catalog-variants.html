@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Variants - CollectorsHub Retail</title>
   <style>
-    :root { --bg:#070d18; --panel:#121c30; --panel2:#15233a; --border:#233451; --text:#e7eefb; --soft:#9fb0cf; }
+    :root { --bg:#070d18; --panel:#121c30; --panel2:#15233a; --border:#233451; --text:#e7eefb; --soft:#9fb0cf; --accent:#33c3ff; }
     *{box-sizing:border-box;} body{margin:0;font-family:"Sora","Segoe UI",Tahoma,sans-serif;color:var(--text);background:linear-gradient(135deg,#060b14 0%,#0a1424 50%,#0c1a2f 100%);} .app{display:grid;grid-template-columns:270px 1fr;min-height:100vh;}
     .sidebar{border-right:1px solid var(--border);background:rgba(10,18,33,.88);padding:24px 16px;} .brand{padding:10px 10px 14px;border-bottom:1px solid rgba(159,176,207,.15);} .brand h1{margin:0;font-size:1.15rem;} .brand p{margin:6px 0 0;color:var(--soft);font-size:.82rem;}
     .nav{display:flex;flex-direction:column;gap:8px;margin-top:18px;} .nav-item{color:var(--soft);text-decoration:none;padding:10px 12px;border-radius:10px;border:1px solid transparent;} .nav-item.active,.nav-item:hover{color:var(--text);border-color:rgba(51,195,255,.36);background:rgba(51,195,255,.12);} .content{display:flex;flex-direction:column;}
     .topbar{min-height:76px;border-bottom:1px solid var(--border);background:rgba(8,16,30,.78);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;} .topbar h2{margin:0;font-size:1.05rem;}
     .main{padding:20px 24px;display:flex;flex-direction:column;gap:16px;} .subnav{display:flex;flex-wrap:wrap;gap:8px;} .subnav a{color:var(--soft);text-decoration:none;border:1px solid rgba(56,89,136,.55);border-radius:999px;padding:7px 10px;font-size:.8rem;} .subnav a.active{color:var(--text);border-color:rgba(51,195,255,.6);background:rgba(51,195,255,.14);} .section{border:1px solid var(--border);border-radius:14px;padding:16px;background:rgba(13,22,40,.76);} .section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;} .btn{border:1px solid rgba(56,89,136,.55);background:rgba(18,31,53,.95);color:var(--text);padding:9px 12px;border-radius:10px;cursor:pointer;}
     table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.85rem;} th,td{padding:10px;border-bottom:1px solid rgba(35,52,81,.5);text-align:left;} th{color:var(--soft);font-size:.76rem;text-transform:uppercase;} .actions{display:flex;gap:6px;} .actions button{border:1px solid rgba(51,195,255,.4);background:none;color:var(--text);padding:4px 8px;border-radius:8px;cursor:pointer;font-size:.75rem;}
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px;} .modal.open{display:flex;} .modal-card{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;} .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;} .field input,.field select{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(56,89,136,.7);background:#0e1a2e;color:var(--text);} .status{min-height:18px;color:var(--soft);font-size:.82rem;}
-    @media(max-width:980px){.app{grid-template-columns:1fr}.main{padding:14px}}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px;} .modal.open{display:flex;} .modal-card{width:100%;max-width:620px;max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;} .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;} .field input,.field select,.field textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(56,89,136,.7);background:#0e1a2e;color:var(--text);} .hint{color:var(--soft);font-size:.78rem;margin:2px 0 0;} .status{min-height:18px;color:var(--soft);font-size:.82rem;margin-top:8px;}
+    @media(max-width:980px){.app{grid-template-columns:1fr}.main{padding:14px}.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -44,8 +44,8 @@
         <div class="section-head"><h3 style="margin:0;">All Variants</h3><button class="btn" id="open-create" type="button">Create Variant</button></div>
         <div style="overflow:auto;">
           <table id="variants-table">
-            <thead><tr><th>Catalog Item</th><th>Platform / Format</th><th>Edition</th><th>Region</th><th>UPC</th><th>Release Date</th><th>Actions</th></tr></thead>
-            <tbody><tr><td colspan="7">Loading...</td></tr></tbody>
+            <thead><tr><th>Catalog Item</th><th>Platform / Format</th><th>Edition</th><th>Region</th><th>Packaging</th><th>UPC</th><th>Release Date</th><th>Actions</th></tr></thead>
+            <tbody><tr><td colspan="8">Loading...</td></tr></tbody>
           </table>
         </div>
         <p class="status" id="table-status"></p>
@@ -57,14 +57,23 @@
 <div class="modal" id="variant-modal">
   <div class="modal-card">
     <h3 style="margin-top:0;" id="modal-title">Create Variant</h3>
-    <div class="field"><label>Catalog Item *</label><select id="catalog-item"></select></div>
-    <div class="field"><label>Platform / Format *</label><input id="platform" type="text" /></div>
-    <div class="field"><label>Edition</label><input id="edition" type="text" /></div>
-    <div class="field"><label>Region</label><input id="region" type="text" /></div>
-    <div class="field"><label>UPC</label><input id="upc" type="text" /></div>
+    <p class="hint" style="margin-top:-4px; margin-bottom:12px;">Use this form to create or edit variant-specific details, similar to the catalog item workflow.</p>
+    <div class="grid">
+      <div class="field"><label>Catalog Item *</label><select id="catalog-item"></select></div>
+      <div class="field"><label>Platform / Format *</label><input id="platform" type="text" placeholder="PlayStation 5, Blu-ray, etc." /></div>
+    </div>
+    <div class="grid">
+      <div class="field"><label>Edition</label><input id="edition" type="text" placeholder="Deluxe, Collector's, Standard" /></div>
+      <div class="field"><label>Region</label><input id="region" type="text" placeholder="NA, EU, JP" /></div>
+    </div>
+    <div class="grid">
+      <div class="field"><label>Packaging</label><input id="packaging" type="text" placeholder="Sealed, Boxed, Loose" /></div>
+      <div class="field"><label>UPC</label><input id="upc" type="text" /></div>
+    </div>
     <div class="field"><label>Release Date</label><input id="release-date" type="date" /></div>
+    <div class="field"><label>Attributes (JSON)</label><textarea id="attributes-json" rows="4" placeholder='{"color":"red","language":"EN"}'></textarea><p class="hint">Optional structured fields for this variant.</p></div>
     <p class="status" id="modal-status"></p>
-    <div style="display:flex;justify-content:flex-end;gap:8px;"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn" id="save" type="button">Save</button></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn" id="save" type="button">Save Variant</button></div>
   </div>
 </div>
 
@@ -87,22 +96,62 @@ async function loadItems(){
 }
 async function loadVariants(){
   var tbody=document.querySelector("#variants-table tbody");
-  tbody.innerHTML='<tr><td colspan="7">Loading...</td></tr>';
-  var res=await supabase.from("variants").select("id,catalog_item_id,platform_or_format,edition,region,upc,release_date,is_active,catalog_items(name)").eq("is_active",true).order("created_at",{ascending:false});
-  if(res.error){tbody.innerHTML='<tr><td colspan="7">Error loading variants: '+esc(res.error.message)+'</td></tr>';return;}
+  tbody.innerHTML='<tr><td colspan="8">Loading...</td></tr>';
+  var res=await supabase.from("variants").select("id,catalog_item_id,platform_or_format,edition,region,packaging,upc,release_date,attributes,is_active,catalog_items(name)").eq("is_active",true).order("created_at",{ascending:false});
+  if(res.error){tbody.innerHTML='<tr><td colspan="8">Error loading variants: '+esc(res.error.message)+'</td></tr>';return;}
   variants=res.data||[];
-  if(!variants.length){tbody.innerHTML='<tr><td colspan="7">No variants found.</td></tr>';return;}
-  tbody.innerHTML=variants.map(function(v){return '<tr>'+ '<td>'+esc(v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"-")+'</td>'+'<td>'+esc(v.platform_or_format||"-")+'</td>'+'<td>'+esc(v.edition||"-")+'</td>'+'<td>'+esc(v.region||"-")+'</td>'+'<td>'+esc(v.upc||"-")+'</td>'+'<td>'+esc(v.release_date||"-")+'</td>'+'<td><div class="actions"><button data-act="view" data-id="'+v.id+'">View</button><button data-act="edit" data-id="'+v.id+'">Edit</button><button data-act="delete" data-id="'+v.id+'">Delete</button></div></td>'+'</tr>';}).join("");
+  if(!variants.length){tbody.innerHTML='<tr><td colspan="8">No variants found.</td></tr>';return;}
+  tbody.innerHTML=variants.map(function(v){return '<tr>'+ '<td>'+esc(v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"-")+'</td>'+'<td>'+esc(v.platform_or_format||"-")+'</td>'+'<td>'+esc(v.edition||"-")+'</td>'+'<td>'+esc(v.region||"-")+'</td>'+'<td>'+esc(v.packaging||"-")+'</td>'+'<td>'+esc(v.upc||"-")+'</td>'+'<td>'+esc(v.release_date||"-")+'</td>'+'<td><div class="actions"><button data-act="view" data-id="'+v.id+'">View</button><button data-act="edit" data-id="'+v.id+'">Edit</button><button data-act="delete" data-id="'+v.id+'">Delete</button></div></td>'+'</tr>';}).join("");
 }
-function openModal(v){editId=v?v.id:null; document.getElementById("modal-title").textContent=v?"Edit Variant":"Create Variant"; document.getElementById("catalog-item").value=v?(v.catalog_item_id||""):""; document.getElementById("platform").value=v?(v.platform_or_format||""):""; document.getElementById("edition").value=v?(v.edition||""):""; document.getElementById("region").value=v?(v.region||""):""; document.getElementById("upc").value=v?(v.upc||""):""; document.getElementById("release-date").value=v?(v.release_date||""):""; document.getElementById("modal-status").textContent=""; document.getElementById("variant-modal").classList.add("open"); }
+function openModal(v){
+  editId=v?v.id:null;
+  document.getElementById("modal-title").textContent=v?"Edit Variant":"Create Variant";
+  document.getElementById("catalog-item").value=v?(v.catalog_item_id||""):"";
+  document.getElementById("platform").value=v?(v.platform_or_format||""):"";
+  document.getElementById("edition").value=v?(v.edition||""):"";
+  document.getElementById("region").value=v?(v.region||""):"";
+  document.getElementById("packaging").value=v?(v.packaging||""):"";
+  document.getElementById("upc").value=v?(v.upc||""):"";
+  document.getElementById("release-date").value=v?(v.release_date||""):"";
+  document.getElementById("attributes-json").value=v&&v.attributes?JSON.stringify(v.attributes,null,2):"";
+  document.getElementById("modal-status").textContent="";
+  document.getElementById("variant-modal").classList.add("open");
+}
+
+function parseAttributesInput(raw){
+  var txt=String(raw||"").trim();
+  if(!txt){
+    return { value: {}, error: null };
+  }
+  try {
+    var parsed=JSON.parse(txt);
+    if(parsed===null || Array.isArray(parsed) || typeof parsed!=="object"){
+      return { value: null, error: "Attributes must be a JSON object." };
+    }
+    return { value: parsed, error: null };
+  } catch (e) {
+    return { value: null, error: "Attributes JSON is invalid." };
+  }
+}
+
 async function saveVariant(){
-  var id=document.getElementById("catalog-item").value; var platform=document.getElementById("platform").value.trim(); var edition=document.getElementById("edition").value.trim(); var region=document.getElementById("region").value.trim(); var upc=document.getElementById("upc").value.trim(); var release=document.getElementById("release-date").value; var status=document.getElementById("modal-status");
+  var id=document.getElementById("catalog-item").value;
+  var platform=document.getElementById("platform").value.trim();
+  var edition=document.getElementById("edition").value.trim();
+  var region=document.getElementById("region").value.trim();
+  var packaging=document.getElementById("packaging").value.trim();
+  var upc=document.getElementById("upc").value.trim();
+  var release=document.getElementById("release-date").value;
+  var attrsRaw=document.getElementById("attributes-json").value;
+  var status=document.getElementById("modal-status");
+  var parsedAttrs=parseAttributesInput(attrsRaw);
   if(!id||!platform){status.textContent="Catalog item and platform/format are required."; return;}
+  if(parsedAttrs.error){status.textContent=parsedAttrs.error; return;}
   if(!editId){
-    var createRes=await supabase.rpc("admin_create_variant",{p_catalog_item_id:id,p_platform_or_format:platform,p_edition:edition||null,p_region:region||null,p_packaging:null,p_upc:upc||null,p_release_date:release||null,p_attributes:"{}"});
+    var createRes=await supabase.rpc("admin_create_variant",{p_catalog_item_id:id,p_platform_or_format:platform,p_edition:edition||null,p_region:region||null,p_packaging:packaging||null,p_upc:upc||null,p_release_date:release||null,p_attributes:parsedAttrs.value});
     if(createRes.error){status.textContent="Error: "+createRes.error.message; return;}
   } else {
-    var updateRes=await supabase.from("variants").update({catalog_item_id:id,platform_or_format:platform,edition:edition||null,region:region||null,upc:upc||null,release_date:release||null}).eq("id",editId);
+    var updateRes=await supabase.from("variants").update({catalog_item_id:id,platform_or_format:platform,edition:edition||null,region:region||null,packaging:packaging||null,upc:upc||null,release_date:release||null,attributes:parsedAttrs.value}).eq("id",editId);
     if(updateRes.error){status.textContent="Error: "+updateRes.error.message; return;}
   }
   status.textContent="Saved.";
@@ -113,7 +162,7 @@ async function deleteVariant(id){ if(!confirm("Delete this variant?")) return; v
 document.getElementById("open-create").addEventListener("click",function(){openModal(null);});
 document.getElementById("cancel").addEventListener("click",function(){document.getElementById("variant-modal").classList.remove("open");});
 document.getElementById("save").addEventListener("click",saveVariant);
-document.querySelector("#variants-table tbody").addEventListener("click",function(e){var b=e.target.closest("button"); if(!b) return; var id=b.getAttribute("data-id"); var act=b.getAttribute("data-act"); var v=variants.find(function(x){return x.id===id;}); if(act==="view"&&v){alert((v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"Variant")+"\n"+(v.platform_or_format||""));} else if(act==="edit"&&v){openModal(v);} else if(act==="delete"){deleteVariant(id);} });
+document.querySelector("#variants-table tbody").addEventListener("click",function(e){var b=e.target.closest("button"); if(!b) return; var id=b.getAttribute("data-id"); var act=b.getAttribute("data-act"); var v=variants.find(function(x){return x.id===id;}); if(act==="view"&&v){alert((v.catalog_items&&v.catalog_items.name?v.catalog_items.name:"Variant")+"\n"+(v.platform_or_format||"")+"\n"+(v.edition||""));} else if(act==="edit"&&v){openModal(v);} else if(act==="delete"){deleteVariant(id);} });
 document.getElementById("sign-out").addEventListener("click", async function(){await supabase.auth.signOut(); window.location.href="/index.html";});
 (async function init(){var ok=await verify(); if(!ok) return; await loadItems(); await loadVariants();})();
 </script>
