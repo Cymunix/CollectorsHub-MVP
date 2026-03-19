@@ -1920,6 +1920,7 @@ create table if not exists public.store_inventory (
   store_code text not null references public.retail_stores(store_code) on update cascade on delete cascade,
   catalog_item_id uuid not null references public.catalog_items(id) on delete cascade,
   variant_id uuid references public.variants(id) on delete set null,
+  item_condition text,
   quantity_on_hand integer not null default 0 check (quantity_on_hand >= 0),
   unit_price numeric(12,2),
   unit_cost numeric(12,2),
@@ -1933,8 +1934,18 @@ create table if not exists public.store_inventory (
 create index if not exists store_inventory_store_code_idx on public.store_inventory(store_code);
 create index if not exists store_inventory_catalog_item_idx on public.store_inventory(catalog_item_id);
 create index if not exists store_inventory_variant_idx on public.store_inventory(variant_id);
+create index if not exists store_inventory_item_condition_idx on public.store_inventory(item_condition);
+drop index if exists public.store_inventory_unique_item_variant_per_store_idx;
 create unique index if not exists store_inventory_unique_item_variant_per_store_idx
-  on public.store_inventory (store_code, catalog_item_id, coalesce(variant_id, '00000000-0000-0000-0000-000000000000'::uuid));
+  on public.store_inventory (
+    store_code,
+    catalog_item_id,
+    coalesce(variant_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    coalesce(item_condition, '')
+  );
+
+alter table public.store_inventory
+  add column if not exists item_condition text;
 
 create or replace function public.set_store_inventory_updated_at()
 returns trigger
@@ -1978,9 +1989,13 @@ create table if not exists public.store_transactions (
   sold_total numeric(12,2) not null default 0 check (sold_total >= 0),
   net_total numeric(12,2) not null default 0,
   status text not null default 'completed' check (status in ('pending', 'completed', 'failed')),
+  condition_summary jsonb not null default '{}'::jsonb,
   note text,
   created_at timestamptz not null default now()
 );
+
+alter table public.store_transactions
+  add column if not exists condition_summary jsonb not null default '{}'::jsonb;
 
 create index if not exists store_transactions_store_code_idx on public.store_transactions(store_code);
 create index if not exists store_transactions_created_at_idx on public.store_transactions(created_at desc);
