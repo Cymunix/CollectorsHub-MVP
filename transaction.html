@@ -2008,6 +2008,102 @@
       return Number.isFinite(price) ? price : null;
     }
 
+    function formatPriceOrNa(value) {
+      return Number.isFinite(Number(value)) ? ("$" + Number(value).toFixed(2)) : "N/A";
+    }
+
+    async function fetchStorePricingSnapshot(storeCode, catalogItemId, variantId, itemCondition) {
+      var normalizedStoreCode = String(storeCode || "").trim();
+      var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
+      var normalizedVariantId = toUuidOrNull(variantId);
+      var normalizedCondition = normalizeConditionValue(itemCondition);
+      if (!normalizedStoreCode || !normalizedCatalogItemId || !normalizedCondition) {
+        return null;
+      }
+
+      var txRows = await supabase
+        .from("store_transactions")
+        .select("id")
+        .eq("store_code", normalizedStoreCode)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      if (txRows.error || !Array.isArray(txRows.data) || !txRows.data.length) {
+        return null;
+      }
+
+      var txIds = txRows.data.map(function(row) { return row.id; }).filter(Boolean);
+      if (!txIds.length) {
+        return null;
+      }
+
+      var linesQuery = supabase
+        .from("store_transaction_items")
+        .select("line_type,unit_price,created_at,item_condition")
+        .eq("catalog_item_id", normalizedCatalogItemId)
+        .eq("item_condition", normalizedCondition)
+        .in("transaction_id", txIds)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+
+      if (normalizedVariantId) {
+        linesQuery = linesQuery.eq("variant_id", normalizedVariantId);
+      } else {
+        linesQuery = linesQuery.is("variant_id", null);
+      }
+
+      var linesRes = await linesQuery;
+      if (linesRes.error || !Array.isArray(linesRes.data) || !linesRes.data.length) {
+        return null;
+      }
+
+      var nowMs = Date.now();
+      var days30Ms = 30 * 24 * 60 * 60 * 1000;
+      var sold = [];
+      var sold30 = [];
+      var buys = [];
+
+      linesRes.data.forEach(function(row) {
+        var price = Number(row.unit_price);
+        if (!Number.isFinite(price)) {
+          return;
+        }
+
+        if (row.line_type === "store_sell") {
+          sold.push({ price: price, created_at: row.created_at });
+          var ts = Date.parse(row.created_at || "");
+          if (Number.isFinite(ts) && (nowMs - ts) <= days30Ms) {
+            sold30.push(price);
+          }
+        } else if (row.line_type === "store_buy") {
+          buys.push(price);
+        }
+      });
+
+      if (!sold.length && !buys.length) {
+        return null;
+      }
+
+      var soldAvg = sold.length
+        ? sold.reduce(function(sum, row) { return sum + row.price; }, 0) / sold.length
+        : null;
+      var sold30Avg = sold30.length
+        ? sold30.reduce(function(sum, value) { return sum + value; }, 0) / sold30.length
+        : null;
+      var lastSale = sold.length ? sold[0].price : null;
+      var lastPaid = buys.length ? buys[0] : null;
+
+      return {
+        market: soldAvg,
+        avg30: sold30Avg,
+        lastSale: lastSale,
+        lastPaid: lastPaid,
+        saleCount: sold.length,
+        saleCount30: sold30.length
+      };
+    }
+
     async function updateDetailSuggestedPrice() {
       if (currentDetailContext !== "catalog" || !selectedCatalogItem) {
         return;
@@ -2019,6 +2115,23 @@
       }
 
       var condition = detailConditionType.value || "";
+      var pricingSnapshot = await fetchStorePricingSnapshot(
+        storeCode,
+        selectedCatalogItem.catalogItemId || selectedCatalogItem.id,
+        selectedCatalogItem.variantId || null,
+        condition
+      );
+
+      if (pricingSnapshot) {
+        detailPricingMarket.textContent = formatPriceOrNa(pricingSnapshot.market);
+        detailPricingAvg.textContent = formatPriceOrNa(pricingSnapshot.avg30);
+        detailPricingLast.textContent = formatPriceOrNa(pricingSnapshot.lastSale);
+      } else {
+        detailPricingMarket.textContent = "N/A";
+        detailPricingAvg.textContent = "N/A";
+        detailPricingLast.textContent = "N/A";
+      }
+
       var suggestedFromHistory = await lookupLastPaidPrice(
         storeCode,
         selectedCatalogItem.catalogItemId || selectedCatalogItem.id,
@@ -2099,7 +2212,7 @@
             catalog_item_id: toUuidOrNull(item.catalogItemId),
             variant_id: toUuidOrNull(item.variantId),
             item_name: item.name || "Item",
-            item_condition: item.condition || null,
+            item_condition: normalizeConditionValue(item.condition),
             grade: item.grade || null,
             quantity: 1,
             unit_price: Number(item.price || 0),
@@ -2121,7 +2234,7 @@
             catalog_item_id: toUuidOrNull(item.catalogItemId),
             variant_id: toUuidOrNull(item.variantId),
             item_name: item.name || "Item",
-            item_condition: item.condition || null,
+            item_condition: normalizeConditionValue(item.condition),
             grade: item.grade || null,
             quantity: 1,
             unit_price: Number(item.price || 0),

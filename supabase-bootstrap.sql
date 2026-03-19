@@ -2019,6 +2019,10 @@ create table if not exists public.store_transaction_items (
 create index if not exists store_transaction_items_transaction_id_idx on public.store_transaction_items(transaction_id);
 create index if not exists store_transaction_items_catalog_item_idx on public.store_transaction_items(catalog_item_id);
 create index if not exists store_transaction_items_variant_idx on public.store_transaction_items(variant_id);
+create index if not exists store_transaction_items_item_condition_idx on public.store_transaction_items(item_condition);
+create index if not exists store_transaction_items_line_type_idx on public.store_transaction_items(line_type);
+create index if not exists store_transaction_items_lookup_idx
+  on public.store_transaction_items (catalog_item_id, variant_id, item_condition, line_type, created_at desc);
 
 alter table public.store_transactions enable row level security;
 alter table public.store_transaction_items enable row level security;
