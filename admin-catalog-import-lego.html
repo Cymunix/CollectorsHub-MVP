@@ -257,6 +257,7 @@
           <div class="field"><label for="edit-brand">Brand / Publisher</label><input id="edit-brand" type="text" /></div>
           <div class="field"><label for="edit-year">Release Year</label><input id="edit-year" type="number" min="1949" max="2100" /></div>
           <div class="field"><label for="edit-piece-count">Piece Count</label><input id="edit-piece-count" type="number" min="0" /></div>
+          <div class="field"><label for="edit-fig-count">Fig Count</label><input id="edit-fig-count" type="number" min="0" /></div>
           <div class="field"><label for="edit-edition">Edition</label><input id="edit-edition" type="text" /></div>
           <div class="field"><label for="edit-upc">UPC</label><input id="edit-upc" type="text" /></div>
           <div class="field"><label for="edit-series">Series</label><input id="edit-series" type="text" /></div>
@@ -519,6 +520,7 @@ async function setPreviewEditor(set) {
   document.getElementById("edit-brand").value = set.brandOrPublisher || "LEGO";
   document.getElementById("edit-year").value = set.year || "";
   document.getElementById("edit-piece-count").value = set.pieceCount || "";
+  document.getElementById("edit-fig-count").value = set.minifigCount || "";
   document.getElementById("edit-edition").value = set.edition || "";
   document.getElementById("edit-upc").value = set.upc || "";
   document.getElementById("edit-series").value = set.series || set.theme || "";
@@ -753,6 +755,7 @@ async function addPreviewToCatalog() {
     brandOrPublisher: document.getElementById("edit-brand").value.trim(),
     year: document.getElementById("edit-year").value ? Number(document.getElementById("edit-year").value) : null,
     pieceCount: document.getElementById("edit-piece-count").value ? Number(document.getElementById("edit-piece-count").value) : null,
+    figCount: document.getElementById("edit-fig-count").value ? Number(document.getElementById("edit-fig-count").value) : null,
     edition: document.getElementById("edit-edition").value.trim(),
     upc: document.getElementById("edit-upc").value.trim(),
     series: document.getElementById("edit-series").value.trim(),

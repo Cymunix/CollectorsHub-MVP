@@ -107,6 +107,7 @@ async function importOneSet(setData, categoryId) {
       brand_or_publisher: normalizeText(setData.brandOrPublisher) || "LEGO",
       set_number: normalizeText(setData.setNumber),
       piece_count: asNumber(setData.pieceCount),
+      fig_count: asNumber(setData.figCount != null ? setData.figCount : setData.minifigCount),
       edition: normalizeText(setData.edition),
       upc: normalizeText(setData.upc),
       series: series,
