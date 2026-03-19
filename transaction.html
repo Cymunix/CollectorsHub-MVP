@@ -1109,6 +1109,13 @@
       border-radius: 8px;
       background: var(--bg-tertiary);
       font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .detail-variant-row:hover {
+      border-color: var(--accent);
+      background: rgba(51, 195, 255, 0.08);
     }
 
     .detail-variant-name {
@@ -1594,6 +1601,7 @@
     var buyingItems = [];
     var currentMode = null; // "selling" or "buying"
     var selectedDetailItem = null;
+    var selectedVariantIndex = -1;
     var catalogItemsCache = {};
     var currentDetailContext = null; // "catalog" when opened from search info, null when from transaction row
 
@@ -1778,14 +1786,54 @@
       }
 
       detailVariantsSection.style.display = "block";
-      detailVariantsList.innerHTML = list.map(function(v) {
+      detailVariantsList.innerHTML = list.map(function(v, idx) {
         var variantName = v.variant_name || "Variant";
         var meta = [v.platform_or_format, v.edition, v.region, v.packaging, v.upc ? ("UPC: " + v.upc) : ""].filter(Boolean).join(" · ");
-        return '<div class="detail-variant-row">' +
+        return '<div class="detail-variant-row" data-variant-idx="' + idx + '">' +
           '<div class="detail-variant-name">' + escapeHtml(variantName) + '</div>' +
           '<div class="detail-variant-meta">' + escapeHtml(meta || "No additional details") + '</div>' +
         '</div>';
       }).join("");
+    }
+
+    function openCatalogVariantInfo(variantIndex) {
+      if (!selectedCatalogItem || !Array.isArray(selectedCatalogItem.variants)) {
+        return;
+      }
+      var idx = Number(variantIndex);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= selectedCatalogItem.variants.length) {
+        return;
+      }
+
+      var baseItem = selectedCatalogItem.parentItem || selectedCatalogItem;
+      var v = selectedCatalogItem.variants[idx] || {};
+      selectedVariantIndex = idx;
+
+      var variantDisplayName = v.variant_name || [v.platform_or_format, v.edition].filter(Boolean).join(" ") || "Variant";
+      var merged = {
+        id: v.id || baseItem.id,
+        name: (baseItem.name || "Item") + " - " + variantDisplayName,
+        category: baseItem.category,
+        subcategory: baseItem.subcategory,
+        franchise: baseItem.franchise,
+        brand_or_publisher: v.brand_or_publisher || baseItem.brand_or_publisher || "",
+        release_year: v.release_year != null ? v.release_year : baseItem.release_year,
+        series: v.series || baseItem.series || "",
+        set_number: v.set_number || baseItem.set_number || "",
+        piece_count: v.piece_count != null ? v.piece_count : baseItem.piece_count,
+        fig_count: v.fig_count != null ? v.fig_count : baseItem.fig_count,
+        edition: v.edition || baseItem.edition || "",
+        upc: v.upc || baseItem.upc || "",
+        description: v.description || baseItem.description || "",
+        primary_image_url: v.primary_image_url || baseItem.primary_image_url || "",
+        platform_or_format: v.platform_or_format || "",
+        variantId: v.id || null,
+        catalogItemId: baseItem.catalogItemId || baseItem.id,
+        variants: baseItem.variants || [],
+        parentItem: baseItem
+      };
+
+      openCatalogItemInfo(merged);
     }
 
     addSellingBtn.addEventListener("click", () => openAddItemModal("selling"));
@@ -1876,7 +1924,7 @@
       if (catalogItemIds.length) {
         var variantsRes = await supabase
           .from("variants")
-          .select("catalog_item_id,platform_or_format,edition,region,packaging,upc,attributes")
+          .select("id,catalog_item_id,platform_or_format,edition,region,packaging,upc,set_number,piece_count,release_year,brand_or_publisher,fig_count,series,description,primary_image_url,attributes")
           .eq("is_active", true)
           .in("catalog_item_id", catalogItemIds)
           .order("created_at", { ascending: false });
@@ -1888,13 +1936,23 @@
               variantsByItemId[v.catalog_item_id] = [];
             }
             var attrs = v.attributes && typeof v.attributes === "object" ? v.attributes : {};
+            var inferredName = attrs.variant_name || [v.platform_or_format, v.edition, v.region, v.packaging].filter(Boolean).join(" ").trim();
             variantsByItemId[v.catalog_item_id].push({
-              variant_name: attrs.variant_name || "",
+              id: v.id,
+              variant_name: inferredName || "Variant",
               platform_or_format: v.platform_or_format || "",
               edition: v.edition || "",
               region: v.region || "",
               packaging: v.packaging || "",
-              upc: v.upc || ""
+              upc: v.upc || "",
+              set_number: v.set_number || "",
+              piece_count: v.piece_count != null ? v.piece_count : null,
+              release_year: v.release_year != null ? v.release_year : null,
+              brand_or_publisher: v.brand_or_publisher || "",
+              fig_count: v.fig_count != null ? v.fig_count : null,
+              series: v.series || "",
+              description: v.description || "",
+              primary_image_url: v.primary_image_url || ""
             });
           });
         }
@@ -2258,8 +2316,11 @@
         barcode: item.upc,
         description: item.description,
         primary_image_url: item.primary_image_url,
+        platform_or_format: item.platform_or_format || "",
+        variantId: item.variantId || null,
         variants: item.variants || [],
-        catalogItemId: item.id,
+        catalogItemId: item.catalogItemId || item.id,
+        parentItem: item.parentItem || item,
         source: "catalog"
       };
 
@@ -2291,6 +2352,7 @@
         ["Franchise", item.franchise],
         ["Brand / Publisher", item.brand_or_publisher],
         ["Release Year", item.release_year != null ? String(item.release_year) : ""],
+        ["Platform / Format", item.platform_or_format],
         ["Series", item.series],
         ["Set Number", item.set_number],
         ["Piece Count", item.piece_count != null ? String(item.piece_count) : ""],
@@ -2413,6 +2475,13 @@
       if (catalogItem) openCatalogItemInfo(catalogItem);
     });
 
+    detailVariantsList.addEventListener("click", function(e) {
+      var row = e.target.closest(".detail-variant-row");
+      if (!row) return;
+      var idx = row.getAttribute("data-variant-idx");
+      openCatalogVariantInfo(idx);
+    });
+
     conditionAddBtn.addEventListener("click", () => {
       if (!selectedCatalogItem) return;
       var price = parseFloat(conditionPrice.value);
@@ -2425,15 +2494,17 @@
         name: selectedCatalogItem.name,
         brand: selectedCatalogItem.brand,
         year: selectedCatalogItem.year,
-        platform: selectedCatalogItem.platform || "",
+        platform: selectedCatalogItem.platform || selectedCatalogItem.platform_or_format || "",
         edition: selectedCatalogItem.edition || "",
         barcode: selectedCatalogItem.barcode || "",
-        catalogueId: "CAT-" + String(selectedCatalogItem.id).padStart(5, "0"),
+        catalogueId: "CAT-" + String(selectedCatalogItem.variantId || selectedCatalogItem.id),
         condition: conditionType.value,
         grade: conditionIsGraded.checked ? (document.getElementById("condition-grader").value.toUpperCase() + " " + document.getElementById("condition-graded-grade").value) : "",
         grader: conditionIsGraded.checked ? document.getElementById("condition-grader").value : "",
         price: price
-        ,catalogItemId: selectedCatalogItem.id,
+        ,catalogItemId: selectedCatalogItem.catalogItemId || selectedCatalogItem.id,
+        variantId: selectedCatalogItem.variantId || null,
+        variants: selectedCatalogItem.variants || [],
         source: "catalog"
       };
       if (currentCatalogMode === "selling") {
@@ -2492,8 +2563,8 @@
         year = selectedCatalogItem.year ? String(selectedCatalogItem.year) : "";
         edition = selectedCatalogItem.edition || "";
         barcode = selectedCatalogItem.barcode || "";
-        catalogueId = selectedCatalogItem.id;
-        catalogItemId = selectedCatalogItem.id;
+        catalogueId = selectedCatalogItem.variantId || selectedCatalogItem.id;
+        catalogItemId = selectedCatalogItem.catalogItemId || selectedCatalogItem.id;
       } else {
         if (!selectedDetailItem) return;
         source = selectedDetailItem.source;
@@ -2520,6 +2591,7 @@
         grader: detailConditionIsGraded.checked ? detailConditionGrader.value : "",
         price: price,
         catalogItemId: catalogItemId,
+        variantId: (currentDetailContext === "catalog" ? (selectedCatalogItem.variantId || null) : (selectedDetailItem.variantId || null)),
         source: source
       };
 
