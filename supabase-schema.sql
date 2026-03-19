@@ -1957,7 +1957,12 @@ begin
     alter table public.variants
       add column if not exists set_number text,
       add column if not exists piece_count integer,
-      add column if not exists release_year integer;
+      add column if not exists release_year integer,
+      add column if not exists brand_or_publisher text,
+      add column if not exists fig_count integer,
+      add column if not exists series text,
+      add column if not exists description text,
+      add column if not exists primary_image_url text;
 
     create unique index if not exists variants_set_number_unique_idx
       on public.variants(set_number)

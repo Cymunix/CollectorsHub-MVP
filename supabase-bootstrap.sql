@@ -797,6 +797,11 @@ create table if not exists public.variants (
   upc text,
   release_year integer,
   release_date date,
+  brand_or_publisher text,
+  fig_count integer,
+  series text,
+  description text,
+  primary_image_url text,
   attributes jsonb not null default '{}'::jsonb,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -806,7 +811,12 @@ create table if not exists public.variants (
 alter table public.variants
   add column if not exists set_number text,
   add column if not exists piece_count integer,
-  add column if not exists release_year integer;
+  add column if not exists release_year integer,
+  add column if not exists brand_or_publisher text,
+  add column if not exists fig_count integer,
+  add column if not exists series text,
+  add column if not exists description text,
+  add column if not exists primary_image_url text;
 
 alter table public.variants enable row level security;
 
@@ -1379,6 +1389,7 @@ grant execute on function public.admin_create_franchise(text, text) to authentic
 drop function if exists public.admin_create_franchise(text, uuid, text);
 
 -- RPC: Admin create variant
+drop function if exists public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb);
 create or replace function public.admin_create_variant(
   p_catalog_item_id uuid,
   p_platform_or_format text default null,
@@ -1387,7 +1398,15 @@ create or replace function public.admin_create_variant(
   p_packaging text default null,
   p_upc text default null,
   p_release_date date default null,
-  p_attributes jsonb default '{}'::jsonb
+  p_attributes jsonb default '{}'::jsonb,
+  p_brand_or_publisher text default null,
+  p_series text default null,
+  p_release_year integer default null,
+  p_set_number text default null,
+  p_piece_count integer default null,
+  p_fig_count integer default null,
+  p_primary_image_url text default null,
+  p_description text default null
 )
 returns table (
   id uuid,
@@ -1448,6 +1467,14 @@ begin
     upc,
     release_date,
     attributes,
+    brand_or_publisher,
+    series,
+    release_year,
+    set_number,
+    piece_count,
+    fig_count,
+    primary_image_url,
+    description,
     is_active
   )
   values (
@@ -1459,6 +1486,14 @@ begin
     case when btrim(p_upc) = '' then null else btrim(p_upc) end,
     p_release_date,
     coalesce(p_attributes, '{}'::jsonb),
+    case when btrim(coalesce(p_brand_or_publisher,'')) = '' then null else btrim(p_brand_or_publisher) end,
+    case when btrim(coalesce(p_series,'')) = '' then null else btrim(p_series) end,
+    p_release_year,
+    case when btrim(coalesce(p_set_number,'')) = '' then null else btrim(p_set_number) end,
+    p_piece_count,
+    p_fig_count,
+    case when btrim(coalesce(p_primary_image_url,'')) = '' then null else btrim(p_primary_image_url) end,
+    case when btrim(coalesce(p_description,'')) = '' then null else btrim(p_description) end,
     true
   )
   returning variants.id, variants.created_at
@@ -1468,8 +1503,8 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb) from public;
-grant execute on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb) to authenticated;
+revoke all on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb, text, text, integer, text, integer, integer, text, text) from public;
+grant execute on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb, text, text, integer, text, integer, integer, text, text) to authenticated;
 
 -- RPC: Admin list variants for a catalog item
 create or replace function public.admin_list_variants(p_catalog_item_id uuid)
@@ -1483,7 +1518,15 @@ returns table (
   upc text,
   release_date date,
   display_name text,
-  created_at timestamptz
+  created_at timestamptz,
+  set_number text,
+  piece_count integer,
+  release_year integer,
+  brand_or_publisher text,
+  fig_count integer,
+  series text,
+  description text,
+  primary_image_url text
 )
 language sql
 security definer
@@ -1501,7 +1544,15 @@ as $$
     ci.name 
       || coalesce(' — ' || v.platform_or_format, '')
       || coalesce(' ' || v.edition, '') as display_name,
-    v.created_at
+    v.created_at,
+    v.set_number,
+    v.piece_count,
+    v.release_year,
+    v.brand_or_publisher,
+    v.fig_count,
+    v.series,
+    v.description,
+    v.primary_image_url
   from public.variants v
   join public.catalog_items ci on ci.id = v.catalog_item_id
   where v.catalog_item_id = p_catalog_item_id

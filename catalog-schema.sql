@@ -37,6 +37,14 @@ CREATE TABLE IF NOT EXISTS public.variants (
   packaging text,
   upc text,
   release_date date,
+  set_number text,
+  piece_count integer,
+  release_year integer,
+  brand_or_publisher text,
+  fig_count integer,
+  series text,
+  description text,
+  primary_image_url text,
   attributes jsonb NOT NULL DEFAULT '{}'::jsonb,
   display_name text GENERATED ALWAYS AS (
     CASE
@@ -264,6 +272,7 @@ END;
 $$;
 
 -- RPC: Create variant
+DROP FUNCTION IF EXISTS public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb);
 CREATE OR REPLACE FUNCTION public.admin_create_variant(
   p_catalog_item_id uuid,
   p_platform_or_format text DEFAULT NULL,
@@ -272,7 +281,15 @@ CREATE OR REPLACE FUNCTION public.admin_create_variant(
   p_packaging text DEFAULT NULL,
   p_upc text DEFAULT NULL,
   p_release_date date DEFAULT NULL,
-  p_attributes jsonb DEFAULT '{}'::jsonb
+  p_attributes jsonb DEFAULT '{}'::jsonb,
+  p_brand_or_publisher text DEFAULT NULL,
+  p_series text DEFAULT NULL,
+  p_release_year integer DEFAULT NULL,
+  p_set_number text DEFAULT NULL,
+  p_piece_count integer DEFAULT NULL,
+  p_fig_count integer DEFAULT NULL,
+  p_primary_image_url text DEFAULT NULL,
+  p_description text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -331,6 +348,15 @@ BEGIN
     upc,
     release_date,
     attributes
+  ,
+    brand_or_publisher,
+    series,
+    release_year,
+    set_number,
+    piece_count,
+    fig_count,
+    primary_image_url,
+    description
   )
   VALUES (
     p_catalog_item_id,
@@ -340,7 +366,15 @@ BEGIN
     NULLIF(trim(p_packaging), ''),
     NULLIF(trim(p_upc), ''),
     p_release_date,
-    COALESCE(p_attributes, '{}'::jsonb)
+    COALESCE(p_attributes, '{}'::jsonb),
+    NULLIF(trim(COALESCE(p_brand_or_publisher,'')), ''),
+    NULLIF(trim(COALESCE(p_series,'')), ''),
+    p_release_year,
+    NULLIF(trim(COALESCE(p_set_number,'')), ''),
+    p_piece_count,
+    p_fig_count,
+    NULLIF(trim(COALESCE(p_primary_image_url,'')), ''),
+    NULLIF(trim(COALESCE(p_description,'')), '')
   )
   RETURNING id INTO v_variant_id;
 
