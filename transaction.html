@@ -1433,6 +1433,7 @@
       <div class="detail-body">
         <!-- Tab 1: Add to Transaction (condition + pricing + add button) -->
         <div class="detail-panel active" id="detail-panel-add">
+          <div id="detail-add-image-container"></div>
           <div class="pricing-panel" id="detail-pricing-panel">
             <h5>Pricing Guidance</h5>
             <div class="pricing-grid">
@@ -1486,9 +1487,9 @@
             <button class="btn secondary" id="detail-detail-cancel" style="flex: 1;">Cancel</button>
           </div>
         </div>
-        <!-- Tab 2: Item Info (image + all catalog fields) -->
+        <!-- Tab 2: Item Info (description + all catalog fields) -->
         <div class="detail-panel" id="detail-panel-info">
-          <div id="detail-item-image-container"></div>
+          <div id="detail-info-description" class="detail-block" style="margin-bottom: 12px;"></div>
           <div class="detail-grid" id="detail-attributes-grid"></div>
         </div>
       </div>
@@ -1535,7 +1536,8 @@
     var detailModalOverlay = document.getElementById("detail-modal-overlay");
     var detailCloseBtn = document.getElementById("detail-close-btn");
     var detailItemTitle = document.getElementById("detail-item-title");
-    var detailItemImageContainer = document.getElementById("detail-item-image-container");
+    var detailAddImageContainer = document.getElementById("detail-add-image-container");
+    var detailInfoDescription = document.getElementById("detail-info-description");
     var detailAttributesGrid = document.getElementById("detail-attributes-grid");
     var detailTabAdd = document.getElementById("detail-tab-add");
     var detailTabInfo = document.getElementById("detail-tab-info");
@@ -2188,12 +2190,15 @@
       detailConditionIsGraded.checked = false;
       detailGradedFields.style.display = "none";
 
-      // Item Info tab — image
+      // Add tab — image
       if (item.primary_image_url) {
-        detailItemImageContainer.innerHTML = '<div class="detail-item-image-wrap"><img src="' + escapeHtml(item.primary_image_url) + '" alt="' + escapeHtml(item.name) + '" loading="lazy" referrerpolicy="no-referrer" /></div>';
+        detailAddImageContainer.innerHTML = '<div class="detail-item-image-wrap"><img src="' + escapeHtml(item.primary_image_url) + '" alt="' + escapeHtml(item.name) + '" loading="lazy" referrerpolicy="no-referrer" /></div>';
       } else {
-        detailItemImageContainer.innerHTML = '<div class="detail-item-image-wrap" style="height:80px;"><span style="color:var(--text-secondary);font-size:13px;">No image</span></div>';
+        detailAddImageContainer.innerHTML = '<div class="detail-item-image-wrap" style="height:80px;"><span style="color:var(--text-secondary);font-size:13px;">No image</span></div>';
       }
+
+      // Info tab — description in place of image
+      detailInfoDescription.innerHTML = '<div class="detail-block-label">Description</div><div style="white-space: pre-wrap;">' + escapeHtml(item.description || "No description") + '</div>';
 
       // Item Info tab — catalog fields grid
       var fields = [
@@ -2214,10 +2219,6 @@
         var val = pair[1] || "-";
         return '<div class="detail-block"><div class="detail-block-label">' + escapeHtml(pair[0]) + '</div><div>' + escapeHtml(val) + '</div></div>';
       }).join("");
-
-      if (item.description) {
-        detailAttributesGrid.innerHTML += '<div class="detail-block" style="grid-column: 1 / -1;"><div class="detail-block-label">Description</div><div style="white-space: pre-wrap;">' + escapeHtml(item.description) + '</div></div>';
-      }
 
       selectDetailTab("add");
       detailModalOverlay.classList.add("open");
@@ -2258,8 +2259,11 @@
       detailConditionGrade.value = item.grade ? item.grade.split(" ")[1] : "";
       detailGradedFields.style.display = detailConditionIsGraded.checked ? "grid" : "none";
 
+      // Add tab image area and Info tab description
+      detailAddImageContainer.innerHTML = '<div class="detail-item-image-wrap" style="height:80px;"><span style="color:var(--text-secondary);font-size:13px;">No image</span></div>';
+      detailInfoDescription.innerHTML = '<div class="detail-block-label">Description</div><div style="white-space: pre-wrap;">' + escapeHtml(item.description || "No description") + '</div>';
+
       // Item Info tab — show what we stored on the transaction item
-      detailItemImageContainer.innerHTML = '';
       var attributes = [
         ["Category", item.category],
         ["Brand / Publisher", item.brand],
@@ -2280,7 +2284,8 @@
       detailModalOverlay.classList.remove("open");
       selectedDetailItem = null;
       currentDetailContext = null;
-      if (detailItemImageContainer) detailItemImageContainer.innerHTML = '';
+      if (detailAddImageContainer) detailAddImageContainer.innerHTML = '';
+      if (detailInfoDescription) detailInfoDescription.innerHTML = '';
     }
 
     function selectDetailTab(tab) {
