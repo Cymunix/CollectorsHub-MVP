@@ -1402,6 +1402,7 @@ declare
   v_uid uuid;
   v_is_admin boolean;
   v_new_id uuid;
+  v_created_at timestamptz;
   v_display_name text;
   v_item_name text;
 begin
@@ -1461,9 +1462,9 @@ begin
     true
   )
   returning variants.id, variants.created_at
-  into v_new_id;
+  into v_new_id, v_created_at;
 
-  return query select v_new_id, v_display_name;
+  return query select v_new_id, v_display_name, v_created_at;
 end;
 $$;
 

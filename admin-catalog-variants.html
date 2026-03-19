@@ -307,7 +307,7 @@ async function saveVariant(){
   if(!editId){
     var createRes=await supabase.rpc("admin_create_variant",{p_catalog_item_id:id,p_platform_or_format:platform,p_edition:edition||null,p_region:region||null,p_packaging:packaging||null,p_upc:upc||null,p_release_date:release||null,p_attributes:parsedAttrs.value});
     if(createRes.error){status.textContent="Error: "+createRes.error.message; return;}
-    var newId=createRes.data&&typeof createRes.data==="string"?createRes.data:(createRes.data&&createRes.data.id?createRes.data.id:null);
+    var newId=null; if(createRes.data){ if(Array.isArray(createRes.data)&&createRes.data[0]){newId=createRes.data[0].id||null;} else if(typeof createRes.data==="object"){newId=createRes.data.variant_id||createRes.data.id||null;} else if(typeof createRes.data==="string"){newId=createRes.data;} }
     if(newId&&(setNum||pieceCount||releaseYear)){
       await supabase.from("variants").update({set_number:setNum||null,piece_count:pieceCount?parseInt(pieceCount,10):null,release_year:releaseYear?parseInt(releaseYear,10):null}).eq("id",newId);
     }

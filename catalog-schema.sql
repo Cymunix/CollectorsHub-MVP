@@ -312,6 +312,15 @@ BEGIN
     END IF;
   END IF;
 
+  -- Build display name from item name and params
+  SELECT ci.name INTO v_display_name
+  FROM public.catalog_items ci
+  WHERE ci.id = p_catalog_item_id
+  LIMIT 1;
+  v_display_name := COALESCE(v_display_name, '')
+    || COALESCE(' — ' || NULLIF(trim(p_platform_or_format), ''), '')
+    || COALESCE(' ' || NULLIF(trim(p_edition), ''), '');
+
   -- Insert variant
   INSERT INTO public.variants (
     catalog_item_id,
@@ -333,7 +342,7 @@ BEGIN
     p_release_date,
     COALESCE(p_attributes, '{}'::jsonb)
   )
-  RETURNING id, display_name INTO v_variant_id, v_display_name;
+  RETURNING id INTO v_variant_id;
 
   RETURN jsonb_build_object(
     'success', true,
