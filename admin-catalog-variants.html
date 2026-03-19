@@ -75,7 +75,21 @@
       <div class="field" id="field-upc"><label id="label-upc">UPC</label><input id="upc" type="text" /></div>
       <div class="field" id="field-release-date"><label id="label-release-date">Release Date</label><input id="release-date" type="date" /></div>
     </div>
-    <div class="field"><label>Attributes (JSON)</label><textarea id="attributes-json" rows="4" placeholder='{"color":"red","language":"EN"}'></textarea><p class="hint">Optional structured fields for this variant.</p></div>
+    <div class="grid">
+      <div class="field"><label>Brand / Publisher</label><input id="brand-publisher" type="text" placeholder="Publisher, manufacturer, etc." /></div>
+      <div class="field"><label>Series</label><input id="series" type="text" placeholder="Series name" /></div>
+    </div>
+    <div class="grid">
+      <div class="field"><label>Release Year</label><input id="release-year" type="number" min="1900" max="2100" placeholder="2024" /></div>
+      <div class="field" id="field-set-number"><label>Set Number</label><input id="set-number" type="text" /></div>
+    </div>
+    <div class="grid">
+      <div class="field" id="field-piece-count"><label>Piece Count</label><input id="piece-count" type="number" min="0" /></div>
+      <div class="field" id="field-fig-count"><label>Fig Count</label><input id="fig-count" type="number" min="0" /></div>
+    </div>
+    <div class="field"><label>Primary Image URL</label><input id="primary-image" type="url" placeholder="https://..." /><p class="hint">URL for this variant's primary image.</p></div>
+    <div class="field"><label>Description</label><textarea id="description" rows="3" placeholder="Variant-specific description..."></textarea></div>
+    <div class="field"><label>Attributes (JSON)</label><textarea id="attributes-json" rows="3" placeholder='{"color":"red","language":"EN"}'></textarea><p class="hint">Extra custom fields not covered by the fields above.</p></div>
     <p class="status" id="modal-status"></p>
     <div style="display:flex;justify-content:flex-end;gap:8px;"><button class="btn" id="cancel" type="button">Cancel</button><button class="btn" id="save" type="button">Save Variant</button></div>
   </div>
@@ -101,7 +115,7 @@ async function loadItems(){
 async function loadVariants(){
   var tbody=document.querySelector("#variants-table tbody");
   tbody.innerHTML='<tr><td colspan="8">Loading...</td></tr>';
-  var res=await supabase.from("variants").select("id,catalog_item_id,platform_or_format,edition,region,packaging,upc,release_date,attributes,is_active,catalog_items(name)").eq("is_active",true).order("created_at",{ascending:false});
+  var res=await supabase.from("variants").select("id,catalog_item_id,platform_or_format,edition,region,packaging,upc,release_date,set_number,piece_count,release_year,attributes,is_active,catalog_items(name)").eq("is_active",true).order("created_at",{ascending:false});
   if(res.error){tbody.innerHTML='<tr><td colspan="8">Error loading variants: '+esc(res.error.message)+'</td></tr>';return;}
   variants=res.data||[];
   if(!variants.length){tbody.innerHTML='<tr><td colspan="8">No variants found.</td></tr>';return;}
@@ -148,7 +162,10 @@ function applyFormByCategory(itemId){
     showRegion:true,
     showPackaging:true,
     showUpc:true,
-    showRelease:true
+    showRelease:true,
+    showSetNumber:false,
+    showPieceCount:false,
+    showFigCount:false
   };
 
   if(key==="building-blocks"){
@@ -157,6 +174,9 @@ function applyFormByCategory(itemId){
     cfg.editionLabel="Set Variant";
     cfg.showPlatform=false;
     cfg.showRegion=false;
+    cfg.showSetNumber=true;
+    cfg.showPieceCount=true;
+    cfg.showFigCount=true;
   } else if(key==="trading-card" || key==="sports-card" || key==="comic"){
     cfg.platformRequired=false;
     cfg.platformLabel="Platform / Format";
@@ -179,6 +199,9 @@ function applyFormByCategory(itemId){
   setFieldVisible("field-packaging", cfg.showPackaging);
   setFieldVisible("field-upc", cfg.showUpc);
   setFieldVisible("field-release-date", cfg.showRelease);
+  setFieldVisible("field-set-number", cfg.showSetNumber);
+  setFieldVisible("field-piece-count", cfg.showPieceCount);
+  setFieldVisible("field-fig-count", cfg.showFigCount);
 
   if(ctx){
     ctx.textContent="Category: " + (selected&&selected.category_name?selected.category_name:"Not selected");
@@ -198,7 +221,18 @@ function openModal(v){
   document.getElementById("packaging").value=v?(v.packaging||""):"";
   document.getElementById("upc").value=v?(v.upc||""):"";
   document.getElementById("release-date").value=v?(v.release_date||""):"";
-  document.getElementById("attributes-json").value=v&&v.attributes?JSON.stringify(v.attributes,null,2):"";
+  document.getElementById("brand-publisher").value=v&&v.attributes&&v.attributes.brand_or_publisher?String(v.attributes.brand_or_publisher):"";
+  document.getElementById("series").value=v&&v.attributes&&v.attributes.series?String(v.attributes.series):"";
+  document.getElementById("release-year").value=v?(v.release_year||(v.attributes&&v.attributes.release_year)||""):"";
+  document.getElementById("set-number").value=v?(v.set_number||(v.attributes&&v.attributes.set_number)||""):"";
+  document.getElementById("piece-count").value=v?(v.piece_count||(v.attributes&&v.attributes.piece_count)||""):"";
+  document.getElementById("fig-count").value=v&&v.attributes&&v.attributes.fig_count?v.attributes.fig_count:"";
+  document.getElementById("primary-image").value=v&&v.attributes&&v.attributes.primary_image_url?String(v.attributes.primary_image_url):"";
+  document.getElementById("description").value=v&&v.attributes&&v.attributes.description?String(v.attributes.description):"";
+  var knownAttrKeys=["variant_name","brand_or_publisher","series","release_year","set_number","piece_count","fig_count","primary_image_url","description"];
+  var extraAttrs={};
+  if(v&&v.attributes){Object.keys(v.attributes).forEach(function(k){if(knownAttrKeys.indexOf(k)===-1){extraAttrs[k]=v.attributes[k];}});}
+  document.getElementById("attributes-json").value=Object.keys(extraAttrs).length?JSON.stringify(extraAttrs,null,2):"";
   document.getElementById("modal-status").textContent="";
   applyFormByCategory(document.getElementById("catalog-item").value);
   document.getElementById("variant-modal").classList.add("open");
@@ -229,6 +263,14 @@ async function saveVariant(){
   var packaging=document.getElementById("packaging").value.trim();
   var upc=document.getElementById("upc").value.trim();
   var release=document.getElementById("release-date").value;
+  var brand=document.getElementById("brand-publisher").value.trim();
+  var series=document.getElementById("series").value.trim();
+  var releaseYear=document.getElementById("release-year").value.trim();
+  var setNum=document.getElementById("set-number").value.trim();
+  var pieceCount=document.getElementById("piece-count").value.trim();
+  var figCount=document.getElementById("fig-count").value.trim();
+  var primaryImage=document.getElementById("primary-image").value.trim();
+  var description=document.getElementById("description").value.trim();
   var attrsRaw=document.getElementById("attributes-json").value;
   var status=document.getElementById("modal-status");
   var formCfg=applyFormByCategory(id);
@@ -237,14 +279,26 @@ async function saveVariant(){
   if(formCfg.platformRequired && !platform){status.textContent="Platform / format is required for this category."; return;}
   if(parsedAttrs.error){status.textContent=parsedAttrs.error; return;}
   if(variantName){ parsedAttrs.value.variant_name=variantName; } else { delete parsedAttrs.value.variant_name; }
+  if(brand){ parsedAttrs.value.brand_or_publisher=brand; } else { delete parsedAttrs.value.brand_or_publisher; }
+  if(series){ parsedAttrs.value.series=series; } else { delete parsedAttrs.value.series; }
+  if(releaseYear){ parsedAttrs.value.release_year=parseInt(releaseYear,10); } else { delete parsedAttrs.value.release_year; }
+  if(setNum&&formCfg.showSetNumber){ parsedAttrs.value.set_number=setNum; } else { delete parsedAttrs.value.set_number; }
+  if(pieceCount&&formCfg.showPieceCount){ parsedAttrs.value.piece_count=parseInt(pieceCount,10); } else { delete parsedAttrs.value.piece_count; }
+  if(figCount&&formCfg.showFigCount){ parsedAttrs.value.fig_count=parseInt(figCount,10); } else { delete parsedAttrs.value.fig_count; }
+  if(primaryImage){ parsedAttrs.value.primary_image_url=primaryImage; } else { delete parsedAttrs.value.primary_image_url; }
+  if(description){ parsedAttrs.value.description=description; } else { delete parsedAttrs.value.description; }
   if(!formCfg.showPlatform){ platform=""; }
   if(!formCfg.showRegion){ region=""; }
   if(!formCfg.showUpc){ upc=""; }
   if(!editId){
     var createRes=await supabase.rpc("admin_create_variant",{p_catalog_item_id:id,p_platform_or_format:platform,p_edition:edition||null,p_region:region||null,p_packaging:packaging||null,p_upc:upc||null,p_release_date:release||null,p_attributes:parsedAttrs.value});
     if(createRes.error){status.textContent="Error: "+createRes.error.message; return;}
+    var newId=createRes.data&&typeof createRes.data==="string"?createRes.data:(createRes.data&&createRes.data.id?createRes.data.id:null);
+    if(newId&&(setNum||pieceCount||releaseYear)){
+      await supabase.from("variants").update({set_number:setNum||null,piece_count:pieceCount?parseInt(pieceCount,10):null,release_year:releaseYear?parseInt(releaseYear,10):null}).eq("id",newId);
+    }
   } else {
-    var updateRes=await supabase.from("variants").update({catalog_item_id:id,platform_or_format:platform,edition:edition||null,region:region||null,packaging:packaging||null,upc:upc||null,release_date:release||null,attributes:parsedAttrs.value}).eq("id",editId);
+    var updateRes=await supabase.from("variants").update({catalog_item_id:id,platform_or_format:platform,edition:edition||null,region:region||null,packaging:packaging||null,upc:upc||null,release_date:release||null,attributes:parsedAttrs.value,set_number:setNum||null,piece_count:pieceCount?parseInt(pieceCount,10):null,release_year:releaseYear?parseInt(releaseYear,10):null}).eq("id",editId);
     if(updateRes.error){status.textContent="Error: "+updateRes.error.message; return;}
   }
   status.textContent="Saved.";
