@@ -2006,23 +2006,35 @@
       return lines;
     }
 
-    async function lookupLastPaidPrice(catalogItemId, variantId, itemCondition) {
+    async function lookupLastPaidPrice(catalogItemId, variantId, itemCondition, itemName) {
       var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
       var normalizedVariantId = toUuidOrNull(variantId);
       var normalizedCondition = normalizeConditionValue(itemCondition);
-      if (!normalizedCatalogItemId) {
+      var normalizedItemName = String(itemName || "").trim();
+      if (!normalizedCatalogItemId && !normalizedItemName) {
         return null;
       }
 
-      var lineQuery = supabase
-        .from("store_transaction_items")
-        .select("unit_price,item_condition,created_at,variant_id")
-        .eq("line_type", "store_buy")
-        .eq("catalog_item_id", normalizedCatalogItemId)
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      var lineRows = normalizedCatalogItemId
+        ? await supabase
+            .from("store_transaction_items")
+            .select("unit_price,item_condition,created_at,variant_id")
+            .eq("line_type", "store_buy")
+            .eq("catalog_item_id", normalizedCatalogItemId)
+            .order("created_at", { ascending: false })
+            .limit(1000)
+        : { data: [], error: null };
 
-      var lineRows = await lineQuery;
+      if ((!Array.isArray(lineRows.data) || !lineRows.data.length) && normalizedItemName) {
+        lineRows = await supabase
+          .from("store_transaction_items")
+          .select("unit_price,item_condition,created_at,variant_id")
+          .eq("line_type", "store_buy")
+          .eq("item_name", normalizedItemName)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+      }
+
       if (lineRows.error || !Array.isArray(lineRows.data) || !lineRows.data.length) {
         return null;
       }
@@ -2044,22 +2056,33 @@
       return Number.isFinite(Number(value)) ? ("$" + Number(value).toFixed(2)) : "N/A";
     }
 
-    async function fetchStorePricingSnapshot(catalogItemId, variantId, itemCondition) {
+    async function fetchStorePricingSnapshot(catalogItemId, variantId, itemCondition, itemName) {
       var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
       var normalizedVariantId = toUuidOrNull(variantId);
       var normalizedCondition = normalizeConditionValue(itemCondition);
-      if (!normalizedCatalogItemId) {
+      var normalizedItemName = String(itemName || "").trim();
+      if (!normalizedCatalogItemId && !normalizedItemName) {
         return null;
       }
 
-      var linesQuery = supabase
-        .from("store_transaction_items")
-        .select("line_type,unit_price,created_at,item_condition,variant_id")
-        .eq("catalog_item_id", normalizedCatalogItemId)
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      var linesRes = normalizedCatalogItemId
+        ? await supabase
+            .from("store_transaction_items")
+            .select("line_type,unit_price,created_at,item_condition,variant_id")
+            .eq("catalog_item_id", normalizedCatalogItemId)
+            .order("created_at", { ascending: false })
+            .limit(1000)
+        : { data: [], error: null };
 
-      var linesRes = await linesQuery;
+      if ((!Array.isArray(linesRes.data) || !linesRes.data.length) && normalizedItemName) {
+        linesRes = await supabase
+          .from("store_transaction_items")
+          .select("line_type,unit_price,created_at,item_condition,variant_id")
+          .eq("item_name", normalizedItemName)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+      }
+
       if (linesRes.error || !Array.isArray(linesRes.data) || !linesRes.data.length) {
         return null;
       }
@@ -2128,7 +2151,8 @@
       var pricingSnapshot = await fetchStorePricingSnapshot(
         selectedCatalogItem.catalogItemId || selectedCatalogItem.id,
         selectedCatalogItem.variantId || null,
-        condition
+        condition,
+        selectedCatalogItem.name || ""
       );
 
       if (pricingSnapshot) {
@@ -2144,7 +2168,8 @@
       var suggestedFromHistory = await lookupLastPaidPrice(
         selectedCatalogItem.catalogItemId || selectedCatalogItem.id,
         selectedCatalogItem.variantId || null,
-        condition
+        condition,
+        selectedCatalogItem.name || ""
       );
 
       if (suggestedFromHistory != null) {
