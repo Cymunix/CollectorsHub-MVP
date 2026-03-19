@@ -1507,6 +1507,7 @@ revoke all on function public.admin_create_variant(uuid, text, text, text, text,
 grant execute on function public.admin_create_variant(uuid, text, text, text, text, text, date, jsonb, text, text, integer, text, integer, integer, text, text) to authenticated;
 
 -- RPC: Admin list variants for a catalog item
+drop function if exists public.admin_list_variants(uuid);
 create or replace function public.admin_list_variants(p_catalog_item_id uuid)
 returns table (
   id uuid,
@@ -2003,6 +2004,7 @@ create index if not exists store_transactions_created_at_idx on public.store_tra
 create table if not exists public.store_transaction_items (
   id uuid primary key default gen_random_uuid(),
   transaction_id uuid not null references public.store_transactions(id) on delete cascade,
+  store_code text not null references public.retail_stores(store_code) on update cascade on delete cascade,
   line_type text not null check (line_type in ('store_buy', 'store_sell')),
   catalog_item_id uuid references public.catalog_items(id) on delete set null,
   variant_id uuid references public.variants(id) on delete set null,
@@ -2016,13 +2018,60 @@ create table if not exists public.store_transaction_items (
   created_at timestamptz not null default now()
 );
 
+alter table public.store_transaction_items
+  add column if not exists store_code text;
+
+update public.store_transaction_items sti
+set store_code = st.store_code
+from public.store_transactions st
+where sti.transaction_id = st.id
+  and (sti.store_code is null or btrim(sti.store_code) = '');
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'store_transaction_items_store_code_fkey'
+      and conrelid = 'public.store_transaction_items'::regclass
+  ) then
+    alter table public.store_transaction_items
+      add constraint store_transaction_items_store_code_fkey
+      foreign key (store_code)
+      references public.retail_stores(store_code)
+      on update cascade
+      on delete cascade;
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'store_transaction_items'
+      and column_name = 'store_code'
+      and is_nullable = 'YES'
+  ) and not exists (
+    select 1
+    from public.store_transaction_items
+    where store_code is null or btrim(store_code) = ''
+  ) then
+    alter table public.store_transaction_items
+      alter column store_code set not null;
+  end if;
+end $$;
+
 create index if not exists store_transaction_items_transaction_id_idx on public.store_transaction_items(transaction_id);
+create index if not exists store_transaction_items_store_code_idx on public.store_transaction_items(store_code);
 create index if not exists store_transaction_items_catalog_item_idx on public.store_transaction_items(catalog_item_id);
 create index if not exists store_transaction_items_variant_idx on public.store_transaction_items(variant_id);
 create index if not exists store_transaction_items_item_condition_idx on public.store_transaction_items(item_condition);
 create index if not exists store_transaction_items_line_type_idx on public.store_transaction_items(line_type);
+drop index if exists public.store_transaction_items_lookup_idx;
 create index if not exists store_transaction_items_lookup_idx
-  on public.store_transaction_items (catalog_item_id, variant_id, item_condition, line_type, created_at desc);
+  on public.store_transaction_items (store_code, catalog_item_id, variant_id, item_condition, line_type, created_at desc);
 
 alter table public.store_transactions enable row level security;
 alter table public.store_transaction_items enable row level security;

@@ -2007,10 +2007,11 @@
     }
 
     async function lookupLastPaidPrice(storeCode, catalogItemId, variantId, itemCondition) {
+      var normalizedStoreCode = String(storeCode || "").trim();
       var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
       var normalizedVariantId = toUuidOrNull(variantId);
       var normalizedCondition = normalizeConditionValue(itemCondition);
-      if (!normalizedCatalogItemId) {
+      if (!normalizedStoreCode || !normalizedCatalogItemId) {
         return null;
       }
 
@@ -2018,6 +2019,7 @@
         .from("store_transaction_items")
         .select("unit_price,item_condition,created_at,variant_id")
         .eq("line_type", "store_buy")
+        .eq("store_code", normalizedStoreCode)
         .eq("catalog_item_id", normalizedCatalogItemId)
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -2045,16 +2047,18 @@
     }
 
     async function fetchStorePricingSnapshot(storeCode, catalogItemId, variantId, itemCondition) {
+      var normalizedStoreCode = String(storeCode || "").trim();
       var normalizedCatalogItemId = toUuidOrNull(catalogItemId);
       var normalizedVariantId = toUuidOrNull(variantId);
       var normalizedCondition = normalizeConditionValue(itemCondition);
-      if (!normalizedCatalogItemId) {
+      if (!normalizedStoreCode || !normalizedCatalogItemId) {
         return null;
       }
 
       var linesQuery = supabase
         .from("store_transaction_items")
         .select("line_type,unit_price,created_at,item_condition,variant_id")
+        .eq("store_code", normalizedStoreCode)
         .eq("catalog_item_id", normalizedCatalogItemId)
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -2223,6 +2227,7 @@
         sellingItems.forEach(function(item) {
           lineRows.push({
             transaction_id: txId,
+            store_code: storeCode,
             line_type: "store_buy",
             catalog_item_id: toUuidOrNull(item.catalogItemId),
             variant_id: toUuidOrNull(item.variantId),
@@ -2245,6 +2250,7 @@
         buyingItems.forEach(function(item) {
           lineRows.push({
             transaction_id: txId,
+            store_code: storeCode,
             line_type: "store_sell",
             catalog_item_id: toUuidOrNull(item.catalogItemId),
             variant_id: toUuidOrNull(item.variantId),
