@@ -1914,6 +1914,61 @@ using (
   and public.is_current_user_catalog_manager()
 );
 
+-- Store inventory records by store and catalog item/variant.
+create table if not exists public.store_inventory (
+  id uuid primary key default gen_random_uuid(),
+  store_code text not null references public.retail_stores(store_code) on update cascade on delete cascade,
+  catalog_item_id uuid not null references public.catalog_items(id) on delete cascade,
+  variant_id uuid references public.variants(id) on delete set null,
+  quantity_on_hand integer not null default 0 check (quantity_on_hand >= 0),
+  unit_price numeric(12,2),
+  unit_cost numeric(12,2),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (unit_price is null or unit_price >= 0),
+  check (unit_cost is null or unit_cost >= 0)
+);
+
+create index if not exists store_inventory_store_code_idx on public.store_inventory(store_code);
+create index if not exists store_inventory_catalog_item_idx on public.store_inventory(catalog_item_id);
+create index if not exists store_inventory_variant_idx on public.store_inventory(variant_id);
+create unique index if not exists store_inventory_unique_item_variant_per_store_idx
+  on public.store_inventory (store_code, catalog_item_id, coalesce(variant_id, '00000000-0000-0000-0000-000000000000'::uuid));
+
+create or replace function public.set_store_inventory_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists store_inventory_set_updated_at on public.store_inventory;
+create trigger store_inventory_set_updated_at
+before update on public.store_inventory
+for each row
+execute function public.set_store_inventory_updated_at();
+
+alter table public.store_inventory enable row level security;
+
+drop policy if exists "Allow read store_inventory" on public.store_inventory;
+create policy "Allow read store_inventory"
+on public.store_inventory
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Allow manage store_inventory" on public.store_inventory;
+create policy "Allow manage store_inventory"
+on public.store_inventory
+for all
+to authenticated
+using (true)
+with check (true);
+
 -- Catalog requests workflow.
 create table if not exists public.catalog_requests (
   id uuid primary key default gen_random_uuid(),

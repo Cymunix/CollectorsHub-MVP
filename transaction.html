@@ -1981,7 +1981,76 @@
       "building-blocks": "Building Blocks"
     };
 
-    async function searchCatalogItems(searchTerm, categorySlug, franchiseName, yearFilter) {
+    async function loadStoreInventoryIndex(storeCode) {
+      var normalizedStoreCode = String(storeCode || "").trim();
+      if (!normalizedStoreCode) {
+        return {
+          itemById: {},
+          variantByItemId: {},
+          itemPriceById: {},
+          variantPriceById: {}
+        };
+      }
+
+      var invRes = await supabase
+        .from("store_inventory")
+        .select("catalog_item_id,variant_id,quantity_on_hand,unit_price,is_active")
+        .eq("store_code", normalizedStoreCode)
+        .eq("is_active", true)
+        .gt("quantity_on_hand", 0)
+        .limit(5000);
+
+      if (invRes.error || !Array.isArray(invRes.data)) {
+        console.error("store_inventory query failed", invRes.error);
+        return null;
+      }
+
+      var itemById = {};
+      var variantByItemId = {};
+      var itemPriceById = {};
+      var variantPriceById = {};
+
+      invRes.data.forEach(function(row) {
+        if (!row || !row.catalog_item_id) {
+          return;
+        }
+        itemById[row.catalog_item_id] = true;
+
+        if (row.variant_id) {
+          if (!variantByItemId[row.catalog_item_id]) {
+            variantByItemId[row.catalog_item_id] = {};
+          }
+          variantByItemId[row.catalog_item_id][row.variant_id] = true;
+          if (row.unit_price != null) {
+            variantPriceById[row.variant_id] = Number(row.unit_price);
+          }
+          return;
+        }
+
+        if (row.unit_price != null) {
+          itemPriceById[row.catalog_item_id] = Number(row.unit_price);
+        }
+      });
+
+      return {
+        itemById: itemById,
+        variantByItemId: variantByItemId,
+        itemPriceById: itemPriceById,
+        variantPriceById: variantPriceById
+      };
+    }
+
+    async function searchCatalogItems(searchTerm, categorySlug, franchiseName, yearFilter, mode) {
+      var searchMode = mode || "selling";
+      var storeInventoryIndex = null;
+      if (searchMode === "buying") {
+        var storeCode = localStorage.getItem(STORE_CODE_KEY) || "";
+        storeInventoryIndex = await loadStoreInventoryIndex(storeCode);
+        if (!storeInventoryIndex) {
+          return { items: [], total: 0 };
+        }
+      }
+
       // Keep store search on catalog_items only so it works even if relation embeds are blocked.
       var response = await supabase
         .from("catalog_items")
@@ -2085,11 +2154,30 @@
       }
 
       var mapped = response.data.map(function (row) {
+        if (searchMode === "buying" && !storeInventoryIndex.itemById[row.id]) {
+          return null;
+        }
+
         var categoryName = categoryById[row.category_id] || "Uncategorized";
         var subcategoryName = subcategoryById[row.subcategory_id] || "";
         var franchise = franchiseById[row.franchise_id] || "";
 
         var activeVariants = variantsByItemId[row.id] || [];
+        var variantFilter = searchMode === "buying" ? (storeInventoryIndex.variantByItemId[row.id] || null) : null;
+        if (searchMode === "buying" && variantFilter) {
+          activeVariants = activeVariants.filter(function(v) {
+            return !!variantFilter[v.id];
+          });
+        }
+
+        var inventoryUnitPrice = null;
+        if (searchMode === "buying") {
+          if (activeVariants.length && storeInventoryIndex.variantPriceById[activeVariants[0].id] != null) {
+            inventoryUnitPrice = storeInventoryIndex.variantPriceById[activeVariants[0].id];
+          } else if (storeInventoryIndex.itemPriceById[row.id] != null) {
+            inventoryUnitPrice = storeInventoryIndex.itemPriceById[row.id];
+          }
+        }
 
         return {
           id: row.id,
@@ -2107,9 +2195,14 @@
           upc: row.upc || "",
           description: row.description || "",
           primary_image_url: row.primary_image_url || "",
-          variants: activeVariants
+          variants: activeVariants,
+          inventory_unit_price: inventoryUnitPrice
         };
       }).filter(function (item) {
+        if (!item) {
+          return false;
+        }
+
         if (selectedCategoryName && item.category !== selectedCategoryName) {
           return false;
         }
@@ -2336,9 +2429,10 @@
       var franchise = filterFranchiseEl.value;
       var year = filterYearEl.value;
       
-      catalogResults.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);">Searching catalog...</div>';
+      var searchingLabel = currentCatalogMode === "buying" ? "Searching inventory..." : "Searching catalog...";
+      catalogResults.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-secondary);">' + searchingLabel + '</div>';
       
-      var results = await searchCatalogItems(query, category, franchise, year);
+      var results = await searchCatalogItems(query, category, franchise, year, currentCatalogMode);
       renderCatalogResults(results.items || []);
     }
 
@@ -2406,7 +2500,7 @@
       detailPricingMarket.textContent = "N/A";
       detailPricingAvg.textContent = "N/A";
       detailPricingLast.textContent = "N/A";
-      detailOfferPrice.value = "";
+      detailOfferPrice.value = item.inventory_unit_price != null ? Number(item.inventory_unit_price).toFixed(2) : "";
       applyConditionOptions(detailConditionType, item.category, "");
       detailConditionIsGraded.checked = false;
       detailGradedFields.style.display = "none";
@@ -2681,6 +2775,13 @@
       closeItemDetail();
       closeCatalogSearch();
     });
+
+    var urlParams = new URLSearchParams(window.location.search || "");
+    if (urlParams.get("sim_purchase") === "1") {
+      setTimeout(function() {
+        openCatalogSearch("buying");
+      }, 0);
+    }
 
     renderItems();
   </script>
