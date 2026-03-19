@@ -2025,6 +2025,15 @@
         .limit(1000);
 
       var lineRows = await lineQuery;
+      if (!lineRows.error && Array.isArray(lineRows.data) && !lineRows.data.length) {
+        lineRows = await supabase
+          .from("store_transaction_items")
+          .select("unit_price,item_condition,created_at,variant_id")
+          .eq("line_type", "store_buy")
+          .eq("catalog_item_id", normalizedCatalogItemId)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+      }
       if (lineRows.error || !Array.isArray(lineRows.data) || !lineRows.data.length) {
         return null;
       }
@@ -2064,6 +2073,14 @@
         .limit(1000);
 
       var linesRes = await linesQuery;
+      if (!linesRes.error && Array.isArray(linesRes.data) && !linesRes.data.length) {
+        linesRes = await supabase
+          .from("store_transaction_items")
+          .select("line_type,unit_price,created_at,item_condition,variant_id")
+          .eq("catalog_item_id", normalizedCatalogItemId)
+          .order("created_at", { ascending: false })
+          .limit(1000);
+      }
       if (linesRes.error || !Array.isArray(linesRes.data) || !linesRes.data.length) {
         return null;
       }
