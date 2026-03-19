@@ -63,6 +63,26 @@ async function resolveFranchiseId(franchiseId, fallbackName) {
   return Array.isArray(created) && created.length ? created[0].id : null;
 }
 
+async function resolveLegoSubcategoryId(categoryId, requestedSubcategoryId) {
+  var subcategoryId = normalizeText(requestedSubcategoryId);
+  if (subcategoryId) {
+    return subcategoryId;
+  }
+  if (!categoryId) {
+    return null;
+  }
+
+  var rows = await supabaseRest.supabaseRequest(
+    "catalog_subcategories?select=id,name&category_id=eq." +
+      encodeURIComponent(categoryId) +
+      "&is_active=eq.true&name=ilike." +
+      encodeURIComponent("LEGO") +
+      "&limit=1"
+  );
+
+  return Array.isArray(rows) && rows.length ? rows[0].id : null;
+}
+
 function getBricksetCredentials(req, body) {
   var headers = req && req.headers ? req.headers : {};
   var apiKey = String(headers["x-brickset-api-key"] || "").trim();
@@ -81,7 +101,7 @@ function getBricksetCredentials(req, body) {
   };
 }
 
-async function importOneSet(setData, categoryId) {
+async function importOneSet(setData, categoryId, defaultSubcategoryId) {
   var duplicateItem = await findDuplicateCatalogItem(setData.setNumber);
 
   if (duplicateItem) {
@@ -102,7 +122,7 @@ async function importOneSet(setData, categoryId) {
     body: JSON.stringify({
       name: itemName,
       category_id: categoryId,
-      subcategory_id: normalizeText(setData.subcategoryId),
+      subcategory_id: normalizeText(setData.subcategoryId) || defaultSubcategoryId || null,
       franchise_id: franchiseId,
       brand_or_publisher: normalizeText(setData.brandOrPublisher) || "LEGO",
       set_number: normalizeText(setData.setNumber),
@@ -159,6 +179,7 @@ module.exports = async function handler(req, res) {
     }
 
     var categoryId = categories[0].id;
+    var defaultSubcategoryId = await resolveLegoSubcategoryId(categoryId, body.subcategoryId);
     var sets = await brickset.getAllSetsByTheme(theme, year, credentials);
 
     if (!sets.length) {
@@ -179,7 +200,7 @@ module.exports = async function handler(req, res) {
 
     for (var i = 0; i < sets.length; i++) {
       try {
-        var result = await importOneSet(sets[i], categoryId);
+        var result = await importOneSet(sets[i], categoryId, defaultSubcategoryId);
         if (result.status === "imported") {
           importedCount++;
         } else if (result.status === "skipped") {

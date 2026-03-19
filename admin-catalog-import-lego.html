@@ -533,7 +533,7 @@ async function setPreviewEditor(set) {
   });
   var categoryId = defaultCategory ? defaultCategory.id : "";
   document.getElementById("edit-category").value = categoryId;
-  await loadPreviewSubcategories(categoryId);
+  await loadPreviewSubcategories(categoryId, set.subcategoryId || "");
 
   var selectedFranchiseId = "";
   if (set.franchiseId) {
@@ -550,7 +550,6 @@ async function setPreviewEditor(set) {
     }
   }
 
-  document.getElementById("edit-subcategory").value = "";
   document.getElementById("preview-edit-wrap").style.display = "grid";
 }
 
@@ -602,7 +601,7 @@ async function loadPreviewCategories() {
     }).join("");
 }
 
-async function loadPreviewSubcategories(categoryId) {
+async function loadPreviewSubcategories(categoryId, preferredSubcategoryId) {
   var sel = document.getElementById("edit-subcategory");
   sel.innerHTML = '<option value="">None</option>';
   if (!categoryId) {
@@ -617,6 +616,24 @@ async function loadPreviewSubcategories(categoryId) {
   sel.innerHTML += rpc.data.map(function (s) {
     return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>';
   }).join("");
+
+  var preferredId = String(preferredSubcategoryId || "").trim();
+  if (preferredId) {
+    var hasPreferred = rpc.data.some(function (row) {
+      return String(row.id) === preferredId;
+    });
+    if (hasPreferred) {
+      sel.value = preferredId;
+      return;
+    }
+  }
+
+  var legoRow = rpc.data.find(function (row) {
+    return String(row.name || "").toLowerCase() === "lego";
+  });
+  if (legoRow) {
+    sel.value = legoRow.id;
+  }
 }
 
 async function loadPreviewFranchises(selectedFranchiseId) {
