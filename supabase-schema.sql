@@ -1166,6 +1166,81 @@ to authenticated
 using (true)
 with check (true);
 
+-- Store invoices saved from in-progress transactions.
+create table if not exists public.store_invoices (
+  id uuid primary key default gen_random_uuid(),
+  invoice_number bigint generated always as identity unique,
+  store_code text not null references public.retail_stores(store_code) on update cascade on delete cascade,
+  created_by uuid,
+  customer_name text,
+  customer_phone text,
+  customer_notes text,
+  valid_until_date date not null,
+  bought_total numeric(12,2) not null default 0 check (bought_total >= 0),
+  sold_total numeric(12,2) not null default 0 check (sold_total >= 0),
+  net_total numeric(12,2) not null default 0,
+  status text not null default 'draft' check (status in ('draft', 'sent', 'cancelled')),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.store_invoice_items (
+  id uuid primary key default gen_random_uuid(),
+  invoice_id uuid not null references public.store_invoices(id) on delete cascade,
+  store_code text not null references public.retail_stores(store_code) on update cascade on delete cascade,
+  line_type text not null check (line_type in ('store_buy', 'store_sell')),
+  catalog_item_id uuid references public.catalog_items(id) on delete set null,
+  variant_id uuid references public.variants(id) on delete set null,
+  item_name text not null,
+  item_condition text,
+  grade text,
+  quantity integer not null default 1 check (quantity > 0),
+  unit_price numeric(12,2) not null check (unit_price >= 0),
+  line_total numeric(12,2) not null check (line_total >= 0),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists store_invoices_store_code_idx on public.store_invoices(store_code);
+create index if not exists store_invoices_valid_until_date_idx on public.store_invoices(valid_until_date);
+create index if not exists store_invoices_created_at_idx on public.store_invoices(created_at desc);
+create index if not exists store_invoice_items_invoice_id_idx on public.store_invoice_items(invoice_id);
+create index if not exists store_invoice_items_store_code_idx on public.store_invoice_items(store_code);
+create index if not exists store_invoice_items_catalog_item_idx on public.store_invoice_items(catalog_item_id);
+create index if not exists store_invoice_items_variant_idx on public.store_invoice_items(variant_id);
+
+alter table public.store_invoices enable row level security;
+alter table public.store_invoice_items enable row level security;
+
+drop policy if exists "Allow read store_invoices" on public.store_invoices;
+create policy "Allow read store_invoices"
+on public.store_invoices
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Allow manage store_invoices" on public.store_invoices;
+create policy "Allow manage store_invoices"
+on public.store_invoices
+for all
+to authenticated
+using (true)
+with check (true);
+
+drop policy if exists "Allow read store_invoice_items" on public.store_invoice_items;
+create policy "Allow read store_invoice_items"
+on public.store_invoice_items
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Allow manage store_invoice_items" on public.store_invoice_items;
+create policy "Allow manage store_invoice_items"
+on public.store_invoice_items
+for all
+to authenticated
+using (true)
+with check (true);
+
 -- Catalog requests workflow.
 create table if not exists public.catalog_requests (
   id uuid primary key default gen_random_uuid(),

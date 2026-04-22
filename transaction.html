@@ -1305,7 +1305,7 @@
         </div>
         <div class="action-buttons">
           <button class="btn-action btn-cancel" id="cancel-btn">Cancel</button>
-          <button class="btn-action btn-draft" id="draft-btn">Save Draft</button>
+          <button class="btn-action btn-draft" id="draft-btn">Save Invoice</button>
           <button class="btn-action btn-complete" id="complete-btn">Complete Transaction</button>
         </div>
       </section>
@@ -1672,6 +1672,9 @@
     var totalSellingEl = document.getElementById("total-selling");
     var totalBuyingEl = document.getElementById("total-buying");
     var finalBalanceEl = document.getElementById("final-balance");
+    var customerNameInput = document.getElementById("customer-name");
+    var customerPhoneInput = document.getElementById("customer-phone");
+    var customerNotesInput = document.getElementById("customer-notes");
 
     var addItemModal = document.getElementById("add-item-modal");
     var itemNameInput = document.getElementById("item-name");
@@ -2617,6 +2620,286 @@
       }
     }
 
+    function formatInvoiceDate(value) {
+      if (!value) {
+        return "N/A";
+      }
+      var date = new Date(value + "T00:00:00");
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleDateString();
+    }
+
+    function promptInvoiceValidUntilDate() {
+      var defaultDate = new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toISOString().slice(0, 10);
+      while (true) {
+        var input = prompt("Enter invoice valid-until date (YYYY-MM-DD)", defaultDate);
+        if (input === null) {
+          return null;
+        }
+
+        var trimmed = String(input || "").trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+          alert("Please enter a valid date in YYYY-MM-DD format.");
+          continue;
+        }
+
+        var parsed = Date.parse(trimmed + "T00:00:00");
+        if (!Number.isFinite(parsed)) {
+          alert("Please enter a valid calendar date.");
+          continue;
+        }
+
+        return trimmed;
+      }
+    }
+
+    function buildInvoicePrintDocument(invoiceData) {
+      var invoiceLines = Array.isArray(invoiceData.lines) ? invoiceData.lines : [];
+      var rowsHtml = invoiceLines.map(function(line, index) {
+        var lineLabel = line.line_type === "store_buy" ? "Store Buying" : "Store Selling";
+        var condition = line.item_condition ? formatConditionLabel(line.item_condition) : "Unspecified";
+        return "<tr>" +
+          "<td>" + (index + 1) + "</td>" +
+          "<td>" + escapeHtml(line.item_name || "Item") + "</td>" +
+          "<td>" + escapeHtml(lineLabel) + "</td>" +
+          "<td>" + escapeHtml(condition) + "</td>" +
+          "<td style=\"text-align:right;\">$" + Number(line.unit_price || 0).toFixed(2) + "</td>" +
+          "</tr>";
+      }).join("");
+
+      return "<!DOCTYPE html><html><head><meta charset=\"utf-8\" />" +
+        "<title>Invoice " + escapeHtml(invoiceData.invoiceNumberLabel) + "</title>" +
+        "<style>" +
+        "body{font-family:Arial,sans-serif;margin:24px;color:#111;}" +
+        "h1{margin:0 0 6px 0;font-size:28px;}" +
+        "h2{margin:18px 0 8px 0;font-size:18px;}" +
+        ".meta{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:8px 16px;margin:14px 0 20px 0;}" +
+        ".meta div{font-size:14px;}" +
+        ".label{font-weight:700;}" +
+        "table{width:100%;border-collapse:collapse;margin-top:8px;}" +
+        "th,td{border:1px solid #d0d0d0;padding:8px;font-size:13px;}" +
+        "th{background:#f4f4f4;text-align:left;}" +
+        ".totals{margin-top:18px;width:100%;max-width:380px;margin-left:auto;}" +
+        ".totals-row{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:6px 0;font-size:14px;}" +
+        ".totals-row.total{font-size:16px;font-weight:700;border-bottom:2px solid #222;margin-top:4px;}" +
+        ".foot{margin-top:20px;color:#444;font-size:12px;}" +
+        "</style></head><body>" +
+        "<h1>Invoice</h1>" +
+        "<div>Invoice #: <strong>" + escapeHtml(invoiceData.invoiceNumberLabel) + "</strong></div>" +
+        "<div class=\"meta\">" +
+        "<div><span class=\"label\">Store:</span> " + escapeHtml(invoiceData.storeLabel) + "</div>" +
+        "<div><span class=\"label\">Created:</span> " + escapeHtml(invoiceData.createdLabel) + "</div>" +
+        "<div><span class=\"label\">Valid Until:</span> " + escapeHtml(invoiceData.validUntilLabel) + "</div>" +
+        "<div><span class=\"label\">Customer:</span> " + escapeHtml(invoiceData.customerName || "N/A") + "</div>" +
+        "<div><span class=\"label\">Phone:</span> " + escapeHtml(invoiceData.customerPhone || "N/A") + "</div>" +
+        "<div><span class=\"label\">Notes:</span> " + escapeHtml(invoiceData.customerNotes || "N/A") + "</div>" +
+        "</div>" +
+        "<h2>Invoice Items</h2>" +
+        "<table><thead><tr><th>#</th><th>Item</th><th>Type</th><th>Condition</th><th style=\"text-align:right;\">Price</th></tr></thead><tbody>" +
+        rowsHtml +
+        "</tbody></table>" +
+        "<div class=\"totals\">" +
+        "<div class=\"totals-row\"><span>Store Buying Total</span><span>$" + Number(invoiceData.boughtTotal || 0).toFixed(2) + "</span></div>" +
+        "<div class=\"totals-row\"><span>Store Selling Total</span><span>$" + Number(invoiceData.soldTotal || 0).toFixed(2) + "</span></div>" +
+        "<div class=\"totals-row total\"><span>Net Total</span><span>$" + Number(invoiceData.netTotal || 0).toFixed(2) + "</span></div>" +
+        "</div>" +
+        "<div class=\"foot\">Generated by Collectors Hub</div>" +
+        "</body></html>";
+    }
+
+    function promptPrintInvoicePdf(invoiceData) {
+      if (!confirm("Invoice saved. Print PDF now?")) {
+        return;
+      }
+
+      var printWindow = window.open("", "_blank", "width=980,height=900");
+      if (!printWindow) {
+        alert("Unable to open print preview. Please allow popups and try again.");
+        return;
+      }
+
+      var html = buildInvoicePrintDocument(invoiceData);
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+
+      setTimeout(function() {
+        printWindow.focus();
+        printWindow.print();
+      }, 250);
+    }
+
+    async function saveInvoice() {
+      if (sellingItems.length === 0 && buyingItems.length === 0) {
+        alert("Add at least one item before saving an invoice.");
+        return;
+      }
+
+      var storeCode = String(localStorage.getItem(STORE_CODE_KEY) || "").trim();
+      if (!storeCode) {
+        alert("Store code is missing. Please sign in again.");
+        return;
+      }
+
+      var validUntilDate = promptInvoiceValidUntilDate();
+      if (!validUntilDate) {
+        return;
+      }
+
+      draftBtn.disabled = true;
+      draftBtn.textContent = "Saving...";
+
+      try {
+        var sessionRes = await supabase.auth.getSession();
+        var userId = sessionRes && sessionRes.data && sessionRes.data.session && sessionRes.data.session.user
+          ? sessionRes.data.session.user.id
+          : null;
+
+        var boughtTotal = sellingItems.reduce(function(sum, item) { return sum + Number(item.price || 0); }, 0);
+        var soldTotal = buyingItems.reduce(function(sum, item) { return sum + Number(item.price || 0); }, 0);
+        var netTotal = soldTotal - boughtTotal;
+
+        var customerName = String((customerNameInput && customerNameInput.value) || "").trim() || null;
+        var customerPhone = String((customerPhoneInput && customerPhoneInput.value) || "").trim() || null;
+        var customerNotes = String((customerNotesInput && customerNotesInput.value) || "").trim() || null;
+
+        var invoiceInsert = await supabase
+          .from("store_invoices")
+          .insert([{
+            store_code: storeCode,
+            created_by: userId,
+            customer_name: customerName,
+            customer_phone: customerPhone,
+            customer_notes: customerNotes,
+            valid_until_date: validUntilDate,
+            bought_total: boughtTotal,
+            sold_total: soldTotal,
+            net_total: netTotal,
+            status: "draft"
+          }])
+          .select("id,invoice_number,created_at,valid_until_date")
+          .single();
+
+        if (invoiceInsert.error || !invoiceInsert.data || !invoiceInsert.data.id) {
+          throw new Error((invoiceInsert.error && invoiceInsert.error.message) || "Failed to save invoice.");
+        }
+
+        var invoiceId = invoiceInsert.data.id;
+
+        var lineRows = [];
+        sellingItems.forEach(function(item) {
+          lineRows.push({
+            invoice_id: invoiceId,
+            store_code: storeCode,
+            line_type: "store_buy",
+            catalog_item_id: toUuidOrNull(item.catalogItemId),
+            variant_id: toUuidOrNull(item.variantId),
+            item_name: item.name || "Item",
+            item_condition: normalizeConditionValue(item.condition),
+            grade: item.grade || null,
+            quantity: 1,
+            unit_price: Number(item.price || 0),
+            line_total: Number(item.price || 0),
+            metadata: {
+              source: item.source || null,
+              category: item.category || null,
+              brand: item.brand || null,
+              edition: item.edition || null,
+              barcode: item.barcode || null
+            }
+          });
+        });
+
+        buyingItems.forEach(function(item) {
+          lineRows.push({
+            invoice_id: invoiceId,
+            store_code: storeCode,
+            line_type: "store_sell",
+            catalog_item_id: toUuidOrNull(item.catalogItemId),
+            variant_id: toUuidOrNull(item.variantId),
+            item_name: item.name || "Item",
+            item_condition: normalizeConditionValue(item.condition),
+            grade: item.grade || null,
+            quantity: 1,
+            unit_price: Number(item.price || 0),
+            line_total: Number(item.price || 0),
+            metadata: {
+              source: item.source || null,
+              category: item.category || null,
+              brand: item.brand || null,
+              edition: item.edition || null,
+              barcode: item.barcode || null
+            }
+          });
+        });
+
+        if (lineRows.length) {
+          var linesInsert = await supabase.from("store_invoice_items").insert(lineRows);
+          if (linesInsert.error) {
+            await supabase.from("store_invoices").delete().eq("id", invoiceId);
+            throw new Error(linesInsert.error.message || "Failed to save invoice lines.");
+          }
+        }
+
+        var storeName = storeCode;
+        var storeRes = await supabase
+          .from("retail_stores")
+          .select("store_name")
+          .eq("store_code", storeCode)
+          .maybeSingle();
+        if (!storeRes.error && storeRes.data && storeRes.data.store_name) {
+          storeName = storeRes.data.store_name;
+        }
+
+        var invoiceNumberLabel = invoiceInsert.data.invoice_number != null
+          ? String(invoiceInsert.data.invoice_number)
+          : String(invoiceInsert.data.id);
+
+        var printableLines = lineRows.map(function(row) {
+          return {
+            line_type: row.line_type,
+            item_name: row.item_name,
+            item_condition: row.item_condition,
+            unit_price: row.unit_price
+          };
+        });
+
+        sellingItems = [];
+        buyingItems = [];
+        renderItems();
+        closeCatalogSearch();
+        closeConditionPanel();
+        closeItemDetail();
+
+        if (customerNameInput) customerNameInput.value = "";
+        if (customerPhoneInput) customerPhoneInput.value = "";
+        if (customerNotesInput) customerNotesInput.value = "";
+
+        alert("Invoice saved successfully.");
+
+        promptPrintInvoicePdf({
+          invoiceNumberLabel: invoiceNumberLabel,
+          storeLabel: storeName + " (" + storeCode + ")",
+          createdLabel: new Date(invoiceInsert.data.created_at || Date.now()).toLocaleString(),
+          validUntilLabel: formatInvoiceDate(invoiceInsert.data.valid_until_date || validUntilDate),
+          customerName: customerName || "",
+          customerPhone: customerPhone || "",
+          customerNotes: customerNotes || "",
+          boughtTotal: boughtTotal,
+          soldTotal: soldTotal,
+          netTotal: netTotal,
+          lines: printableLines
+        });
+      } catch (error) {
+        alert(error && error.message ? error.message : "Unable to save invoice.");
+      } finally {
+        draftBtn.disabled = false;
+        draftBtn.textContent = "Save Invoice";
+      }
+    }
+
     async function completeTransaction() {
       if (sellingItems.length === 0 && buyingItems.length === 0) {
         alert("Add at least one item to complete transaction.");
@@ -2864,9 +3147,7 @@
       }
     });
 
-    draftBtn.addEventListener("click", () => {
-      alert("Draft saving is currently unavailable.");
-    });
+    draftBtn.addEventListener("click", saveInvoice);
 
     completeBtn.addEventListener("click", completeTransaction);
 
